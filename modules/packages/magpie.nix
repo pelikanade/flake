@@ -3,10 +3,8 @@ let
   package =
     {
       lib,
-      stdenv,
       buildGoModule,
       fetchFromGitHub,
-      fetchurl,
       bun,
       pkg-config,
       wrapGAppsHook3,
@@ -22,27 +20,6 @@ let
       dbus,
       versionCheckHook,
     }:
-    let
-      # Match Magpie's minimum Bun version while retaining nixpkgs' ELF fixups.
-      pluginBun = bun.overrideAttrs (
-        finalBunAttrs: prevBunAttrs: {
-          version = "1.4.2";
-          src = finalBunAttrs.passthru.sources.${stdenv.hostPlatform.system};
-          passthru = prevBunAttrs.passthru // {
-            sources = {
-              aarch64-linux = fetchurl {
-                url = "https://github.com/oven-sh/bun/releases/download/bun-v${finalBunAttrs.version}/bun-linux-aarch64.zip";
-                hash = "sha256-VDKLvC2cjgyfiSxUTWbFeoO4QTnjSQnl7oF1jxrI/ac=";
-              };
-              x86_64-linux = fetchurl {
-                url = "https://github.com/oven-sh/bun/releases/download/bun-v${finalBunAttrs.version}/bun-linux-x64-baseline.zip";
-                hash = "sha256-xngEDxT+BEDrg503y9DOTAUaMtpygGrJfeamqra/co8=";
-              };
-            };
-          };
-        }
-      );
-    in
     buildGoModule (finalAttrs: {
       pname = "magpie";
       version = "0.1.726";
@@ -99,7 +76,7 @@ let
 
       nativeCheckInputs = [
         dbus
-        pluginBun
+        bun
       ];
       preCheck = ''
         # The fake CLIs deliberately clear PATH, so use absolute store paths.
@@ -125,7 +102,7 @@ let
 
       preFixup = ''
         # Use a Nix-managed runtime instead of downloading generic Linux Bun.
-        gappsWrapperArgs+=(--set-default MAGPIE_BUN "${lib.getExe pluginBun}")
+        gappsWrapperArgs+=(--set-default MAGPIE_BUN "${lib.getExe bun}")
         gappsWrapperArgs+=(--prefix PATH : "${
           lib.makeBinPath [
             xdg-utils
@@ -166,7 +143,7 @@ let
         $out/bin/magpie plugin add "$HOME/nix-test-plugin.js"
         $out/bin/magpie plugin list --json > "$TMPDIR/plugins.json"
         grep -q '"id": "fakeco"' "$TMPDIR/plugins.json"
-        test ! -e "$XDG_CACHE_HOME/magpie/bun/${pluginBun.version}/bun"
+        test ! -e "$XDG_CACHE_HOME/magpie/bun/${bun.version}/bun"
       '';
       versionCheckProgramArg = "--version";
 
@@ -183,8 +160,15 @@ let
 in
 {
   perSystem =
-    { pkgs, ... }:
     {
-      packages.magpie = pkgs.callPackage package { };
+      pkgs,
+      pkgsUnstable,
+      ...
+    }:
+    {
+      # Magpie never runs a Bun older than its BunVersion floor (1.4.2), which
+      # nixos-26.05 does not carry yet; take the unstable set's Bun and leave the
+      # rest of the build on stable.
+      packages.magpie = pkgs.callPackage package { inherit (pkgsUnstable) bun; };
     };
 }
