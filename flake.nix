@@ -58,7 +58,6 @@
       url = "github:rose-pine/zed";
       flake = false;
     };
-    sfd-nix.url = "git+https://forge.asnk.io/sugar/sfd-nix";
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";

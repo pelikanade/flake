@@ -475,22 +475,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-cronet": {
-      "locked": {
-        "lastModified": 1790605008,
-        "narHash": "sha256-mbMHR2jOFEHpBDtAPKdbFdPsz5T3m/9gANJDWhBcuPY=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "e71f1aa922d90b3f5b01a68c00f685711e307412",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "master",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "nixpkgs-unstable": {
       "locked": {
         "lastModified": 1790689126,
@@ -528,22 +512,6 @@
       "original": {
         "type": "tarball",
         "url": "https://channels.nixos.org/nixos-unstable/nixexprs.tar.zst"
-      }
-    },
-    "nixpkgs_4": {
-      "locked": {
-        "lastModified": 1787305858,
-        "narHash": "sha256-IxabTv0+vrHxWceCvIDOGKedms6MdkIgsMqkAugNoN8=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "63a410de48ab4442e5bf62ee5b4ce71bdf7478b0",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "master",
-        "repo": "nixpkgs",
-        "type": "github"
       }
     },
     "nixvim": {
@@ -678,7 +646,6 @@
         "noctalia": "noctalia",
         "noctalia-greeter": "noctalia-greeter",
         "rose-pine-zed": "rose-pine-zed",
-        "sfd-nix": "sfd-nix",
         "sops-nix": "sops-nix",
         "stylix": "stylix",
         "systems": "systems_2"
@@ -719,25 +686,6 @@
         "owner": "oxalica",
         "repo": "rust-overlay",
         "type": "github"
-      }
-    },
-    "sfd-nix": {
-      "inputs": {
-        "nixpkgs": "nixpkgs_4",
-        "nixpkgs-cronet": "nixpkgs-cronet"
-      },
-      "locked": {
-        "lastModified": 1790606056,
-        "narHash": "sha256-KUee8oHYGUxYXCQFscRLwfcQSBUjH6XmMToIz8ZL4B4=",
-        "ref": "refs/heads/main",
-        "rev": "6ec9b90bfe20c78f63430d7c259320cba8c04a58",
-        "revCount": 24,
-        "type": "git",
-        "url": "https://forge.asnk.io/sugar/sfd-nix"
-      },
-      "original": {
-        "type": "git",
-        "url": "https://forge.asnk.io/sugar/sfd-nix"
       }
     },
     "sops-nix": {
