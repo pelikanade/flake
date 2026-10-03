@@ -1,6 +1,6 @@
 keys:
   - &noa age155rf8ggpnmdmcpwkd4gj3qy8j05wdtz7cwf96k50um6xly40h3wqc8pthy
-  - &hydra age1fca2dlmqukt48zg89lrd0k2s5q8w52f9z3tyrfzcr2r2sj8gegxssldpzp
+  - &box age1fca2dlmqukt48zg89lrd0k2s5q8w52f9z3tyrfzcr2r2sj8gegxssldpzp
   - &asymmetry age1r6yhequnuznq8chh6l6zq4mwdmf3htcffsxndg4r542qffuj4chsdzlgws
   - &parallax age1umq8y8qy5af02krxupz4lfa3tg6x2mcdhzsdatlmmttgpdyz7fqs3w69rx
 creation_rules:
@@ -16,13 +16,15 @@ creation_rules:
       - age:
           - *noa
           - *asymmetry
-          - *hydra
+          - *box
           - *parallax
-  # Both workstations read the provider credentials through NixOS provisioning;
-  # the maintainer can edit all credentials in this shared document.
+  # The workstations read the provider credentials for their own Magpie
+  # service, and box runs one as the host for the Paseo daemon; the maintainer
+  # can edit all credentials in this shared document.
   - path_regex: ^modules/secrets/agent-providers\.yaml$
     key_groups:
       - age:
           - *noa
           - *asymmetry
+          - *box
           - *parallax

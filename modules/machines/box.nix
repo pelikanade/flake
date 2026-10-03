@@ -1,5 +1,5 @@
 { inputs, ... }: {
-  machines.hydra = {
+  machines.box = {
     system = "x86_64-linux";
     imports = with inputs.self.modules.aspects; [
       base
@@ -8,7 +8,7 @@
       i18n
       substituter-cn
       sing-box
-      hydra
+      paseo-daemon
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;
     hardware =
@@ -24,7 +24,7 @@
         ];
 
         networking = {
-          hostName = "hydra";
+          hostName = "box";
           domain = "lotus.local";
         };
         boot.initrd.availableKernelModules = [ "nvme" ];
