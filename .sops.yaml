@@ -11,7 +11,19 @@ creation_rules:
   # editable. sops applies the first matching rule, so keep the patterns
   # disjoint; there is no catch-all, and a document that matches no rule cannot
   # be encrypted until one names exactly who decrypts it.
-  - path_regex: modules/secrets/sing-box\.json$
+  # Every host that runs sing-box reads the proxy credentials and endpoints, and
+  # the maintainer keeps the document editable.
+  - path_regex: ^modules/secrets/sing-box\.yaml$
+    key_groups:
+      - age:
+          - *noa
+          - *asymmetry
+          - *box
+          - *parallax
+  # The tailnet belongs to the host rather than to sing-box: every host that
+  # joins it reads this key, through the sing-box endpoint now and through a
+  # tailscaled module on hosts that do not run sing-box later.
+  - path_regex: ^modules/secrets/tailscale\.yaml$
     key_groups:
       - age:
           - *noa

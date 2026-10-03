@@ -6,7 +6,7 @@ The desktop retains the Rose Pine Moon theme and uses Sway-style window controls
 
 The [Magpie gateway](docs/magpie.md) on box owns the coding agents' encrypted credentials, and client hosts run Pi against it over the tailnet. Machines can also host coding agents for remote desktop and phone clients with the standalone [Paseo daemon](docs/paseo-daemon.md).
 
-Asymmetry and Parallax have a [Tailscale pilot](docs/tailscale.md) using sing-box's native endpoint in the shared sing-box configuration. NetBird's desktop UI, its local daemon and the sing-box bypass for that daemon remain for workplace login.
+Asymmetry and Parallax have a [Tailscale pilot](docs/tailscale.md) using sing-box's native endpoint, declared with the rest of the proxy configuration in [the sing-box module](docs/sing-box.md) and kept in the encrypted document only where it is secret. NetBird's desktop UI, its local daemon and the sing-box bypass for that daemon remain for workplace login.
 
 It is intended for the maintainer's machines and for people comfortable adapting a NixOS configuration. The machine definitions target `x86_64-linux` and include personal accounts, hardware, disk paths, network settings, and trusted keys. Adopting the configuration requires replacing those values and supplying your own secrets and recipients.
 
@@ -41,4 +41,4 @@ Boot the target from the resulting ISO and connect it to the network with `nmtui
 
 Follow [machine preparation](.agents/skills/init-machine/SKILL.md), then the [installation procedure](.agents/skills/install-machine/SKILL.md). Preparation records hardware facts, selects the disk layout, and enrolls secret recipients when needed. Installation erases the selected disk; confirm the target and device before proceeding. The procedure also covers encrypted disks and Secure Boot.
 
-Last updated at: `c0bb6c665cf8c65c944e28cb386055090afa824b`.
+Last updated at: `aed6cd162312f3e3b4d778064e839c260dfbab1d`.
