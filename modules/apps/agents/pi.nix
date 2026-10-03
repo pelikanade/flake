@@ -274,7 +274,13 @@ in
             # consumer explicitly asks for.
             packages = packages pkgs ++ lib.optional (cfg.package != null) cfg.package;
 
-            sessionVariables = lib.mkIf (cfg.configDir != defaultConfigDir) {
+            # The gateway answers to its MagicDNS name, and the resolver does not
+            # expand a bare peer name for it, so address the gateway fully
+            # qualified. A host that runs its own gateway overrides this.
+            sessionVariables = {
+              PI_MAGPIE_URL = lib.mkDefault "http://${config.constants.getTailnetFqdn "box"}:3425";
+            }
+            // lib.optionalAttrs (cfg.configDir != defaultConfigDir) {
               PI_CODING_AGENT_DIR = cfg.configDir;
             };
 

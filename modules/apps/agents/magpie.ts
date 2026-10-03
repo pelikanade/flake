@@ -15,8 +15,9 @@ interface GatewayModel {
 // Pi's Magpie gateway extension: it registers the gateway as a provider and
 // puts search on the requests that go to it. The gateway's public catalog
 // supplies native APIs, context windows and thinking levels; Pi's local
-// settings and models.json stay user-owned. Magpie runs on box, and a host that
-// runs its own gateway sets PI_MAGPIE_URL.
+// settings and models.json stay user-owned. Consumers set PI_MAGPIE_URL:
+// loopback on the gateway host, and the gateway's fully qualified MagicDNS name
+// elsewhere, because the resolver does not expand the bare name below.
 export default async function (pi: ExtensionAPI) {
   const gateway = (process.env.PI_MAGPIE_URL ?? "http://box:3425").replace(/\/$/, "");
   const discover = async (signal?: AbortSignal): Promise<ProviderModelConfig[]> => {

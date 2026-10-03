@@ -398,11 +398,6 @@
       # going to whatever DHCP handed out.
       services.resolved.enable = true;
 
-      # MagicDNS answers fully qualified names. Giving the resolver the tailnet's
-      # search domain is what makes a short peer name such as `box` expand to
-      # `box.<tailnet>.ts.net`, which the Pi extension and every other tool expect.
-      services.resolved.settings.Resolve.Domains = [ "leaffish-halfmoon.ts.net" ];
-
       # resolved only accepts those SetLinkDNS/SetDomains/SetDefaultRoute calls
       # from the sing-box user when polkit applies the rule shipped in the
       # sing-box package. Without it they fail with "Access denied" and sing-tun

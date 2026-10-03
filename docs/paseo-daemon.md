@@ -89,7 +89,7 @@ After deployment, inspect startup without printing pairing credentials:
 systemctl status paseo-daemon.service
 sudo -u paseo -H paseo --home /var/lib/paseo/.paseo daemon status --json
 curl --fail http://127.0.0.1:6767/api/health
-curl --fail --silent http://box:3425/v1/models | head
+curl --fail --silent http://box.leaffish-halfmoon.ts.net:3425/v1/models | head
 ```
 
 Use `journalctl -u paseo-daemon.service` for startup failures. The daemon also
@@ -104,13 +104,14 @@ installed Cursor CLI remains a backup to sign in yourself if you need it.
 
 The service binds its Pi extension read-only into
 `/var/lib/paseo/.pi/agent/extensions/magpie.ts`, without generating or replacing
-Pi's model/settings files. It is the only Pi extension the daemon gets. The
-extension defaults to `http://box:3425` over the tailnet; when the same host runs
-`magpie.service`, the module sets `PI_MAGPIE_URL` to that local gateway instead.
-Select the `magpie` models in Paseo's Pi provider to reach Codex, Cursor,
-DeepSeek, and OpenRouter through the gateway. Cursor is available through Pi even
-though Paseo exposes no Cursor harness, and because no Codex CLI is installed
-either, Pi is the provider to dispatch through.
+Pi's model/settings files. It is the only Pi extension the daemon gets. The module
+sets `PI_MAGPIE_URL` for it: the local gateway over loopback when the same host runs
+`magpie.service`, and otherwise the gateway's fully qualified MagicDNS name from
+[the tailnet constant](../modules/constants/tailnet.nix), because the resolver does
+not expand the bare name. Select the `magpie` models in Paseo's Pi provider to reach
+Codex, Cursor, DeepSeek, and OpenRouter through the gateway. Cursor is available
+through Pi even though Paseo exposes no Cursor harness, and because no Codex CLI is
+installed either, Pi is the provider to dispatch through.
 See [Magpie and Pi](magpie.md#pi-on-the-client-hosts).
 
 Use `sudo systemctl restart paseo-daemon.service` for package, launch-environment,

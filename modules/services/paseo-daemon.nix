@@ -63,9 +63,14 @@ in
           PASEO_LISTEN = lib.mkDefault "0.0.0.0:6767";
           PASEO_NODE_ENV = "production";
           SHELL = lib.getExe pkgs.bashInteractive;
-          # A host that runs the gateway itself talks to it directly; every
-          # other host uses the extension's tailnet default, http://box:3425.
-          PI_MAGPIE_URL = lib.mkIf (config.systemd.services ? magpie) "http://127.0.0.1:3425";
+          # A host that runs the gateway itself talks to it over loopback; every
+          # other host addresses it by its fully qualified MagicDNS name, because
+          # the resolver does not expand a bare peer name.
+          PI_MAGPIE_URL =
+            if config.systemd.services ? magpie then
+              "http://127.0.0.1:3425"
+            else
+              "http://${config.constants.getTailnetFqdn "box"}:3425";
           # Leave relay enablement in writable config.json: pairing saves it
           # there, and a deployment env override would prevent later changes.
         };

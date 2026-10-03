@@ -96,7 +96,10 @@ catalog, including native Chat/Responses/Messages APIs, context windows, output
 limits, and thinking levels. It is the only model provider the installed Pi has:
 no API key is provisioned for Pi itself.
 
-The extension defaults to `http://box:3425` over the tailnet, so the tailnet must
+The extension reaches the gateway at `PI_MAGPIE_URL`, which the `pi` module sets to
+`http://box.<tailnetDnsName>:3425` from
+[the tailnet constant](../modules/constants/tailnet.nix): MagicDNS answers fully
+qualified names, and the resolver does not expand the bare name. The tailnet must
 have MagicDNS enabled and the gateway must be reachable when Pi loads. A host that
 runs its own gateway sets `PI_MAGPIE_URL` to its local address instead; the Paseo
 daemon does that automatically when `magpie.service` is present on the same
@@ -137,7 +140,7 @@ from a client host:
 
 ```sh
 systemctl status magpie.service          # on box
-curl --fail --silent http://box:3425/v1/models | head   # from a tailnet peer
+curl --fail --silent http://box.leaffish-halfmoon.ts.net:3425/v1/models | head   # from a tailnet peer
 pi --list-models magpie                  # on a client host
 ```
 

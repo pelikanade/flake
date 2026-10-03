@@ -11,6 +11,7 @@
     imports = with inputs.self.modules.generic; [
       nvirellia
       resources
+      tailnet
     ];
   };
 }

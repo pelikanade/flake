@@ -57,10 +57,12 @@ rule with `preferred_by` gates MagicDNS names and DNS route suffixes to it. The
 existing resolvers and the `cfdns` final rule stay in place, so ordinary name
 resolution is unchanged. Enable MagicDNS in the tailnet to use peer names.
 
-MagicDNS answers fully qualified names, so the module also gives systemd-resolved
-the tailnet's search domain. That is what makes a short name such as `box` expand
-to `box.<tailnet>.ts.net` for every tool, not only for sing-box's own DNS rules —
-`preferred_by` matches the tailnet's domain and never a bare label.
+MagicDNS answers fully qualified names only, and a search domain does not help
+here: the `resolve` NSS module answers "not found" for a bare label before `dns`,
+the only module that applies a search list, ever runs. Consumers therefore address a
+peer fully qualified, expanding it with `constants.getTailnetFqdn` from
+[modules/constants/tailnet.nix](../modules/constants/tailnet.nix). The Pi extension
+receives that address through `PI_MAGPIE_URL`.
 
 ### Routes
 
@@ -114,7 +116,7 @@ behavior on each enrolled host. Confirm workplace NetBird login still works
 through the desktop UI, and exercise Pi's model selection, streaming, search and
 a tool-calling conversation through Magpie. Check reboot persistence and how a
 sing-box restart interrupts peer connections before expanding the pilot. Verify
-that a peer really reaches box's gateway on `http://box:3425/v1/models`, its
+that a peer really reaches box's gateway on `http://box.leaffish-halfmoon.ts.net:3425/v1/models`, its
 browser UI on 3430 and the Paseo daemon on 6767, and that the tailnet node names
 are what the client extension expects, instead of trusting evaluation alone. See
 the
