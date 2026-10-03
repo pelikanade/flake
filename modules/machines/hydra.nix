@@ -8,7 +8,6 @@
       i18n
       substituter-cn
       sing-box
-      netbird
       hydra
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;

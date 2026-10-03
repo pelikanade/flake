@@ -11,11 +11,6 @@ creation_rules:
   # editable. sops applies the first matching rule, so keep the patterns
   # disjoint; there is no catch-all, and a document that matches no rule cannot
   # be encrypted until one names exactly who decrypts it.
-  - path_regex: ^modules/secrets/netbird\.yaml$
-    key_groups:
-      - age:
-          - *noa
-          - *hydra
   - path_regex: modules/secrets/sing-box\.json$
     key_groups:
       - age:

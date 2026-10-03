@@ -24,13 +24,6 @@ _: {
           _: client: "system.slice/${client.service.name}.service"
         ) config.services.netbird.clients;
 
-        assertions = [
-          {
-            assertion = !(config.services.netbird.clients ? sne-connect);
-            message = "The netbird-desktop and netbird aspects cannot be used together.";
-          }
-        ];
-
         services.resolved.enable = true;
 
         services.netbird = {
