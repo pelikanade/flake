@@ -63,13 +63,29 @@ in
           ${magpie} plugin add ${cursorPlugin}
         fi
       '';
+      # MAGPIE_WEB_KEY pins the browser sign-in link; without it magpie mints a
+      # new key, and a new link, on every start.
+      webStart = pkgs.writeShellScript "magpie-web" ''
+        set -euo pipefail
+        export MAGPIE_WEB_KEY="$(${pkgs.coreutils}/bin/cat "$CREDENTIALS_DIRECTORY/magpie_web_key")"
+        exec ${magpie} web --addr 0.0.0.0:3430 --no-open
+      '';
     in
     {
       key = "magpie";
 
-      # Magpie is the only consumer of these credentials. They stay root-owned
-      # and reach the dynamic service through systemd credentials; no user, Pi
-      # process or Paseo service can open them.
+      # The gateway and the browser UI are reachable on the tailnet and on
+      # loopback only. `tailnet0` is the system interface of the sing-box
+      # Tailscale endpoint, which every host running this imports.
+      networking.firewall.interfaces.tailnet0.allowedTCPPorts = [
+        3425
+        3430
+      ];
+
+      # Magpie is the only consumer of these secrets: the four provider
+      # credentials and the key that pins the browser UI's sign-in link. They
+      # stay root-owned and reach the dynamic service through systemd
+      # credentials; no user, Pi process or Paseo service can open them.
       sops.secrets =
         lib.genAttrs
           [
@@ -77,6 +93,7 @@ in
             "openrouter_api_key"
             "codex_auth_json"
             "cursor_auth_json"
+            "magpie_web_key"
           ]
           (name: {
             format = "yaml";
@@ -149,9 +166,9 @@ in
         environment = {
           HOME = "/var/lib/magpie";
           XDG_CONFIG_HOME = "/var/lib/magpie/.config";
-          # Tailnet peers reach the gateway on this host's tailnet address, so
-          # it listens on every interface; the firewall admits 3425 only on
-          # tailnet0, and loopback keeps working. The browser UI stays local.
+          # Tailnet peers reach both listeners on this host's tailnet address,
+          # so they bind every interface; this module admits 3425 and 3430 on
+          # tailnet0 only, and loopback keeps working.
           MAGPIE_ADDR = "0.0.0.0:3425";
         };
         serviceConfig = {
@@ -164,6 +181,7 @@ in
             "codex_auth_json:${config.sops.secrets.codex_auth_json.path}"
             "cursor_auth_json:${config.sops.secrets.cursor_auth_json.path}"
             "providers.json:${config.sops.templates.magpie-providers.path}"
+            "magpie_web_key:${config.sops.secrets.magpie_web_key.path}"
           ];
           ExecStartPre = [
             "${pkgs.systemd}/bin/systemd-tmpfiles --user --create ${loginRules}"
@@ -174,7 +192,7 @@ in
             "${install} -m 0600 ${migrations} ${directory}/migrations.json"
             installPlugin
           ];
-          ExecStart = "${magpie} web --addr 127.0.0.1:3430 --no-open";
+          ExecStart = webStart;
           Restart = "on-failure";
           RestartSec = 10;
           UMask = "0077";

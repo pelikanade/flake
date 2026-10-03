@@ -23,12 +23,14 @@ Every provider credential belongs to `magpie.service` alone:
 | `openrouter_api_key` | Magpie's OpenRouter authentication |
 | `codex_auth_json` | JSON string containing the Codex account login cache |
 | `cursor_auth_json` | JSON string containing the Linux Cursor Agent login cache |
+| `magpie_web_key` | The browser UI's stable sign-in key |
 
-`modules/services/magpie.nix` declares the four secrets, so only the gateway host
+`modules/services/magpie.nix` declares these secrets, so only the gateway host
 provisions them. Activation decrypts them to `/run/secrets/<key>` owned by `root`
 with mode `0400`, and `magpie.service` is the only consumer: systemd
-`LoadCredential` hands the dynamic service the two login JSONs and the rendered
-provider template, and Magpie's own declarative tmpfiles `f^` rules create its
+`LoadCredential` hands the dynamic service the two login JSONs, the rendered
+provider template and the UI key, and Magpie's own declarative tmpfiles `f^` rules
+create its
 writable Codex and Cursor caches under `/var/lib/magpie` from those credentials,
 only when missing. No agent account, no Pi process, and no Paseo service can open
 the files or inherits a copy. No token enters Nix evaluation or the store, and no
@@ -49,12 +51,13 @@ and [Codex authentication](https://developers.openai.com/codex/auth).
 `StateDirectory=magpie` and HOME `/var/lib/magpie`. The UID is temporary; token
 refresh caches, plugin installation, and gateway settings survive restarts.
 `ProtectHome=true` hides the personal and root homes. Both listeners bind every
-interface so tailnet peers reach them on box's tailnet address, and the firewall
-admits 3425 and 3430 only on `tailnet0` and on loopback: the gateway on
+interface so tailnet peers reach them on box's tailnet address, and this module
+admits 3425 and 3430 on `tailnet0` only, so loopback keeps working: the gateway on
 `0.0.0.0:3425` and the browser UI on `0.0.0.0:3430`, which no desktop session is
 needed for. The UI's only credential is the private sign-in link from the
-service's journal, so keep that link out of logs you share and restrict 3430 with
-tailnet grants; it changes on restart.
+service's journal: keep it out of logs you share and restrict 3430 with tailnet
+grants. `magpie_web_key` pins that link across restarts, so read it once and store
+it like a password; replace the key in the document to revoke it.
 
 Nix declares the provider policy. `sops.templates.magpie-providers` renders the
 DeepSeek and OpenRouter keys at activation; `LoadCredential` gives the dynamic

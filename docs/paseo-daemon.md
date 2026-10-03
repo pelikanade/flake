@@ -120,10 +120,14 @@ the service or use its stop command to manage systemd's lifecycle.
 
 ## Connect after startup
 
-The service binds to `127.0.0.1:6767` and opens no firewall port. New Paseo homes
-start with relay disabled. The runtime `config.json` stays writable and is
-preserved across restarts; the module does not replace it or set
-`PASEO_RELAY_ENABLED`. This lets pairing persist its explicit relay opt-in.
+The service binds `0.0.0.0:6767`: loopback for local clients and the host's
+tailnet address for tailnet peers, admitted by the firewall only on `tailnet0`.
+Set the Paseo password before relying on that, and restrict 6767 with tailnet
+grants. Set `systemd.services.paseo-daemon.environment.PASEO_LISTEN` back to
+`127.0.0.1:6767` to keep it local. New Paseo homes start with relay disabled. The
+runtime `config.json` stays writable and is preserved across restarts; the module
+does not replace it or set `PASEO_RELAY_ENABLED`. This lets pairing persist its
+explicit relay opt-in.
 
 ### Desktop and CLI over SSH
 
@@ -171,21 +175,19 @@ paseo --host ssh://USER@HOST run --provider pi --cwd /var/lib/paseo/projects/PRO
 The CLI also accepts a pairing link as `--host` for relay access. Keep it private
 and avoid storing it in shell history. See the [CLI reference](https://paseo.sh/docs/cli.md).
 
-### Direct VPN access
+### Direct access over the tailnet
 
-Prefer SSH or the relay for this module's default setup. The native sing-box
-[Tailscale pilot](tailscale.md) can reach loopback services through its endpoint;
-keep those listeners on loopback and restrict access with tailnet grants.
+The daemon already listens on the host's tailnet address, so a tailnet peer can
+connect without SSH or the relay. Set the password first: a direct connection
+uses it, and the tailnet carries it encrypted. Restrict 6767 with tailnet grants,
+then add a **Direct connection** in the client with the host's tailnet name and
+port 6767. Password authentication does not encrypt traffic, so keep it on the
+tailnet rather than opening 6767 anywhere else.
 
-With an ordinary VPN interface, direct access is possible by overriding
-`systemd.services.paseo-daemon.environment.PASEO_LISTEN` with the host's VPN
-address and port, configuring authentication in the runtime home, and permitting
-that port only on the intended VPN interface. Set a password before exposing the
-listener, then restart with systemd and add a **Direct connection** in the client.
-Password authentication does not encrypt traffic; use the VPN for encryption.
-Do not open port 6767 globally. A VPN-address listener also needs that interface
-to exist before Paseo starts; add its service dependency in the consuming aspect.
-This is a separate machine policy change, not part of enabling this aspect.
+Keep the daemon on loopback instead by setting
+`systemd.services.paseo-daemon.environment.PASEO_LISTEN = "127.0.0.1:6767"` in the
+consuming aspect and use SSH or the relay. A listener on another interface needs
+that interface to exist before Paseo starts; add its service dependency there.
 
 ## Verification scope
 
