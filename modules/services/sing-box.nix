@@ -238,6 +238,10 @@
             route_exclude_address = [
               "10.0.0.0/8"
               "fe80::/10"
+              # The tailnet reaches its peers through its own interface, not the
+              # tun, so keep those ranges out of the tun's routes.
+              "100.64.0.0/10"
+              "fd7a:115c:a1e0::/48"
             ];
             # [ wt0 ] is the NetBird client; its traffic must not enter the tun.
             exclude_interface = [ "wt0" ];
@@ -297,12 +301,17 @@
               ip_is_private = true;
               outbound = "direct";
             }
+            # The LAN, the NetBird ULA and the tailnet are reached directly. The
+            # tailnet's CGNAT range matters here because `ip_is_private` does not
+            # cover it: without this rule a connection to a peer falls through to
+            # `final` and is proxied out to the internet instead.
             {
               ip_cidr = [
                 "10.0.0.0/24"
                 "fe80::/10"
-                "100.79.0.0/16"
+                "100.64.0.0/10"
                 "fd2b:a214:7af1:40d2::/64"
+                "fd7a:115c:a1e0::/48"
               ];
               outbound = "direct";
             }
@@ -396,6 +405,11 @@
       # without resolved nothing points the system at the tun and DNS keeps
       # going to whatever DHCP handed out.
       services.resolved.enable = true;
+
+      # MagicDNS answers fully qualified names. Giving the resolver the tailnet's
+      # search domain is what makes a short peer name such as `box` expand to
+      # `box.<tailnet>.ts.net`, which the Pi extension and every other tool expect.
+      services.resolved.settings.Resolve.Domains = [ "leaffish-halfmoon.ts.net" ];
 
       # resolved only accepts those SetLinkDNS/SetDomains/SetDefaultRoute calls
       # from the sing-box user when polkit applies the rule shipped in the

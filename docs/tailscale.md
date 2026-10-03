@@ -58,13 +58,26 @@ rule with `preferred_by` gates MagicDNS names and DNS route suffixes to it. The
 existing resolvers and the `cfdns` final rule stay in place, so ordinary name
 resolution is unchanged. Enable MagicDNS in the tailnet to use peer names.
 
+MagicDNS answers fully qualified names, so the module also gives systemd-resolved
+the tailnet's search domain. That is what makes a short name such as `box` expand
+to `box.<tailnet>.ts.net` for every tool, not only for sing-box's own DNS rules —
+`preferred_by` matches the tailnet's domain and never a bare label.
+
 ### Routes
 
 With `system_interface: true` the endpoint owns the real interface `tailnet0` and
 the kernel owns its routes: peer traffic enters and leaves through `tailnet0`
 without returning to sing-box's routing engine. The document therefore carries no
-tailnet route rules — an `inbound: "tailnet"` rule and a `preferred_by` rule would
-match nothing — and inbound peer traffic is governed by the host firewall instead.
+`inbound: "tailnet"` or endpoint-preference route rules — they would match nothing
+— and inbound peer traffic is governed by the host firewall instead.
+
+`auto_redirect` still redirects locally generated connections into the tun before
+the kernel's route is used, so the tailnet's own ranges are declared `direct` in
+the route rules: `100.64.0.0/10` and `fd7a:115c:a1e0::/48` go out directly, and the
+same ranges stay out of the tun's routes. Without the direct rule a connection to
+a peer matches no rule, falls through to the `final` proxy and never reaches the
+peer — `ip_is_private` does not cover Tailscale's CGNAT range.
+
 Because a peer addresses the host's tailnet address rather than loopback, every
 service that peers should reach listens on all interfaces. The DNS section above is
 unaffected: sing-box resolves names itself, so the `tailnet-dns` rule still
