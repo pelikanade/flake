@@ -222,6 +222,9 @@
           }
         ];
 
+        # The tun is the only inbound: nothing points applications at a proxy
+        # environment variable, and auto_redirect routes their traffic anyway, so
+        # a local mixed proxy listener would only add another port.
         inbounds = [
           {
             type = "tun";
@@ -238,12 +241,6 @@
             ];
             # [ wt0 ] is the NetBird client; its traffic must not enter the tun.
             exclude_interface = [ "wt0" ];
-          }
-          {
-            type = "mixed";
-            tag = "mixed-in";
-            listen = "0.0.0.0";
-            listen_port = 2080;
           }
         ];
 
