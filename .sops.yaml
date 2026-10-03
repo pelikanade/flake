@@ -18,13 +18,10 @@ creation_rules:
           - *asymmetry
           - *box
           - *parallax
-  # The workstations read the provider credentials for their own Magpie
-  # service, and box runs one as the host for the Paseo daemon; the maintainer
-  # can edit all credentials in this shared document.
+  # Only the gateway host reads the provider credentials; the maintainer can
+  # edit all credentials in this shared document.
   - path_regex: ^modules/secrets/agent-providers\.yaml$
     key_groups:
       - age:
           - *noa
-          - *asymmetry
           - *box
-          - *parallax

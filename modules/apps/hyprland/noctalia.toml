@@ -5,7 +5,7 @@ order = [ "Status" ]
 
     [bar.Status]
     background_opacity = 0.79999998211860657
-    end = [ "group:g3", "group:g1", "bar", "group:g2", "battery", "tray", "notifications", "session" ]
+    end = [ "group:g3", "group:g1", "group:g2", "battery", "tray", "notifications", "session" ]
     start = [ "wallhaven", "workspaces", "media" ]
 
         [bar.Status.monitor.DP-3]
@@ -137,7 +137,7 @@ widget_order = [ "lockscreen-login-box@DP-1", "lockscreen-login-box@DP-3" ]
 keyboard_layout = false
 
 [plugins]
-enabled = [ "felipeartur/ai-usagebar", "noctalia/screen_recorder", "noctalia/wallhaven" ]
+enabled = [ "noctalia/screen_recorder", "noctalia/wallhaven" ]
 
 [shell]
 corner_radius_scale = 0.7500000111758709
@@ -171,12 +171,6 @@ path = "/home/nvirellia/Pictures/wallhaven-5ypmx8.png"
 
 [wallpaper.monitors.DP-3]
 path = "/home/nvirellia/Pictures/wallhaven-5ypmx8.png"
-
-[widget.bar]
-capsule = true
-capsule_padding = 12
-type = "felipeartur/ai-usagebar:bar"
-vendor = "openai"
 
 [widget.brightness]
 capsule = true

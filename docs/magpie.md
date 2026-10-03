@@ -8,10 +8,10 @@ already includes the client side. The normal workflow is Paseo → Pi → Magpie
 box → Codex, Cursor, DeepSeek, or OpenRouter. OpenCode is not provisioned.
 
 The machine that runs `magpie.service` must be an authorized recipient of
-`agent-providers.yaml`. Today that is box. Asymmetry and Parallax read the same
-document for the usage bar's keys only. The maintainer can edit the whole
-document; adding a reader requires enrolling its host recipient and an explicitly
-authorized ciphertext rewrite, following [secret guidance](../AGENTS.md).
+`agent-providers.yaml`, and it is the only one: today that is box. The maintainer
+can edit the whole document; adding a reader requires enrolling its host
+recipient and an explicitly authorized ciphertext rewrite, following
+[secret guidance](../AGENTS.md).
 
 ## Credentials
 
@@ -19,7 +19,7 @@ Every provider credential belongs to `magpie.service` alone:
 
 | Encrypted document key | Use |
 | --- | --- |
-| `deepseek_api_key` | Magpie's DeepSeek authentication, and the usage bar |
+| `deepseek_api_key` | Magpie's DeepSeek authentication |
 | `openrouter_api_key` | Magpie's OpenRouter authentication |
 | `codex_auth_json` | JSON string containing the Codex account login cache |
 | `cursor_auth_json` | JSON string containing the Linux Cursor Agent login cache |
@@ -43,25 +43,18 @@ read-only secret or a Nix store file. See
 [systemd tmpfiles](https://www.freedesktop.org/software/systemd/man/latest/tmpfiles.d.html)
 and [Codex authentication](https://developers.openai.com/codex/auth).
 
-The usage bar is the one consumer that reads a provider key by path: it runs as
-the desktop account on the workstations and needs `deepseek_api_key` for its
-balance display, so Noctalia declares that copy itself, owned by the desktop
-account. `openrouter_management_key` is a separate billing key used only by the
-usage bar and is never passed to Magpie, Pi, or Paseo. See
-[OpenRouter credits](https://openrouter.ai/docs/api/api-reference/credits/get-remaining-credits).
-
 ## Magpie on box
 
 `magpie.service` uses systemd `DynamicUser=true`, with a private persistent
 `StateDirectory=magpie` and HOME `/var/lib/magpie`. The UID is temporary; token
 refresh caches, plugin installation, and gateway settings survive restarts.
-`ProtectHome=true` hides the personal and root homes. It opens the gateway on
-`0.0.0.0:3425` so tailnet peers reach it on box's tailnet address — the firewall
-admits 3425 only on `tailnet0` and on loopback — and the browser UI on
-`127.0.0.1:3430`, which no desktop session is needed for. Read the private
-browser sign-in link from the service's journal when using the UI, and keep that
-link out of logs you share. It changes on restart. For a headless host, reach the
-browser UI through an SSH local forward.
+`ProtectHome=true` hides the personal and root homes. Both listeners bind every
+interface so tailnet peers reach them on box's tailnet address, and the firewall
+admits 3425 and 3430 only on `tailnet0` and on loopback: the gateway on
+`0.0.0.0:3425` and the browser UI on `0.0.0.0:3430`, which no desktop session is
+needed for. The UI's only credential is the private sign-in link from the
+service's journal, so keep that link out of logs you share and restrict 3430 with
+tailnet grants; it changes on restart.
 
 Nix declares the provider policy. `sops.templates.magpie-providers` renders the
 DeepSeek and OpenRouter keys at activation; `LoadCredential` gives the dynamic

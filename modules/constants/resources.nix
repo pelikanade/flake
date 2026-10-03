@@ -8,13 +8,11 @@
     config.constants.resources = {
       getSecretPath = fileName: "${inputs.self}/modules/secrets/${fileName}";
 
-      # Runtime paths of secrets an unprivileged consumer reads by path. The
-      # usage bar is the only one: every agent credential reaches its service
-      # through systemd credentials instead.
-      userSecretPaths = {
-        deepseek_api_key = "/run/secrets/deepseek_api_key";
-        openrouter_management_key = "/run/secrets/openrouter_management_key";
-      };
+      # Runtime paths a Home Manager consumer reads by path, so a user-level
+      # program never needs its own decryption key. Empty today: every secret is
+      # consumed by a NixOS service, and magpie.service alone holds the provider
+      # credentials. Add an entry here with the first Home Manager consumer.
+      userSecretPaths = { };
     };
   };
 }
