@@ -54,11 +54,34 @@ export default async function (pi: ExtensionAPI) {
     });
   };
 
+  // The gateway is a tailnet service, so Pi can start before sing-box, tailnet
+  // DNS or magpie itself is ready. Register the provider with no models instead
+  // of failing the whole extension: refreshModels fills the list once the
+  // gateway answers, and a session start says what went wrong.
+  let startupError: string | undefined;
+  const models = await discover().catch((error: unknown) => {
+    startupError = error instanceof Error ? error.message : String(error);
+    return [] as ProviderModelConfig[];
+  });
+
   pi.registerProvider("magpie", {
     name: "Magpie", baseUrl: `${gateway}/v1`, api: "openai-completions", apiKey: "magpie",
-    models: await discover(),
+    models,
     refreshModels: (context) => discover(context.signal),
   });
+
+  if (startupError) {
+    pi.on("session_start", async (_event, ctx) => {
+      try {
+        await discover();
+      } catch {
+        ctx.ui.notify(
+          `Magpie is unreachable at ${gateway}: ${startupError}`,
+          "warning",
+        );
+      }
+    });
+  }
 
   // Magpie runs the server-side search tool; Pi retains its ordinary tools.
   pi.on("before_provider_request", (event, ctx) => {
