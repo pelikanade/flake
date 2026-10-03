@@ -7,22 +7,7 @@ _: {
       ...
     }:
     {
-      options.netbird.clientCgroups = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        readOnly = true;
-        description = ''
-          Cgroups of this machine's NetBird client services.
-
-          NetBird reaches its management, relays and peers with its own
-          WireGuard, STUN and relay traffic, which does not survive being
-          proxied, so consumers use these to keep it outside the sing-box tun.
-        '';
-      };
-
       config = {
-        netbird.clientCgroups = lib.mapAttrsToList (
-          _: client: "system.slice/${client.service.name}.service"
-        ) config.services.netbird.clients;
 
         services.resolved.enable = true;
 

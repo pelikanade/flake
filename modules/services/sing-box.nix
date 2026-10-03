@@ -7,36 +7,26 @@
       ...
     }:
     let
-      # xt_cgroup resolves --path when the rule is inserted. firewall.service
-      # runs at sysinit, before a NetBird client has a cgroup, and a missing
-      # path is rejected with EINVAL (kernel: "xt_cgroup: invalid path,
-      # errno=-2"). firewall-start uses `set -e`, so that one append takes the
-      # whole firewall down. Skip the mark until the cgroup exists, and install
-      # it from the client unit before the daemon runs.
-      netbirdCgroups = config.netbird.clientCgroups or [ ];
-      iptables = "${pkgs.iptables}/bin/iptables";
-      mark = "0x2024";
-
-      ensureNetbirdMark = pkgs.writeShellScript "sing-box-netbird-mark" ''
-        set -euo pipefail
-        cgroup=$1
-        mode=''${2:-optional}
-        if [[ ! -d /sys/fs/cgroup/$cgroup ]]; then
-          if [[ $mode == require ]]; then
-            echo "sing-box: NetBird cgroup $cgroup does not exist" >&2
-            exit 1
-          fi
-          exit 0
-        fi
-        ${iptables} -w -t mangle -C OUTPUT -m cgroup --path "$cgroup" -j MARK --set-mark ${mark} 2>/dev/null \
-          || ${iptables} -w -t mangle -A OUTPUT -m cgroup --path "$cgroup" -j MARK --set-mark ${mark}
-      '';
-
-      clearNetbirdMark = pkgs.writeShellScript "sing-box-netbird-unmark" ''
-        set -euo pipefail
-        cgroup=$1
-        ${iptables} -w -t mangle -D OUTPUT -m cgroup --path "$cgroup" -j MARK --set-mark ${mark} 2>/dev/null || true
-      '';
+      # NetBird reaches its management, relays and peers with its own WireGuard,
+      # STUN and relay traffic, which does not survive being proxied. Route its
+      # own ranges through an outbound bound to its interface instead of marking
+      # the client's packets by cgroup.
+      netbirdInterface = config.services.netbird.clients.default.interface or null;
+      netbirdOutbound = {
+        type = "direct";
+        tag = "netbird";
+        bind_interface = netbirdInterface;
+      };
+      netbirdRule = {
+        ip_cidr = [
+          "100.69.0.0/16"
+          "100.79.0.0/16"
+          "fd2b:a214:7af1:40d2::/64"
+          "fdd3:c8c7:a7e5:d757::/64"
+        ];
+        action = "route";
+        outbound = "netbird";
+      };
 
       # The configuration is declared here and assembled at activation: the
       # nixpkgs module replaces every `_secret` below with the contents of the
@@ -243,8 +233,9 @@
               "100.64.0.0/10"
               "fd7a:115c:a1e0::/48"
             ];
-            # [ wt0 ] is the NetBird client; its traffic must not enter the tun.
-            exclude_interface = [ "wt0" ];
+            # NetBird's interface: what arrives on it is already inside the
+            # NetBird tunnel and must not enter the tun.
+            exclude_interface = lib.optional (netbirdInterface != null) netbirdInterface;
           }
         ];
 
@@ -290,10 +281,11 @@
             default = "snemeow-vless-laxp";
             interrupt_exist_connections = true;
           }
-        ];
+        ]
+        ++ lib.optional (netbirdInterface != null) netbirdOutbound;
 
         route = {
-          rules = [
+          rules = lib.optional (netbirdInterface != null) netbirdRule ++ [
             {
               action = "sniff";
             }
@@ -435,28 +427,8 @@
       '';
 
       # NetBird's own WireGuard, STUN and relay traffic does not survive being
-      # proxied, and the tun's exclude_interface only covers packets that arrive
-      # on the NetBird interface. Stamping everything the NetBird clients send
-      # with sing-box's auto_redirect output mark (0x2024) instead makes sing-box
-      # skip those packets in the redirection and routing paths alike.
-      networking.firewall.extraCommands = lib.concatMapStrings (cgroup: ''
-        ${ensureNetbirdMark} ${lib.escapeShellArg cgroup}
-      '') netbirdCgroups;
-
-      # `+` runs the hook as root, outside the client's User= and
-      # ProtectSystem=, so it can update the mangle table. The cgroup already
-      # exists here: systemd creates it before ExecStartPre.
-      systemd.services = lib.listToAttrs (
-        map (cgroup: {
-          name = lib.removeSuffix ".service" (baseNameOf cgroup);
-          value = {
-            serviceConfig = {
-              ExecStartPre = [ "+${ensureNetbirdMark} ${cgroup} require" ];
-              ExecStopPost = [ "+${clearNetbirdMark} ${cgroup}" ];
-            };
-          };
-        }) netbirdCgroups
-      );
+      # proxied, so its ranges leave through the NetBird interface instead.
+      # Nothing here marks packets by cgroup any more.
 
       # One root-owned, root-only file per value. The nixpkgs module renders
       # them into the runtime configuration as root before the service starts,

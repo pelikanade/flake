@@ -6,8 +6,7 @@ A host that should join the tailnet *without* sing-box needs its own `tailscaled
 module, which does not exist yet. The endpoint, the MagicDNS server and the routing
 rules are declared in [modules/services/sing-box.nix](../modules/services/sing-box.nix)
 with the rest of the sing-box configuration. `tailscaled` is not installed or
-enabled, and no separate Tailscale service, cgroup bypass or runtime configuration
-merge is used.
+enabled, and no separate Tailscale service or runtime configuration merge is used.
 
 `modules/secrets/tailscale.yaml` holds only the tailnet auth key, so the same
 document serves the endpoint here and a `tailscaled` module later.
@@ -16,8 +15,8 @@ Asymmetry, Parallax and box all read both and all run the endpoint, so filling t
 auth key enrolls every host that runs sing-box, not just the two workstations. Use a
 reusable auth key, because the same key is read by more than one host.
 
-NetBird's workstation UI, its local daemon and the sing-box cgroup bypass for
-that daemon remain for workplace login. No machine has a declared NetBird client
+NetBird's workstation UI and its local daemon remain for workplace login. No
+machine has a declared NetBird client
 any more, so joining a NetBird network is a manual step through the desktop UI.
 Personal peer access uses Tailscale.
 

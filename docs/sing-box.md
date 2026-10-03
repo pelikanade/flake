@@ -38,6 +38,15 @@ sets, routing rules and the Clash API listener — is declared in Nix and visibl
 git. The sing-box document is shared by every host that runs sing-box, because each
 one needs the same proxy credentials.
 
+## NetBird
+
+On a host that runs a NetBird client, the module adds a `direct` outbound bound to
+the client's interface and a rule sending NetBird's own ranges
+(`100.69.0.0/16`, `100.79.0.0/16`, `fd2b:a214:7af1:40d2::/64`,
+`fdd3:c8c7:a7e5:d757::/64`) to it, because that traffic does not survive being
+proxied. Both are present only on a host that configures a NetBird client, and no
+cgroup measurement or packet mark is involved any more.
+
 ## Change a value
 
 ```sh
