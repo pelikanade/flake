@@ -48,6 +48,19 @@
         mode = "0400";
       };
 
+      # The balance bar runs as the desktop account and reads this key by path,
+      # so it is declared here as well; the gateway reads its own copy through
+      # systemd credentials.
+      sops.secrets.deepseek_api_key = {
+        format = "yaml";
+        key = "deepseek_api_key";
+        sopsFile = config.constants.resources.getSecretPath "agent-providers.yaml";
+        path = secretPaths.deepseek_api_key;
+        owner = config.constants.nvirellia.username;
+        group = config.users.users.${config.constants.nvirellia.username}.group;
+        mode = "0400";
+      };
+
       environment.systemPackages = [
         # Noctalia drives external monitor brightness through ddcutil.
         pkgs.ddcutil

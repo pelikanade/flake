@@ -3,6 +3,6 @@
   flake.modules.aspects.agents.imports = with inputs.self.modules.aspects; [
     herdr
     agent-desktops
-    agent-providers
+    pi
   ];
 }

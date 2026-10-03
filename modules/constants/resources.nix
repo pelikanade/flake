@@ -8,14 +8,12 @@
     config.constants.resources = {
       getSecretPath = fileName: "${inputs.self}/modules/secrets/${fileName}";
 
-      # Runtime paths of secrets that NixOS provisions for an unprivileged
-      # consumer, so Home Manager can read the file without a key of its own.
+      # Runtime paths of secrets an unprivileged consumer reads by path. The
+      # usage bar is the only one: every agent credential reaches its service
+      # through systemd credentials instead.
       userSecretPaths = {
         deepseek_api_key = "/run/secrets/deepseek_api_key";
-        openrouter_api_key = "/run/secrets/openrouter_api_key";
         openrouter_management_key = "/run/secrets/openrouter_management_key";
-        codex_auth_json = "/run/secrets/codex_auth_json";
-        cursor_auth_json = "/run/secrets/cursor_auth_json";
       };
     };
   };

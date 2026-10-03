@@ -4,9 +4,10 @@
 workspaces, and schedules. Its standalone daemon runs on the host that should do
 the work. Desktop, phone, browser, and CLI clients connect to that daemon to
 dispatch tasks, follow progress, review changes, and answer agent permissions.
-The repositories, provider executables, credentials, and build tools must exist
-on the daemon host; connecting a client does not transfer its development
-environment. The agent providers still make their own model API requests.
+The repositories, provider executables, and build tools must exist on the daemon
+host; connecting a client does not transfer its development environment. The
+daemon holds no provider credentials: its Pi reaches every model through the
+Magpie gateway on box over the tailnet.
 
 This aspect runs one standalone daemon per machine. It is independent of the
 daemon bundled with Paseo Desktop and does not enroll the host in Paseo Hub.
@@ -20,12 +21,15 @@ Add `paseo-daemon` to the selected machine's aspect imports, preserving `base`:
 imports = with inputs.self.modules.aspects; [
   base
   server
+  tailscale
   paseo-daemon
 ];
 ```
 
-Importing the aspect enables the service. No existing machine imports it yet.
-Build that machine's NixOS configuration before separately authorizing deployment:
+Importing the aspect enables the service. `box` composes this list plus `magpie`,
+so it also runs the gateway; any other daemon host composes it unchanged and
+reaches box over the tailnet, which `tailscale` joins. Build that machine's NixOS
+configuration before separately authorizing deployment:
 
 ```sh
 nix develop
@@ -62,14 +66,14 @@ with a persistent home at `/var/lib/paseo` and `PASEO_HOME` at
 five seconds, and stops the whole service cgroup, including agent and terminal
 processes. `Type=simple` records process startup, not API readiness.
 
-The service imports `agent-providers` and uses the same harness list as the
-workstation: Codex, Pi, and the backup Cursor Agent, with Bubblewrap, jq, and
-Python. Its PATH also includes Paseo, Bash, Git, SSH, Nix, and ripgrep.
-Additional provider or project tools belong in the consuming aspect's
+The service imports `pi` and installs its package set: Pi
+with Bubblewrap, jq and Python, and no Codex, Cursor Agent or Magpie CLI, so Pi
+is the only provider Paseo can offer. Its PATH also includes Paseo, Bash, Git,
+SSH, Nix, and ripgrep. Additional project tools belong in the consuming aspect's
 `systemd.services.paseo-daemon.path`. It does not inherit a desktop user's shell
-environment or Home Manager packages. It provisions its own authentication
-files from the shared encrypted [provider document](agent-providers.md) using
-systemd credentials. The host must be an authorized document recipient.
+environment or Home Manager packages, and it receives no provider credentials at
+all. The gateway on box is their only consumer; see
+[credentials](magpie.md#credentials).
 
 Systemd creates the home with mode `0700`; the service uses umask `0077`.
 `ProtectHome=true` hides `/home`, `/root`, and `/run/user`, `ProtectSystem=full`
@@ -85,19 +89,29 @@ After deployment, inspect startup without printing pairing credentials:
 systemctl status paseo-daemon.service
 sudo -u paseo -H paseo --home /var/lib/paseo/.paseo daemon status --json
 curl --fail http://127.0.0.1:6767/api/health
-sudo -u paseo -H paseo --home /var/lib/paseo/.paseo provider diagnostic codex --json
+curl --fail --silent http://box:3425/v1/models | head
 ```
 
 Use `journalctl -u paseo-daemon.service` for startup failures. The daemon also
 writes `$PASEO_HOME/daemon.log`; redact credentials, pairing offers, and user code
-before sharing either log. `ExecStartPre` provisions writable Codex and Cursor
-login caches and renders Pi's DeepSeek/OpenRouter authentication as `paseo`, using
-four `LoadCredential` files: Codex JSON, Cursor JSON, DeepSeek API key, and
-OpenRouter API key. Subsequent startup preserves refreshed login caches unless
-their encrypted seed changes. A changed secret restarts the service. Provider
-settings and token refresh stay local to its home; never put credential values
-in Nix configuration. Current Paseo v0.10.2 does not expose Cursor in its provider
-manifest; the installed Cursor CLI remains a backup.
+before sharing either log. The service has no `LoadCredential` and no credential
+files: the Codex and Cursor login caches and the DeepSeek and OpenRouter keys
+belong to `magpie.service` alone (see
+[credentials](magpie.md#credentials)). A changed secret restarts
+`magpie.service`, not this one. Current Paseo v0.10.2 does not expose Cursor in
+its provider manifest, and no Cursor login is provisioned for the daemon; the
+installed Cursor CLI remains a backup to sign in yourself if you need it.
+
+The service binds its Pi extension read-only into
+`/var/lib/paseo/.pi/agent/extensions/magpie.ts`, without generating or replacing
+Pi's model/settings files. It is the only Pi extension the daemon gets. The
+extension defaults to `http://box:3425` over the tailnet; when the same host runs
+`magpie.service`, the module sets `PI_MAGPIE_URL` to that local gateway instead.
+Select the `magpie` models in Paseo's Pi provider to reach Codex, Cursor,
+DeepSeek, and OpenRouter through the gateway. Cursor is available through Pi even
+though Paseo exposes no Cursor harness, and because no Codex CLI is installed
+either, Pi is the provider to dispatch through.
+See [Magpie and Pi](magpie.md#pi-on-the-client-hosts).
 
 Use `sudo systemctl restart paseo-daemon.service` for package, launch-environment,
 or startup-setting changes. It interrupts running work. `paseo reload` can apply
@@ -151,7 +165,7 @@ host identity. Neither startup nor Nix activation generates or prints an offer.
 To dispatch a task from a remote CLI through SSH, use a project path on the host:
 
 ```sh
-paseo --host ssh://USER@HOST run --provider codex --cwd /var/lib/paseo/projects/PROJECT "Review the project"
+paseo --host ssh://USER@HOST run --provider pi --cwd /var/lib/paseo/projects/PROJECT "Review the project"
 ```
 
 The CLI also accepts a pairing link as `--host` for relay access. Keep it private
@@ -159,8 +173,11 @@ and avoid storing it in shell history. See the [CLI reference](https://paseo.sh/
 
 ### Direct VPN access
 
-Prefer SSH or the relay for this module's default setup. Direct access over
-NetBird or another VPN is possible by overriding
+Prefer SSH or the relay for this module's default setup. The native sing-box
+[Tailscale pilot](tailscale.md) can reach loopback services through its endpoint;
+keep those listeners on loopback and restrict access with tailnet grants.
+
+With an ordinary VPN interface, direct access is possible by overriding
 `systemd.services.paseo-daemon.environment.PASEO_LISTEN` with the host's VPN
 address and port, configuring authentication in the runtime home, and permitting
 that port only on the intended VPN interface. Set a password before exposing the
@@ -172,8 +189,9 @@ This is a separate machine policy change, not part of enabling this aspect.
 
 ## Verification scope
 
-Before use on a host, verify the service starts after reboot, provider
-authentication and project permissions work for `paseo`, an SSH client can reach
-the API, and a phone can pair and reconnect after a service restart. Confirm
-that stopping the service ends its agent and terminal processes. Configuration
-evaluation and package builds alone cannot prove these runtime behaviors.
+Before use on a host, verify the service starts after reboot, the daemon's Pi can
+discover and run `magpie` models through the gateway, project permissions work
+for `paseo`, an SSH client can reach the API, and a phone can pair and reconnect
+after a service restart. Confirm that stopping the service ends its agent and
+terminal processes. Configuration evaluation and package builds alone cannot
+prove these runtime behaviors.
