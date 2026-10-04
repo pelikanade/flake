@@ -6,8 +6,8 @@ the work. Desktop, phone, browser, and CLI clients connect to that daemon to
 dispatch tasks, follow progress, review changes, and answer agent permissions.
 The repositories, provider executables, and build tools must exist on the daemon
 host; connecting a client does not transfer its development environment. The
-daemon holds no provider credentials: its omp reaches every model through the
-Magpie gateway on box over the tailnet.
+daemon declares omp's key-based providers and reads their keys from sops; it has
+no interactive login, so Codex and Cursor stay desktop-only.
 
 This aspect runs one standalone daemon per machine. It is independent of the
 daemon bundled with Paseo Desktop and does not enroll the host in Paseo Hub.
@@ -26,12 +26,10 @@ imports = with inputs.self.modules.aspects; [
 ];
 ```
 
-Importing the aspect enables the service. `box` composes this list plus `magpie`,
-so it also runs the gateway; any other daemon host composes it unchanged and
-reaches box over the tailnet, which `sing-box` joins. A host that should join the
-tailnet without sing-box needs its own `tailscaled` module, which does not exist
-yet. Build that machine's NixOS configuration before separately authorizing
-deployment:
+Importing the aspect enables the service. box composes this list; any other daemon
+host composes it unchanged. A host that should join the tailnet without sing-box
+needs its own `tailscaled` module, which does not exist yet. Build that machine's
+NixOS configuration before separately authorizing deployment:
 
 ```sh
 nix develop
@@ -68,13 +66,14 @@ with a persistent home at `/var/lib/paseo` and `PASEO_HOME` at
 five seconds, and stops the whole service cgroup, including agent and terminal
 processes. `Type=simple` records process startup, not API readiness.
 
-The service imports `omp` and installs its package set: omp with jq and Python, and
-no Codex, Cursor Agent or Magpie CLI, so omp is the only provider Paseo can offer.
+The service imports `omp` and installs its package set: omp with jq and Python.
 Its PATH also includes Paseo, Bash, Git, SSH, Nix, and ripgrep. Additional project
 tools belong in the consuming aspect's `systemd.services.paseo-daemon.path`. It
-does not inherit a desktop user's shell environment or Home Manager packages, and
-it receives no provider credentials at all. The gateway on box is their only
-consumer; see [credentials](magpie.md#credentials).
+does not inherit a desktop user's shell environment or Home Manager packages. Its
+omp is the only provider Paseo can offer, and the daemon reads the DeepSeek and
+OpenRouter keys from its own copies of
+[the provider document](omp.md#credentials), owned by the `paseo` account; a
+changed key restarts the unit.
 
 Systemd creates the home with mode `0700`; the service uses umask `0077`.
 `ProtectHome=true` hides `/home`, `/root`, and `/run/user`, `ProtectSystem=full`
@@ -90,34 +89,25 @@ After deployment, inspect startup without printing pairing credentials:
 systemctl status paseo-daemon.service
 sudo -u paseo -H paseo --home /var/lib/paseo/.paseo daemon status --json
 curl --fail http://127.0.0.1:6767/api/health
-curl --fail --silent http://box.leaffish-halfmoon.ts.net:3425/v1/models | head
 ```
 
 Use `journalctl -u paseo-daemon.service` for startup failures. The daemon also
 writes `$PASEO_HOME/daemon.log`; redact credentials, pairing offers, and user code
-before sharing either log. The service has no `LoadCredential` and no credential
-files: the Codex and Cursor login caches and the DeepSeek and OpenRouter keys
-belong to `magpie.service` alone (see
-[credentials](magpie.md#credentials)). A changed secret restarts
-`magpie.service`, not this one. Current Paseo v0.10.2 does not expose Cursor in
-its provider manifest, and no Cursor login is provisioned for the daemon.
+before sharing either log. The service has no `LoadCredential`: the DeepSeek and
+OpenRouter keys arrive as files owned by the `paseo` account (see
+[credentials](omp.md#credentials)). Current Paseo v0.10.2 does not expose Cursor
+in its provider manifest, so the daemon offers the key-based providers only.
 
-The service binds its omp extension read-only into
-`/var/lib/paseo/.omp/agent/extensions/magpie.ts`, without generating or replacing
-omp's model/settings files. It is the only omp extension the daemon gets. The
-module sets `PI_MAGPIE_URL` for it: the local gateway over loopback when the same
-host runs `magpie.service`, and otherwise the gateway's fully qualified MagicDNS
-name from [the tailnet constant](../modules/constants/tailnet.nix), because the
-resolver does not expand the bare name. Paseo ships its built-in omp provider
-disabled and owns `$PASEO_HOME/config.json` for its own state, so enabling that
-provider is a manual change in that file, outside this repository. Paseo drives omp
-over RPC
-(`omp --mode rpc-ui`), so omp must be on the service's PATH. Select the `magpie`
-models in Paseo's omp provider to reach Codex, Cursor, DeepSeek, and OpenRouter
-through the gateway. Cursor is available through omp even though Paseo exposes no
-Cursor harness, and because no Codex CLI is installed either, omp is the provider
-to dispatch through.
-See [Magpie and omp](magpie.md#omp-on-the-client-hosts).
+The service binds a read-only `models.yml` into
+`/var/lib/paseo/.omp/agent/models.yml`, declaring the DeepSeek and OpenRouter
+providers and reading each key by path. It does not generate or replace omp's
+`config.yml`. Paseo ships its built-in omp provider disabled and owns
+`$PASEO_HOME/config.json` for its own state, so enabling that provider is a manual
+change in that file, outside this repository. Paseo drives omp over RPC
+(`omp --mode rpc-ui`), so omp must be on the service's PATH. Select the DeepSeek or
+OpenRouter models in Paseo's omp provider. Cursor and Codex are not available to
+the daemon: they need an interactive `omp /login`, which only a desktop user can
+run. See [omp and its providers](omp.md).
 
 Use `sudo systemctl restart paseo-daemon.service` for package, launch-environment,
 or startup-setting changes. It interrupts running work. `paseo reload` can apply
@@ -198,8 +188,8 @@ that interface to exist before Paseo starts; add its service dependency there.
 ## Verification scope
 
 Before use on a host, verify the service starts after reboot, the daemon's omp can
-discover and run `magpie` models through the gateway, project permissions work
-for `paseo`, an SSH client can reach the API, and a phone can pair and reconnect
+discover and run its DeepSeek and OpenRouter models, project permissions work for
+`paseo`, an SSH client can reach the API, and a phone can pair and reconnect
 after a service restart. Confirm that stopping the service ends its agent and
 terminal processes. Configuration evaluation and package builds alone cannot
 prove these runtime behaviors.

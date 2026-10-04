@@ -8,7 +8,6 @@
       i18n
       substituter-cn
       sing-box
-      magpie
       paseo-daemon
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;

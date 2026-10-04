@@ -30,10 +30,14 @@ creation_rules:
           - *asymmetry
           - *box
           - *parallax
-  # Only the gateway host reads the provider credentials; the maintainer can
-  # edit all credentials in this shared document.
-  - path_regex: ^modules/secrets/agent-providers\.yaml$
+  # Every host that runs omp resolves the DeepSeek and OpenRouter keys from this
+  # document at request time. Codex and Cursor sign in per host through
+  # `omp /login`, so no OAuth credential belongs here. The maintainer keeps the
+  # document editable.
+  - path_regex: ^modules/secrets/omp-providers\.yaml$
     key_groups:
       - age:
           - *noa
           - *box
+          - *asymmetry
+          - *parallax

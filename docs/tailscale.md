@@ -59,10 +59,10 @@ resolution is unchanged. Enable MagicDNS in the tailnet to use peer names.
 
 MagicDNS answers fully qualified names only, and a search domain does not help
 here: the `resolve` NSS module answers "not found" for a bare label before `dns`,
-the only module that applies a search list, ever runs. Consumers therefore address a
-peer fully qualified, expanding it with `constants.getTailnetFqdn` from
-[modules/constants/tailnet.nix](../modules/constants/tailnet.nix). The omp extension
-receives that address through `PI_MAGPIE_URL`.
+the only module that applies a search list, ever runs. A consumer therefore
+addresses a peer fully qualified; `constants.getTailnetFqdn` in
+[modules/constants/tailnet.nix](../modules/constants/tailnet.nix) expands a peer
+name for a module that needs the address.
 
 ### Routes
 
@@ -93,19 +93,17 @@ would need inbound and endpoint-preference rules again.
 `modules/services/sing-box.nix` opens UDP 41641 for the endpoint's peer transport,
 because peers reach that port on the host's own addresses rather than through the
 tunnel. Every other port belongs to the service that listens on it, and each one
-admits only the tailnet interface `tailnet0`: `ssh` opens 22, `magpie` 3425 and
-3430, `paseo-daemon` 6767. A service that is not imported opens nothing, and none
-of them needs `openFirewall`.
+admits only the tailnet interface `tailnet0`: `ssh` opens 22 and `paseo-daemon`
+6767. A service that is not imported opens nothing, and none of them needs
+`openFirewall`.
 
 The firewall, not the route rules, is what admits inbound peer traffic. Every
 service binds all interfaces so it is reachable on the host's tailnet address —
-`magpie.service` takes `0.0.0.0:3425` and `0.0.0.0:3430`, the Paseo daemon
-`0.0.0.0:6767` — and loopback keeps working. Nothing is admitted on a LAN or
-public interface.
+the Paseo daemon takes `0.0.0.0:6767` — and loopback keeps working. Nothing is
+admitted on a LAN or public interface.
 
-Magpie's dummy API key is not an authentication boundary, and the browser UI's
-sign-in link is its only credential, so restrict these ports with tailnet grants;
-configure the Paseo password before relying on direct access.
+Restrict 6767 with tailnet grants and configure the Paseo password before relying
+on direct access.
 
 ## Pilot verification
 
@@ -114,12 +112,9 @@ is filled in and deployment is authorized, verify peer-name DNS, SSH in both
 directions, direct versus DERP connectivity, and ordinary internet proxy
 behavior on each enrolled host. Confirm workplace NetBird login still works
 through the desktop UI, and exercise omp's model selection, streaming, search and
-a tool-calling conversation through Magpie. Check reboot persistence and how a
-sing-box restart interrupts peer connections before expanding the pilot. Verify
-that a peer really reaches box's gateway on `http://box.leaffish-halfmoon.ts.net:3425/v1/models`, its
-browser UI on 3430 and the Paseo daemon on 6767, and that the tailnet node names
-are what the client extension expects, instead of trusting evaluation alone. See
-the
+a tool-calling conversation. Check reboot persistence and how a sing-box restart
+interrupts peer connections before expanding the pilot. Verify that a peer really
+reaches the Paseo daemon on 6767, instead of trusting evaluation alone. See the
 upstream
 [endpoint](https://sing-box.sagernet.org/configuration/endpoint/tailscale/),
 [DNS server](https://sing-box.sagernet.org/configuration/dns/server/tailscale/)

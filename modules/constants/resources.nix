@@ -9,10 +9,13 @@
       getSecretPath = fileName: "${inputs.self}/modules/secrets/${fileName}";
 
       # Runtime paths a Home Manager consumer reads by path, so a user-level
-      # program never needs its own decryption key. Empty today: every secret is
-      # consumed by a NixOS service, and magpie.service alone holds the provider
-      # credentials. Add an entry here with the first Home Manager consumer.
-      userSecretPaths = { };
+      # program never needs its own decryption key. The omp aspect decrypts the
+      # DeepSeek and OpenRouter keys for the desktop user at these paths, and
+      # its models.yml resolves them with `!cat` when a request needs one.
+      userSecretPaths = {
+        ompDeepseekApiKey = "/run/secrets/omp-deepseek-api-key";
+        ompOpenrouterApiKey = "/run/secrets/omp-openrouter-api-key";
+      };
     };
   };
 }
