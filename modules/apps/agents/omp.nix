@@ -99,12 +99,33 @@ in
 
         imports = [ inputs.omp.homeManagerModules.default ];
 
-        # Upstream owns the agent directory and config.yml. This adds the
-        # provider declarations and selects a model that is always authenticated
-        # by a key; Codex and Cursor become selectable after `omp /login`.
+        # Upstream owns the agent directory and installs config.yml as a
+        # writable copy overwritten on every switch, so every setting worth
+        # keeping is declared here; a runtime /settings change is lost at the
+        # next switch. Prewalk plans on the session's active model - the default
+        # role - and then hands the session to smol, so the default selects the
+        # Cursor OAuth model that a host unlocks with `omp /login cursor`, while
+        # smol stays on the always key-authenticated DeepSeek provider. Without
+        # that login the default role does not resolve, so omp falls back to a
+        # provider default and armless prewalk. setupVersion is the onboarding
+        # wizard's completion marker (omp's CURRENT_SETUP_VERSION); raise it when
+        # omp raises that constant, or the wizard reappears.
         programs.omp = {
           enable = lib.mkDefault true;
-          settings.modelRoles.default = lib.mkDefault "deepseek/deepseek-v4-pro";
+          settings = {
+            modelRoles = {
+              default = lib.mkDefault "cursor/claude-sonnet-5-5:high";
+              smol = "deepseek/deepseek-v4-flash:high";
+              plan = "cursor/claude-sonnet-5-5:high";
+            };
+            setupVersion = 2;
+            symbolPreset = "nerd";
+            theme.dark = "dark-rose-pine";
+            hideThinkingBlock = true;
+            prewalk.enabled = true;
+            github.enabled = true;
+            task.isolation.enabled = true;
+          };
         };
 
         home = lib.mkIf config.programs.omp.enable {
