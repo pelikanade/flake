@@ -1,9 +1,6 @@
-{ config, inputs, ... }:
-let
-  clientPackages = config.pi.packages;
-in
+{ inputs, ... }:
 {
-  flake.modules.aspects.paseo-daemon.imports = [ inputs.self.modules.aspects.pi ];
+  flake.modules.aspects.paseo-daemon.imports = [ inputs.self.modules.aspects.omp ];
 
   flake.modules.nixos.paseo-daemon =
     {
@@ -14,7 +11,6 @@ in
     }:
     let
       paseoDaemon = pkgs.selfPackages.paseo-daemon;
-      agentPackages = clientPackages pkgs;
     in
     {
       users.groups.paseo = { };
@@ -27,7 +23,9 @@ in
         shell = pkgs.bashInteractive;
       };
 
-      environment.systemPackages = [ paseoDaemon ] ++ agentPackages;
+      # The unit takes the whole system profile as its PATH, so the agents it
+      # spawns see everything the omp aspect installs there, omp included.
+      environment.systemPackages = [ paseoDaemon ];
 
       # Reachable on the tailnet and on loopback only. `tailnet0` is the system
       # interface of the sing-box Tailscale endpoint.
@@ -41,17 +39,9 @@ in
           "network-online.target"
         ];
 
-        path = [
-          paseoDaemon
-        ]
-        ++ agentPackages
-        ++ (with pkgs; [
-          bashInteractive
-          git
-          openssh
-          nix
-          ripgrep
-        ]);
+        # systemd's path option replaces the unit's PATH rather than extending it,
+        # so point it at the system profile instead of listing packages again.
+        path = [ config.system.path ];
 
         environment = {
           HOME = "/var/lib/paseo";
@@ -71,8 +61,11 @@ in
               "http://127.0.0.1:3425"
             else
               "http://${config.constants.getTailnetFqdn "box"}:3425";
-          # Leave relay enablement in writable config.json: pairing saves it
-          # there, and a deployment env override would prevent later changes.
+          # Paseo ships its built-in omp provider disabled, and it rewrites this
+          # daemon's config.json for pairing and relay state. Enabling the provider
+          # is a manual change there, outside this repository. Leave relay
+          # enablement there too: a deployment env override would prevent later
+          # changes.
         };
 
         serviceConfig = {
@@ -81,14 +74,14 @@ in
           Group = "paseo";
           StateDirectory = [
             "paseo"
-            "paseo/.pi/agent/extensions"
+            "paseo/.omp/agent/extensions"
           ];
           StateDirectoryMode = "0700";
           WorkingDirectory = "/var/lib/paseo";
-          # Paseo holds no provider credentials. Its Pi extension reaches every
+          # Paseo holds no provider credentials. Its omp extension reaches every
           # model through the local Magpie gateway, which owns them.
           BindReadOnlyPaths = [
-            "${../apps/agents/magpie.ts}:/var/lib/paseo/.pi/agent/extensions/magpie.ts"
+            "${../apps/agents/magpie.ts}:/var/lib/paseo/.omp/agent/extensions/magpie.ts"
           ];
           ExecStart = "${lib.getExe paseoDaemon} daemon run";
           Restart = "on-failure";

@@ -14,13 +14,14 @@
     zswap
 
     _1password
-    agents
+    agent-desktops
     fcitx5
     firefox
     fish
     flatpak
     gdm
     git
+    herdr
     keyring
     kitty
     neovim
@@ -28,6 +29,7 @@
     hyprland
     noctalia
     obsidian
+    omp
     sing-box
     splayer-next
     starship

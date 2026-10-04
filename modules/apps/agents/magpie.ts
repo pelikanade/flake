@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ProviderModelConfig } from "@oh-my-pi/pi-coding-agent";
 
 interface GatewayModel {
   id: string;
@@ -12,18 +12,18 @@ interface GatewayModel {
   modalities?: { input?: ("text" | "image")[] };
 }
 
-// Pi's Magpie gateway extension: it registers the gateway as a provider and
+// omp's Magpie gateway extension: it registers the gateway as a provider and
 // puts search on the requests that go to it. The gateway's public catalog
-// supplies native APIs, context windows and thinking levels; Pi's local
-// settings and models.json stay user-owned. Consumers set PI_MAGPIE_URL:
-// loopback on the gateway host, and the gateway's fully qualified MagicDNS name
-// elsewhere, because the resolver does not expand the bare name below.
-export default async function (pi: ExtensionAPI) {
+// supplies native APIs, context windows and thinking levels; omp's local
+// settings and models stay user-owned. Consumers set PI_MAGPIE_URL: loopback on
+// the gateway host, and the gateway's fully qualified MagicDNS name elsewhere,
+// because the resolver does not expand the bare name below.
+export default function (pi: ExtensionAPI) {
   const gateway = (process.env.PI_MAGPIE_URL ?? "http://box:3425").replace(/\/$/, "");
-  const discover = async (signal?: AbortSignal): Promise<ProviderModelConfig[]> => {
+  const discover = async (): Promise<ProviderModelConfig[]> => {
     const response = await fetch(`${gateway}/v1/models`, {
       headers: { Authorization: "Bearer magpie", "User-Agent": "pi-magpie/1" },
-      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(5000)]) : AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) throw new Error(`Magpie catalog returned HTTP ${response.status}`);
     const catalog = await response.json() as { data: GatewayModel[] };
@@ -55,34 +55,30 @@ export default async function (pi: ExtensionAPI) {
     });
   };
 
-  // The gateway is a tailnet service, so Pi can start before sing-box, tailnet
-  // DNS or magpie itself is ready. Register the provider with no models instead
-  // of failing the whole extension: refreshModels fills the list once the
-  // gateway answers, and a session start says what went wrong.
-  let startupError: string | undefined;
-  const models = await discover().catch((error: unknown) => {
-    startupError = error instanceof Error ? error.message : String(error);
-    return [] as ProviderModelConfig[];
-  });
-
+  // Loading must not wait on the gateway: it is a tailnet service, so omp can
+  // start before sing-box, tailnet DNS or magpie itself is ready. Register the
+  // provider with no static roster; omp calls fetchDynamicModels to discover and
+  // cache the catalog once the gateway answers, so an unreachable gateway never
+  // blocks extension loading or delays a sibling extension's registration. A
+  // session start reports a gateway that is still unreachable.
   pi.registerProvider("magpie", {
     name: "Magpie", baseUrl: `${gateway}/v1`, api: "openai-completions", apiKey: "magpie",
-    models,
-    refreshModels: (context) => discover(context.signal),
+    models: [],
+    // omp refreshes a provider's list through fetchDynamicModels. Pi 1.0 named
+    // this refreshModels, which exists in omp only on the session, not here.
+    fetchDynamicModels: () => discover(),
   });
 
-  if (startupError) {
-    pi.on("session_start", async (_event, ctx) => {
-      try {
-        await discover();
-      } catch {
-        ctx.ui.notify(
-          `Magpie is unreachable at ${gateway}: ${startupError}`,
-          "warning",
-        );
-      }
+  pi.on("session_start", (_event, ctx) => {
+    if (ctx.agent.kind !== "main") return;
+    // Probe without delaying the session; only a failure needs to surface.
+    void discover().catch((error: unknown) => {
+      ctx.ui.notify(
+        `Magpie is unreachable at ${gateway}: ${error instanceof Error ? error.message : String(error)}`,
+        "warning",
+      );
     });
-  }
+  });
 
   // Magpie runs the server-side search tool; Pi retains its ordinary tools.
   pi.on("before_provider_request", (event, ctx) => {

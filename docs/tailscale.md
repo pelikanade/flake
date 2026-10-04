@@ -61,7 +61,7 @@ MagicDNS answers fully qualified names only, and a search domain does not help
 here: the `resolve` NSS module answers "not found" for a bare label before `dns`,
 the only module that applies a search list, ever runs. Consumers therefore address a
 peer fully qualified, expanding it with `constants.getTailnetFqdn` from
-[modules/constants/tailnet.nix](../modules/constants/tailnet.nix). The Pi extension
+[modules/constants/tailnet.nix](../modules/constants/tailnet.nix). The omp extension
 receives that address through `PI_MAGPIE_URL`.
 
 ### Routes
@@ -113,7 +113,7 @@ Configuration checks and `sing-box check` do not enroll a host. After the real k
 is filled in and deployment is authorized, verify peer-name DNS, SSH in both
 directions, direct versus DERP connectivity, and ordinary internet proxy
 behavior on each enrolled host. Confirm workplace NetBird login still works
-through the desktop UI, and exercise Pi's model selection, streaming, search and
+through the desktop UI, and exercise omp's model selection, streaming, search and
 a tool-calling conversation through Magpie. Check reboot persistence and how a
 sing-box restart interrupts peer connections before expanding the pilot. Verify
 that a peer really reaches box's gateway on `http://box.leaffish-halfmoon.ts.net:3425/v1/models`, its

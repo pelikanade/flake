@@ -1,13 +1,11 @@
 { inputs, lib, ... }:
 let
-  # The CLIs Magpie drives: codex and cursor-agent refresh the logins it seeds,
-  # and pi is the harness it serves to agents through the gateway.
+  # The CLIs Magpie drives: codex and cursor-agent refresh the logins it seeds.
   providerPath =
     pkgs:
     (with inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}; [
       codex
       cursor-agent
-      pi
     ])
     ++ (with pkgs; [
       bubblewrap

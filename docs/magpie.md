@@ -2,9 +2,9 @@
 
 The mode has two sides. `box` runs the one `magpie.service`, which holds every
 provider credential and can refresh it. Every other host that imports
-`inputs.self.modules.aspects.pi` installs Pi and a Pi extension,
-and reaches the gateway over the tailnet. The full workstation `agents` aspect
-already includes the client side. The normal workflow is Paseo → Pi → Magpie on
+`inputs.self.modules.aspects.omp` installs omp and an omp extension,
+and reaches the gateway over the tailnet. The workstation role already composes
+the client aspects. The normal workflow is Paseo → omp → Magpie on
 box → Codex, Cursor, DeepSeek, or OpenRouter. OpenCode is not provisioned.
 
 The machine that runs `magpie.service` must be an authorized recipient of
@@ -32,7 +32,7 @@ with mode `0400`, and `magpie.service` is the only consumer: systemd
 provider template and the UI key, and Magpie's own declarative tmpfiles `f^` rules
 create its
 writable Codex and Cursor caches under `/var/lib/magpie` from those credentials,
-only when missing. No agent account, no Pi process, and no Paseo service can open
+only when missing. No agent account, no omp process, and no Paseo service can open
 the files or inherits a copy. No token enters Nix evaluation or the store, and no
 initializer script renders credentials into a user's home.
 
@@ -79,44 +79,44 @@ The browser UI edits runtime state in the service home. Restart reapplies the
 managed provider/plugin/auth declarations. Change managed policy in Nix and
 credentials with SOPS. Do not launch a second gateway on port 3425 anywhere.
 
-## Pi on the client hosts
+## omp on the client hosts
 
-The `pi` aspect installs Pi with its runtime tools and declares `programs.pi`, a
-Home Manager module that mirrors Pi's agent directory as Pi 1.0 reads it:
-`settings`, `keybindings`, `mcpServers`, `models`, `context`, `systemPrompt`,
-`appendSystemPrompt`, `extensions`, `prompts` and `themes`, written under
-`<configDir>` with `PI_CODING_AGENT_DIR` set when it is not the default. It does
-not vendor npm packages, and it leaves skills and `auth.json` alone. Importing
-the aspect enables the program, installs the `magpie` extension and sets
-`defaultProvider = "magpie"`; every other option stays at Pi's default until a
-machine declares it.
+The `omp` aspect installs omp with the tools it needs and imports upstream's
+`programs.omp`, which owns the agent directory: it installs the package, takes
+`settings` (written to `config.yml` as a writable copy, because omp flocks and
+rewrites it) and enables the program. The aspect adds only what upstream does not
+manage: it installs the `magpie` extension under `<configDir>/extensions`, sets
+`modelRoles.default = "magpie/cursor/auto"`, and leaves skills and stored logins
+alone.
 
 That extension registers `magpie` from the gateway's public `/v1/models`
 catalog, including native Chat/Responses/Messages APIs, context windows, output
-limits, and thinking levels. It is the only model provider the installed Pi has:
-no API key is provisioned for Pi itself.
+limits, and thinking levels. It is the only model provider the installed omp has:
+no API key is provisioned for omp itself.
 
-The extension reaches the gateway at `PI_MAGPIE_URL`, which the `pi` module sets to
+The extension reaches the gateway at `PI_MAGPIE_URL`, which the `omp` module sets to
 `http://box.<tailnetDnsName>:3425` from
 [the tailnet constant](../modules/constants/tailnet.nix): MagicDNS answers fully
 qualified names, and the resolver does not expand the bare name. The tailnet must
-have MagicDNS enabled and the gateway must be reachable when Pi loads. A host that
+have MagicDNS enabled, but the gateway need not be reachable when omp loads: the
+extension registers the provider immediately, omp discovers and caches the catalog
+when the gateway answers, and a session start warns if it still cannot. A host that
 runs its own gateway sets `PI_MAGPIE_URL` to its local address instead; the Paseo
 daemon does that automatically when `magpie.service` is present on the same
-machine. Select a Magpie model in Paseo's Pi model picker, or start it directly:
+machine. Select a Magpie model in Paseo's model picker, or start omp directly:
 
 ```sh
-pi --provider magpie --model cursor/auto
-pi --list-models magpie
+omp --model magpie/cursor/auto
+omp models magpie
 ```
 
-Client hosts install Pi and its runtime tools only. `codex` and `cursor-agent`
+Client hosts install omp only. `codex` and `cursor-agent`
 belong to the gateway host, where Magpie refreshes their logins, so Paseo has no
 second harness to offer. The extension also offers web search on Magpie requests,
-preserving Pi's other tools. Magpie performs search itself or delegates it to a
+preserving omp's other tools. Magpie performs search itself or delegates it to a
 configured search-capable account (such as Codex), or a search API. Search
 consumes that account's allowance. A search offer alone does not establish that
-the available accounts can perform it. Pi's displayed cost metadata is zero
+the available accounts can perform it. omp's displayed cost metadata is zero
 because this public catalog does not publish billing rates; it is not a statement
 that the upstream request is free.
 
@@ -126,12 +126,13 @@ Paseo holds no provider credentials and depends on no local gateway. Paseo
 Desktop launches tools as the desktop user and uses the `magpie` extension
 installed in that user's home. The standalone [Paseo daemon](paseo-daemon.md)
 runs as `paseo`, with a separate home, and receives only the `magpie` extension
-bound read-only into its Pi extensions directory. Both talk to box's gateway over
+bound read-only into its omp extensions directory. Both talk to box's gateway over
 the tailnet.
 
-Paseo v0.10.2 exposes Codex and Pi where their CLIs are installed. Client hosts
-carry only Pi, so Pi is Paseo's sole provider there, and Cursor reaches Paseo
-through Pi's `magpie` provider even though Paseo registers no Cursor harness.
+Paseo v0.10.2 ships omp as a built-in provider, off by default, and drives it over
+RPC rather than ACP. The daemon turns it on for its own home, so omp is Paseo's
+provider there, and Cursor reaches Paseo through omp's `magpie` provider even
+though Paseo registers no Cursor harness of its own.
 
 ## Verification
 
@@ -141,11 +142,11 @@ from a client host:
 ```sh
 systemctl status magpie.service          # on box
 curl --fail --silent http://box.leaffish-halfmoon.ts.net:3425/v1/models | head   # from a tailnet peer
-pi --list-models magpie                  # on a client host
+omp models magpie                        # on a client host
 ```
 
 `/v1/models` lists what the configured providers expose; it does not prove that an
 upstream account still accepts requests. Use `journalctl -u magpie.service` for
 startup and login failures, and keep its browser sign-in link and any credential
 output out of shared logs. Model availability can also be inspected through
-Paseo's Pi provider, whose RPC discovery reads the same catalog.
+Paseo's omp provider, whose RPC discovery reads the same catalog.

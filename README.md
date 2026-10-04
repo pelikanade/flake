@@ -4,7 +4,7 @@ This repository manages personal NixOS workstations and servers, including their
 
 The desktop retains the Rose Pine Moon theme and uses Sway-style window controls. See [desktop bindings and migration notes](docs/hyprland.md).
 
-The [Magpie gateway](docs/magpie.md) on box owns the coding agents' encrypted credentials, and client hosts run Pi against it over the tailnet. Machines can also host coding agents for remote desktop and phone clients with the standalone [Paseo daemon](docs/paseo-daemon.md).
+The [Magpie gateway](docs/magpie.md) on box owns the coding agents' encrypted credentials, and client hosts run omp against it over the tailnet. Machines can also host coding agents for remote desktop and phone clients with the standalone [Paseo daemon](docs/paseo-daemon.md).
 
 Asymmetry and Parallax have a [Tailscale pilot](docs/tailscale.md) using sing-box's native endpoint, declared with the rest of the proxy configuration in [the sing-box module](docs/sing-box.md) and kept in the encrypted document only where it is secret. NetBird's desktop UI and its local daemon remain for workplace login.
 
