@@ -12,6 +12,7 @@
         llmAgents."grok-bot"
         pkgs.selfPackages.paseo-desktop
         pkgs.selfPackages.deepseek-harness-desktop
+        pkgs.selfPackages.tern
       ];
     };
 }
