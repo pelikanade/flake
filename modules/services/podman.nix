@@ -7,7 +7,6 @@
       environment.systemPackages = [ pkgs.docker-client ];
 
       virtualisation = {
-        docker.enable = false;
         podman = {
           enable = true;
           dockerSocket.enable = true;

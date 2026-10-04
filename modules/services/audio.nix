@@ -7,6 +7,5 @@ _: {
       pulse.enable = true;
       wireplumber.enable = true;
     };
-    services.pulseaudio.enable = false;
   };
 }
