@@ -73,7 +73,8 @@
             output = "DP-1";
             mode = "3840x2160@120";
             position = "1440x416";
-            scale = 1.333333;
+            # 150% matches the 32" 1440p side display's pixel density (93 ppi).
+            scale = 1.5;
             vrr = 3;
           }
           {
