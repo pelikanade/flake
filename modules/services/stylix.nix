@@ -1,70 +1,4 @@
 { inputs, ... }:
-let
-  noctaliaGreeterTarget =
-    {
-      config,
-      lib,
-      options,
-      ...
-    }:
-    {
-      options.stylix.targets.noctalia-greeter.enable =
-        config.lib.stylix.mkEnableTarget "Noctalia Greeter" true;
-
-      config = lib.optionalAttrs (options.programs ? noctalia-greeter) (
-        lib.mkIf
-          (
-            config.stylix.enable
-            && config.stylix.targets.noctalia-greeter.enable
-            && config.programs.noctalia-greeter.enable
-          )
-          {
-            programs.noctalia-greeter.settings =
-              let
-                colors = config.lib.stylix.colors.withHashtag;
-              in
-              {
-                appearance = {
-                  scheme = "Synced";
-                  scheme_selector_position = "hidden";
-                  theme_mode = config.stylix.polarity;
-                  font_family = config.stylix.fonts.sansSerif.name;
-
-                  palette = {
-                    primary = colors.base0D;
-                    on_primary = colors.base00;
-                    secondary = colors.base0E;
-                    on_secondary = colors.base00;
-                    tertiary = colors.base0B;
-                    on_tertiary = colors.base00;
-                    error = colors.base08;
-                    on_error = colors.base00;
-                    surface = colors.base00;
-                    on_surface = colors.base05;
-                    surface_variant = colors.base01;
-                    on_surface_variant = colors.base04;
-                    outline = colors.base03;
-                    shadow = colors.base00;
-                    hover = colors.base0C;
-                    on_hover = colors.base00;
-                  };
-
-                  wallpaper = {
-                    path = toString config.stylix.image;
-                    fill_mode = "crop";
-                  };
-                };
-
-                cursor = {
-                  theme = config.stylix.cursor.name;
-                  size = config.stylix.cursor.size;
-                  path = "${config.stylix.cursor.package}/share/icons";
-                };
-              };
-          }
-      );
-    };
-in
 {
   flake-file.inputs.stylix = {
     url = "github:nix-community/stylix/release-26.05";
@@ -78,7 +12,6 @@ in
     {
       imports = [
         inputs.stylix.nixosModules.stylix
-        noctaliaGreeterTarget
       ];
 
       stylix = {

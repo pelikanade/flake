@@ -85,7 +85,6 @@ in
   };
 
   config = {
-    flake.modules.generic.aspect-interface = aspectModule;
     flake.modules.aspects = generatedAspects;
     flake.nixosConfigurations = lib.mapAttrs materializeMachine config.machines;
   };

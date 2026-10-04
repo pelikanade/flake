@@ -11,7 +11,6 @@
     };
 
     security.pam.services = {
-      greetd.u2f.enable = true;
       login.u2f.enable = true;
       sudo.u2f.enable = true;
     };

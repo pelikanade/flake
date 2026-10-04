@@ -12,7 +12,7 @@
       ];
       config.common = {
         default = [ "gtk" ];
-        "org.freedesktop.impl.portal.Secret" = [ "kwallet" ];
+        "org.freedesktop.impl.portal.Secret" = [ "gnome-keyring" ];
       };
     };
   };
