@@ -121,7 +121,8 @@ document from its plaintext is a separate, explicitly authorized operation.
 
 Fold the collected configuration into the machine's `hardware` block, keeping the
 shape the other machines use: the `not-detected.nix` import, kernel module lists,
-CPU microcode and firmware flags, and `hostPlatform` through `lib.mkDefault`. Set
+and CPU microcode and firmware flags. Drop the generated `nixpkgs.hostPlatform`
+line: the machine's own `system` selects the platform. Set
 `networking.hostName` and `domain` to the machine's own identity, since the
 generated facts carry the installer environment's hostname.
 

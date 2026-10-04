@@ -8,9 +8,8 @@
       i18n
       substituter-cn
     ];
-    hardware = { lib, ... }: {
+    hardware = {
       networking.hostName = "installer";
-      nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
     };
   };
 }

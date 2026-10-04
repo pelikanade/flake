@@ -20,7 +20,6 @@
     ];
     hardware =
       {
-        lib,
         modulesPath,
         ...
       }:
@@ -30,7 +29,6 @@
         environment.sessionVariables.LIBGL_ALWAYS_SOFTWARE = "1";
 
         networking.hostName = "stylix-test";
-        nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
         services.displayManager.autoLogin = {
           enable = true;
