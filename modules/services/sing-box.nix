@@ -33,26 +33,64 @@
       # named file. Proxy credentials and endpoints stay in sing-box.yaml, and the
       # tailnet auth key in tailscale.yaml, so no secret reaches Nix evaluation,
       # the store or git.
-      singBoxSecrets = [
-        "snemeow_vless_laxp_server"
-        "snemeow_vless_laxp_uuid"
-        "snemeow_vless_laxp_server_name"
-        "snemeow_vless_jptp_server"
-        "snemeow_vless_jptp_uuid"
-        "snemeow_vless_jptp_server_name"
-        "snemeow_vless_hkgp_server"
-        "snemeow_vless_hkgp_uuid"
-        "snemeow_vless_hkgp_server_name"
-        "snemeow_hysteria2_laxp_server"
-        "snemeow_hysteria2_laxp_password"
-        "snemeow_hysteria2_laxp_server_name"
-        "snemeow_hysteria2_jptp_server"
-        "snemeow_hysteria2_jptp_password"
-        "snemeow_hysteria2_jptp_server_name"
-        "snemeow_hysteria2_hkgp_server"
-        "snemeow_hysteria2_hkgp_password"
-        "snemeow_hysteria2_hkgp_server_name"
+      # The proxy nodes this host dials. One table drives the encrypted secret
+      # names, the selector's tag list and the outbounds, so the three cannot
+      # drift apart.
+      nodes = [
+        {
+          tag = "snemeow-vless-laxp";
+          type = "vless";
+          port = 37327;
+          prefix = "snemeow_vless_laxp";
+        }
+        {
+          tag = "snemeow-vless-jptp";
+          type = "vless";
+          port = 33724;
+          prefix = "snemeow_vless_jptp";
+        }
+        {
+          tag = "snemeow-vless-hkgp";
+          type = "vless";
+          port = 17170;
+          prefix = "snemeow_vless_hkgp";
+        }
+        {
+          tag = "snemeow-hysteria2-laxp";
+          type = "hysteria2";
+          port = 32737;
+          prefix = "snemeow_hysteria2_laxp";
+        }
+        {
+          tag = "snemeow-hysteria2-jptp";
+          type = "hysteria2";
+          port = 14459;
+          prefix = "snemeow_hysteria2_jptp";
+        }
+        {
+          tag = "snemeow-hysteria2-hkgp";
+          type = "hysteria2";
+          port = 41348;
+          prefix = "snemeow_hysteria2_hkgp";
+        }
       ];
+
+      nodeSecrets =
+        node:
+        if node.type == "vless" then
+          [
+            "${node.prefix}_server"
+            "${node.prefix}_uuid"
+            "${node.prefix}_server_name"
+          ]
+        else
+          [
+            "${node.prefix}_server"
+            "${node.prefix}_password"
+            "${node.prefix}_server_name"
+          ];
+
+      singBoxSecrets = lib.concatMap nodeSecrets nodes;
       secret = name: { _secret = config.sops.secrets.${name}.path; };
       secretFrom = file: name: {
         format = "yaml";
@@ -65,14 +103,7 @@
         restartUnits = [ "sing-box.service" ];
       };
 
-      nodeTags = [
-        "snemeow-vless-laxp"
-        "snemeow-vless-jptp"
-        "snemeow-vless-hkgp"
-        "snemeow-hysteria2-laxp"
-        "snemeow-hysteria2-jptp"
-        "snemeow-hysteria2-hkgp"
-      ];
+      nodeTags = map (node: node.tag) nodes;
 
       vlessNode =
         {
@@ -244,36 +275,14 @@
             type = "direct";
             tag = "direct";
           }
-          (vlessNode {
-            tag = "snemeow-vless-laxp";
-            port = 37327;
-            prefix = "snemeow_vless_laxp";
-          })
-          (vlessNode {
-            tag = "snemeow-vless-jptp";
-            port = 33724;
-            prefix = "snemeow_vless_jptp";
-          })
-          (vlessNode {
-            tag = "snemeow-vless-hkgp";
-            port = 17170;
-            prefix = "snemeow_vless_hkgp";
-          })
-          (hysteria2Node {
-            tag = "snemeow-hysteria2-laxp";
-            port = 32737;
-            prefix = "snemeow_hysteria2_laxp";
-          })
-          (hysteria2Node {
-            tag = "snemeow-hysteria2-jptp";
-            port = 14459;
-            prefix = "snemeow_hysteria2_jptp";
-          })
-          (hysteria2Node {
-            tag = "snemeow-hysteria2-hkgp";
-            port = 41348;
-            prefix = "snemeow_hysteria2_hkgp";
-          })
+        ]
+        ++ map (
+          node:
+          (if node.type == "vless" then vlessNode else hysteria2Node) {
+            inherit (node) tag port prefix;
+          }
+        ) nodes
+        ++ [
           {
             type = "selector";
             tag = "proxy";
