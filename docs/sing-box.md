@@ -1,6 +1,8 @@
 # sing-box
 
-The proxy platform every host runs. The configuration is declared in
+The proxy platform the tailnet hosts run; a host that should join the tailnet
+without it needs its own `tailscaled` module, which does not exist yet. The
+configuration is declared in
 [modules/services/sing-box.nix](../modules/services/sing-box.nix) as
 `services.sing-box.settings`; only values that must stay encrypted live in
 [modules/secrets/sing-box.yaml](../modules/secrets/sing-box.yaml).

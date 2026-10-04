@@ -15,10 +15,10 @@ Asymmetry, Parallax and box all read both and all run the endpoint, so filling t
 auth key enrolls every host that runs sing-box, not just the two workstations. Use a
 reusable auth key, because the same key is read by more than one host.
 
-NetBird's workstation UI and its local daemon remain for workplace login. No
-machine has a declared NetBird client
-any more, so joining a NetBird network is a manual step through the desktop UI.
-Personal peer access uses Tailscale.
+NetBird's workstation UI and its local daemon remain for workplace login. The
+workstation machines declare a NetBird client, but no account is provisioned, so
+joining a NetBird network is a manual step through the desktop UI. Personal peer
+access uses Tailscale.
 
 ## Configure the auth key
 
