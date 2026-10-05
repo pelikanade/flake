@@ -52,6 +52,21 @@ RUNPATH; and `tern register` shells out to `git` and the desktop and icon caches
 so the wrapper prepends them to `PATH`. `versionCheckHook` runs the finished
 binary, which is what proves the pin still loads against this nixpkgs.
 
+The browser pane is the other runtime gap. Tern dlopens its web engine, taking
+WPE WebKit if it is present and WebKitGTK otherwise, so `webkitgtk_4_1` joins
+those libraries on the RUNPATH: no other package on NixOS answers to
+`libwebkit2gtk-4.1.so.0`, and the dlopen happens from the executable, which is
+where RUNPATH is read.
+
+WebKitGTK's network process then takes its TLS backend from a GIO module, which
+no RUNPATH can supply, because GIO finds those through `GIO_EXTRA_MODULES`.
+`agent-desktops` enables `services.gnome.glib-networking` for that. It cannot be
+the package's own wrapper environment: Tern registers itself with the path of the
+binary it runs from — the wrapped executable, not the wrapper — so the desktop
+entry and the profile's links launch it without that environment, while the
+session variable reaches every launch. The engine alone works without it; pages
+over HTTPS report `TLS support is not available`.
+
 ## Moving to a newer build
 
 Take the new link, and update `build`, `version` and `hash` in the expression

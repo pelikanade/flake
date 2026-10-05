@@ -23,6 +23,7 @@ let
       libGL,
       libxkbcommon,
       wayland,
+      webkitgtk_4_1,
     }:
     stdenv.mkDerivation (finalAttrs: {
       pname = "tern";
@@ -67,6 +68,12 @@ let
           libGL
           libxkbcommon
           wayland
+          # The browser pane finds its engine by dlopening libWPEWebKit-2.0.so.1
+          # and then libwebkit2gtk-4.1.so.0, which is the name Tern's own error
+          # asks for. No WPE build is provided, so the GTK one is what answers;
+          # webkit2gtk carries the RUNPATHs of everything it needs itself, so its
+          # lib directory is the whole requirement.
+          webkitgtk_4_1
         ])
         "/run/opengl-driver/lib"
       ];
