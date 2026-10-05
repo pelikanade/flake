@@ -102,14 +102,13 @@ in
         # Upstream owns the agent directory and installs config.yml as a
         # writable copy overwritten on every switch, so every setting worth
         # keeping is declared here; a runtime /settings change is lost at the
-        # next switch. Prewalk plans on the session's active model - the default
-        # role - and then hands the session to smol, so the default selects the
-        # Cursor OAuth model that a host unlocks with `omp /login cursor`, while
-        # smol stays on the always key-authenticated DeepSeek provider. Without
-        # that login the default role does not resolve, so omp falls back to a
-        # provider default and armless prewalk. setupVersion is the onboarding
-        # wizard's completion marker (omp's CURRENT_SETUP_VERSION); raise it when
-        # omp raises that constant, or the wizard reappears.
+        # next switch. The default role selects the Cursor OAuth model that a
+        # host unlocks with `omp /login cursor`, while smol stays on the always
+        # key-authenticated DeepSeek provider. Without that login the default
+        # role does not resolve, so omp falls back to a provider default.
+        # setupVersion is the onboarding wizard's completion marker (omp's
+        # CURRENT_SETUP_VERSION); raise it when omp raises that constant, or the
+        # wizard reappears.
         programs.omp = {
           enable = lib.mkDefault true;
           settings = {
@@ -122,7 +121,6 @@ in
             symbolPreset = "nerd";
             theme.dark = "dark-rose-pine";
             hideThinkingBlock = true;
-            prewalk.enabled = true;
             github.enabled = true;
             task.isolation.enabled = true;
           };

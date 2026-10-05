@@ -22,12 +22,11 @@ Codex and Cursor are OAuth providers omp owns: a user runs `omp /login` per host
 and the credential lives in omp's own auth store. That keeps a rotating OAuth
 token out of Nix and the store. `settings.modelRoles.default` selects
 `cursor/claude-sonnet-5-5:high` and `settings.modelRoles.smol` selects
-`deepseek/deepseek-v4-flash:high`: prewalk plans on the active model — the default
-role — and then hands the session to `smol`, so planning runs on Cursor's OAuth
-model while implementation continues on the key-authenticated DeepSeek provider. A
-host that has not run `omp /login cursor` cannot resolve the default role; omp
-falls back to a provider default and prewalk stays unarmed. Search is omp's own
-tool set; the aspect adds nothing to a request.
+`deepseek/deepseek-v4-flash:high`, so the session runs on Cursor's OAuth model
+while small workloads continue on the key-authenticated DeepSeek provider. A host
+that has not run `omp /login cursor` cannot resolve the default role; omp falls
+back to a provider default. Search is omp's own tool set; the aspect adds nothing
+to a request.
 
 `programs.omp.settings` writes `config.yml` as a writable copy, because omp flocks
 and atomically rewrites it. `models.yml` is read-only user configuration, so the
