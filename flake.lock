@@ -165,6 +165,26 @@
         "type": "github"
       }
     },
+    "delta": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791209703,
+        "narHash": "sha256-abnyAJFxDrANA5huj6qxWt3yRNo1lBlEr5uvv8weJX8=",
+        "owner": "zed-industries",
+        "repo": "delta-nix",
+        "rev": "1ab2191e4c87f8f253b42f3a99d1cb70522dd5ac",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zed-industries",
+        "repo": "delta-nix",
+        "type": "github"
+      }
+    },
     "disko": {
       "inputs": {
         "nixpkgs": [
@@ -763,6 +783,7 @@
     },
     "root": {
       "inputs": {
+        "delta": "delta",
         "disko": "disko",
         "flake-file": "flake-file",
         "flake-parts": "flake-parts",

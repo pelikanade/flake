@@ -15,6 +15,7 @@
 
     _1password
     agent-desktops
+    delta
     fcitx5
     firefox
     fish
