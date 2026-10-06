@@ -72,8 +72,9 @@
             output = "DP-1";
             mode = "3840x2160@120";
             position = "1440x416";
-            # 150% matches the 32" 1440p side display's pixel density (93 ppi).
-            scale = 1.5;
+            # 4/3 scaling: a 2880x1620 logical area, larger than 150%'s
+            # 2560x1440, at the cost of matching DP-3's 93 ppi.
+            scale = 1.333333;
             vrr = 3;
           }
           {
