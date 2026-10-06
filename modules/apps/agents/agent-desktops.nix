@@ -24,6 +24,7 @@
         pkgs.selfPackages.paseo-desktop
         pkgs.selfPackages.deepseek-harness-desktop
         pkgs.selfPackages.tern
+        pkgs.selfPackages.magpie
       ];
     };
 }
