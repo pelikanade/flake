@@ -56,22 +56,6 @@ let
         mkdir -p $out/lib/paseo
         node scripts/trace-daemon.mjs > daemon-files.txt
 
-        # The CLI resolves the server's root export dynamically. Trace its
-        # dependencies explicitly, without rewriting upstream's tracer.
-        node --input-type=module >> daemon-files.txt <<'JS'
-        import { nodeFileTrace } from "@vercel/nft";
-        const { fileList } = await nodeFileTrace([
-          "packages/server/dist/server/server/exports.js",
-        ], {
-          base: process.cwd(),
-          ignore: [
-            "sherpa-onnx-*/**", "@mariozechner/clipboard-*/**", "encoding/**",
-            "**/*.test.js", "**/*.e2e.test.js",
-          ],
-        });
-        for (const path of fileList) console.log(path);
-        JS
-
         # node-pty loads the compiled addon and spawn helper through computed
         # paths, outside the static trace.
         find packages/server/node_modules/node-pty/build/Release -maxdepth 1 -type f \

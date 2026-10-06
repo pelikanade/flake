@@ -95,8 +95,11 @@ Use `journalctl -u paseo-daemon.service` for startup failures. The daemon also
 writes `$PASEO_HOME/daemon.log`; redact credentials, pairing offers, and user code
 before sharing either log. The service has no `LoadCredential`: the DeepSeek and
 OpenRouter keys arrive as files owned by the `paseo` account (see
-[credentials](omp.md#credentials)). Current Paseo v0.10.3 does not expose Cursor
-in its provider manifest, so the daemon offers the key-based providers only.
+[credentials](omp.md#credentials)). The pinned Paseo v0.11.0-beta.5 is a
+pre-release; it exposes no Cursor provider in its built-in manifest, and the
+built-in plugin providers it adds — Antigravity (the `agy` CLI) and Muse Code
+(the `muse` CLI) — need their own signed-in executables, which this host does
+not install. Only the key-based providers are therefore usable.
 
 The service binds a read-only `models.yml` into
 `/var/lib/paseo/.omp/agent/models.yml`, declaring the DeepSeek and OpenRouter
