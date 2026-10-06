@@ -31,6 +31,7 @@
     obsidian
     omp
     sing-box
+    skills
     splayer-next
     starship
     udiskie
