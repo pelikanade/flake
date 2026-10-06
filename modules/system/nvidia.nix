@@ -22,6 +22,16 @@
           modesetting.enable = true;
           open = true;
           package = nvidiaPackage;
+          # Kernel suspend notifiers let the open modules restore GPU and display
+          # state themselves across suspend, instead of the driver refusing the
+          # first modeset of a resume and bringing the display back at a low
+          # refresh rate (DP-1 has been returning at 3840x2160@29.97). The
+          # preservation that comes with them writes every video memory
+          # allocation out at suspend, and the open modules back it with tmpfs by
+          # default; point it at the root file system so a VRAM-sized image does
+          # not have to fit in RAM.
+          powerManagement.enable = true;
+          moduleParams.nvidia.NVreg_TemporaryFilePath = "/var/tmp";
         };
       };
 
