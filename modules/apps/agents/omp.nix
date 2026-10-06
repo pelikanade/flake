@@ -102,21 +102,32 @@ in
         # Upstream owns the agent directory and installs config.yml as a
         # writable copy overwritten on every switch, so every setting worth
         # keeping is declared here; a runtime /settings change is lost at the
-        # next switch. The default role selects the Cursor OAuth model that a
-        # host unlocks with `omp /login cursor`, while smol stays on the always
-        # key-authenticated DeepSeek provider. Without that login the default
-        # role does not resolve, so omp falls back to a provider default.
-        # setupVersion is the onboarding wizard's completion marker (omp's
-        # CURRENT_SETUP_VERSION); raise it when omp raises that constant, or the
-        # wizard reappears.
+        # next switch. These are the role assignments and interface settings the
+        # desktop user runs today, mirroring omp's own `omp config list`. The
+        # key-authenticated DeepSeek provider carries the session default and
+        # the cheap roles: smol for small workloads, and the low-thinking
+        # tiny/commit plus memory, task and vision. Cursor's OAuth Sonnet plans
+        # and advises, and Codex's gpt-6-astra:xhigh runs the slow role, so
+        # those three selectors resolve only on a host that ran
+        # `omp /login cursor` and `omp /login openai-codex`. setupVersion is the
+        # onboarding wizard's completion marker (omp's CURRENT_SETUP_VERSION);
+        # raise it when omp raises that constant, or the wizard reappears.
         programs.omp = {
           enable = lib.mkDefault true;
           settings = {
             modelRoles = {
-              default = lib.mkDefault "cursor/claude-sonnet-5-5:high";
-              smol = "deepseek/deepseek-v4-flash:high";
+              default = "deepseek/deepseek-flash:high";
+              smol = "deepseek/deepseek-flash:high";
+              tiny = "deepseek/deepseek-flash:low";
+              commit = "deepseek/deepseek-flash:low";
+              memory = "deepseek/deepseek-flash:high";
+              task = "deepseek/deepseek-flash:high";
+              vision = "deepseek/deepseek-flash:high";
               plan = "cursor/claude-sonnet-5-5:high";
+              advisor = "cursor/claude-sonnet-5-5:high";
+              slow = "openai-codex/gpt-6-astra:xhigh";
             };
+            composer.shape = "claude";
             setupVersion = 2;
             symbolPreset = "nerd";
             theme.dark = "dark-rose-pine";
