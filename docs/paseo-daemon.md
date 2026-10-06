@@ -95,7 +95,7 @@ Use `journalctl -u paseo-daemon.service` for startup failures. The daemon also
 writes `$PASEO_HOME/daemon.log`; redact credentials, pairing offers, and user code
 before sharing either log. The service has no `LoadCredential`: the DeepSeek and
 OpenRouter keys arrive as files owned by the `paseo` account (see
-[credentials](omp.md#credentials)). Current Paseo v0.10.2 does not expose Cursor
+[credentials](omp.md#credentials)). Current Paseo v0.10.3 does not expose Cursor
 in its provider manifest, so the daemon offers the key-based providers only.
 
 The service binds a read-only `models.yml` into
