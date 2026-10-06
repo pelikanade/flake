@@ -83,10 +83,8 @@ let
         # Scheme registration shadows the packaged desktop item. Use the profile
         # command, not a store path that becomes stale after an upgrade and GC.
         substituteInPlace internal/gui/scheme_linux.go \
-          --replace-fail 'exe, err := os.Executable()
-        	if err != nil {
-        		return err
-        	}' 'exe := "magpie"'
+          --replace-fail $'exe, err := os.Executable()\n\tif err != nil {\n\t\treturn err\n\t}' \
+          'exe := "magpie"'
 
         # Login startup must retain the GTK wrapper.
         substituteInPlace internal/autostart/autostart.go \
