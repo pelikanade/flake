@@ -18,20 +18,21 @@ let
       desktop-file-utils,
       coreutils,
       dbus,
+      python3,
       versionCheckHook,
     }:
     buildGoModule (finalAttrs: {
       pname = "magpie";
-      version = "0.1.726";
+      version = "0.1.1092";
 
       src = fetchFromGitHub {
         owner = "yetone";
         repo = "magpie";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-j7D8ZHPHYG1RIPPP/AYeA2C1QnfWMywiuCzLmbXJN54=";
+        hash = "sha256-2LrIgl8rZAVS8aOL+iQ43dwSGl860IHHX6bffPUqZ7g=";
       };
 
-      vendorHash = "sha256-XEaHZVw3co0yUV6fLUlSkvg9LlroKFj2B2sjMW1e6BU=";
+      vendorHash = "sha256-dqFc8UTREaRFt3G3DS7IllBx8ysOlcA5JUqGaQ/XlcI=";
 
       subPackages = [ "." ];
       tags = [
@@ -79,8 +80,16 @@ let
           --replace-fail 'crashed := !h.alive()' \
           'crashed := !h.alive() || errors.Is(err, syscall.EPIPE)'
 
-        # Desktop links and login startup must retain the GTK wrapper.
-        substituteInPlace internal/gui/scheme_linux.go internal/autostart/autostart.go \
+        # Scheme registration shadows the packaged desktop item. Use the profile
+        # command, not a store path that becomes stale after an upgrade and GC.
+        substituteInPlace internal/gui/scheme_linux.go \
+          --replace-fail 'exe, err := os.Executable()
+        	if err != nil {
+        		return err
+        	}' 'exe := "magpie"'
+
+        # Login startup must retain the GTK wrapper.
+        substituteInPlace internal/autostart/autostart.go \
           --replace-fail 'exe, err := os.Executable()' \
           'exe, err := os.Executable(); if filepath.Base(exe) == ".magpie-wrapped" { exe = filepath.Join(filepath.Dir(exe), "magpie") }'
       '';
@@ -90,6 +99,16 @@ let
         bun
       ];
       preCheck = ''
+        export MAGPIE_BUN="${lib.getExe bun}"
+        # Keep upstream checks aligned with the profile-based desktop entry.
+        substituteInPlace internal/gui/scheme_linux_test.go \
+          --replace-fail 'exe, err := os.Executable()' '_, err := os.Executable()' \
+          --replace-fail '"Exec="+exe+" %u\n"' '"Exec=magpie %u\n"'
+        substituteInPlace internal/agent/omp_wsl_key_test.go \
+          --replace-fail '#!/usr/bin/env bun' '#!${coreutils}/bin/env bun' \
+          --replace-fail ':/usr/bin:/bin' ':${lib.makeBinPath [ coreutils ]}'
+        substituteInPlace internal/gateway/automode_test.go \
+          --replace-fail '#!/usr/bin/env python3' '#!${lib.getExe python3}'
         # The fake CLIs deliberately clear PATH, so use absolute store paths.
         substituteInPlace internal/agent/cliupdate_test.go internal/library/rtk_upgrade_test.go \
           --replace-fail '/bin/cat' '${coreutils}/bin/cat'
@@ -123,8 +142,11 @@ let
       '';
 
       postInstall = ''
-        install -Dm644 internal/gui/icon-1024.png \
-          $out/share/icons/hicolor/1024x1024/apps/magpie.png
+        # 1024x1024 is not indexed by the standard hicolor theme.
+        for size in 16 32 48 64 128 256; do
+          install -Dm644 build/windows/icon-$size.png \
+            $out/share/icons/hicolor/''${size}x$size/apps/magpie.png
+        done
       '';
 
       desktopItems = [
