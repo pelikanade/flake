@@ -5,7 +5,7 @@ let
   # a redirect to auth.stencil.so, so fetchurl cannot take it and no Nix build can
   # reach it. requireFile pins the artifact and names the missing tarball, and the
   # build succeeds only once its hash is in the store. See docs/tern.md.
-  build = "20261004-143808-30396e5";
+  build = "20261007-073820-0e39682";
 
   package =
     {
@@ -22,19 +22,20 @@ let
       vulkan-loader,
       libGL,
       libxkbcommon,
+      libxcb,
       wayland,
       webkitgtk_4_1,
     }:
     stdenv.mkDerivation (finalAttrs: {
       pname = "tern";
-      version = "0.4.4";
+      version = "0.6.0";
 
       # The glibc artifact. NixOS is glibc, and the published musl artifact needs
       # /lib/ld-musl-x86_64.so.1 plus a musl libstdc++, so it saves nothing here.
       src = requireFile {
         name = "Tern-${finalAttrs.version}-linux-x86_64.tar.gz";
         url = "https://build.stencil.so/d/tern/${build}/Tern-${finalAttrs.version}-linux-x86_64.tar.gz";
-        hash = "sha256-NbIKo7ZIbF8Q3tX59CE6ZnoMZzBDML9rx6766oNUCoI=";
+        hash = "sha256-E3hYK1PmNGnqTIXY/H9i7NoQcrTDOBvWfh3B4/+Mjbc=";
       };
 
       # The archive holds tern/tern and nothing else.
@@ -67,6 +68,10 @@ let
           vulkan-loader
           libGL
           libxkbcommon
+          # 0.6.0's windowing dlopens libxcb.so.1 for the X11 backend and says
+          # "failed to load libxcb" without it; libxkbcommon already carries the
+          # libxkbcommon-x11.so.0 that pairs with it.
+          libxcb
           wayland
           # The browser pane finds its engine by dlopening libWPEWebKit-2.0.so.1
           # and then libwebkit2gtk-4.1.so.0, which is the name Tern's own error

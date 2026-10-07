@@ -15,8 +15,8 @@ add `pkgs.selfPackages.tern` where a machine wants it.
 | `Tern-<version>-linux-x86_64.tar.gz` | glibc, the one NixOS runs; pinned here |
 | `Tern-<version>-linux-musl-x86_64.tar.gz` | musl loader and libstdc++; saves nothing on NixOS |
 
-Both hold a single `tern/tern`; the version is `0.4.4`, whose build service id is
-`20261004-143808-30396e5` (the trailing commit is what `tern --version` prints).
+Both hold a single `tern/tern`; the version is `0.6.0`, whose build service id is
+`20261007-073820-0e39682` (the trailing commit is what `tern --version` prints).
 
 `https://tern.sh/releases/...` also serves a binary called `tern`, and it is a
 different product: the hosted tour and hook tool documented at `tern.sh`. Do not
@@ -32,14 +32,14 @@ is in the store. Download it while signed in; the first command prints the SRI t
 put in `hash`, and the second is what makes the build's output path exist:
 
 ```sh
-nix hash file --type sha256 --sri ~/Downloads/Tern-0.4.4-linux-x86_64.tar.gz
-nix-store --add-fixed sha256 ~/Downloads/Tern-0.4.4-linux-x86_64.tar.gz
+nix hash file --type sha256 --sri ~/Downloads/Tern-0.6.0-linux-x86_64.tar.gz
+nix-store --add-fixed sha256 ~/Downloads/Tern-0.6.0-linux-x86_64.tar.gz
 nix build .#tern
 ```
 
 `requireFile` compares by output path, which is the content hash plus the
 artifact's own file name: add the tarball under the name the expression expects,
-and neither rename it (`Tern-0.4.4-linux-x86_64(1).tar.gz` will not do) nor edit
+and neither rename it (`Tern-0.6.0-linux-x86_64(1).tar.gz` will not do) nor edit
 it. Keep the artifact out of the repository and out of any public cache.
 
 ## The build
@@ -48,9 +48,11 @@ The artifact is a glibc binary that links nothing beyond glibc, libstdc++ and
 libgcc_s; `autoPatchelfHook` supplies the last two. It needs more than that.
 Tern draws through wgpu, which dlopens Vulkan, EGL and the Wayland client, so
 those directories and the host's GPU driver directory are appended to its
-RUNPATH; and `tern register` shells out to `git` and the desktop and icon caches,
-so the wrapper prepends them to `PATH`. `versionCheckHook` runs the finished
-binary, which is what proves the pin still loads against this nixpkgs.
+RUNPATH; 0.6.0's windowing also dlopens `libxcb.so.1` for the X11 backend, so
+`libxcb` joins them, and `libxkbcommon` carries the `libxkbcommon-x11.so.0` that
+pairs with it. `tern register` shells out to `git` and the desktop and icon
+caches, so the wrapper prepends them to `PATH`. `versionCheckHook` runs the
+finished binary, which is what proves the pin still loads against this nixpkgs.
 
 The browser pane is the other runtime gap. Tern dlopens its web engine, taking
 WPE WebKit if it is present and WebKitGTK otherwise, so `webkitgtk_4_1` joins
