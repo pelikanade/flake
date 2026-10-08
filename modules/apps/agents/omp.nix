@@ -130,7 +130,7 @@ in
             composer.shape = "claude";
             setupVersion = 2;
             symbolPreset = "nerd";
-            theme.dark = "dark-rose-pine";
+            theme.dark = "dark";
             hideThinkingBlock = true;
             github.enabled = true;
             task.isolation.enabled = true;
