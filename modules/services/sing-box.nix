@@ -299,21 +299,21 @@
               action = "sniff";
             }
             {
-              ip_is_private = true;
-              outbound = "direct";
-            }
-            # The LAN, the NetBird ULA and the tailnet are reached directly. The
-            # tailnet's CGNAT range matters here because `ip_is_private` does not
-            # cover it: without this rule a connection to a peer falls through to
-            # `final` and is proxied out to the internet instead.
-            {
               ip_cidr = [
                 "10.0.0.0/24"
                 "fe80::/10"
+              ];
+              outbound = "direct";
+            }
+            {
+              ip_cidr = [
                 "100.64.0.0/10"
-                "fd2b:a214:7af1:40d2::/64"
                 "fd7a:115c:a1e0::/48"
               ];
+              outbound = "tailnet";
+            }
+            {
+              ip_is_private = true;
               outbound = "direct";
             }
             {
@@ -374,15 +374,11 @@
           {
             type = "tailscale";
             tag = "tailnet";
-            state_directory = "/var/lib/sing-box/tailscale";
             auth_key = secret "tailscale_auth_key";
             ephemeral = false;
-            system_interface = true;
-            system_interface_name = "tailnet0";
-            accept_routes = false;
+            accept_routes = true;
             advertise_exit_node = false;
             ssh_server = false;
-            listen_port = 41641;
           }
         ];
       };
