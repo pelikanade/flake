@@ -1,12 +1,17 @@
 config_version = 14
 
+[backdrop]
+enabled = true
+
 [bar]
 order = [ "Status" ]
 
     [bar.Status]
     background_opacity = 0.79999998211860657
-    end = [ "group:g3", "group:g1", "group:g2", "battery", "tray", "notifications", "session" ]
-    start = [ "wallhaven", "workspaces", "media" ]
+    concave_edge_corners = false
+    font_family = "FiraCode Nerd Font Mono Ret"
+    margin_ends = 0
+    radius = 0
 
         [bar.Status.monitor.DP-3]
         center = []
@@ -46,6 +51,17 @@ order = [ "Status" ]
         opacity = 1.0
         padding = 12.0
 
+[desktop_widgets]
+schema_version = 2
+widget_order = []
+
+    [desktop_widgets.grid]
+    cell_size = 16
+    major_interval = 4
+    visible = true
+
+    [desktop_widgets.widget]
+
 [dock]
 auto_hide = true
 background_opacity = 0.79999998211860657
@@ -82,8 +98,8 @@ widget_order = [ "lockscreen-login-box@DP-1", "lockscreen-login-box@DP-3" ]
     [lockscreen_widgets.widget."lockscreen-login-box@DP-1"]
     box_height = 196.0
     box_width = 810.0
-    cx = 1440.000244140625
-    cy = 1438.0
+    cx = 1440.0003662109375
+    cy = 1438.0001220703125
     output = "DP-1"
     placement_height = 1620.0
     placement_width = 2880.0
@@ -137,17 +153,22 @@ widget_order = [ "lockscreen-login-box@DP-1", "lockscreen-login-box@DP-3" ]
 keyboard_layout = false
 
 [plugins]
-enabled = [ "noctalia/screen_recorder", "noctalia/wallhaven" ]
+enabled = [ "felipeartur/ai-usagebar", "noctalia/screen_recorder", "noctalia/wallhaven", "oldirtty/color_picker" ]
 
 [shell]
+avatar_path = "/home/nvirellia/Downloads/ChatGPT Image Sep 20, 2026, 11_58_53 PM.png"
 corner_radius_scale = 0.7500000111758709
 lang = "zh-Hans"
-launch_apps_as_systemd_services = true
+niri_overview_type_to_launch_enabled = true
 polkit_agent = true
 
     [shell.launcher]
     app_grid = true
     fetch_exchange_rates = false
+
+    [shell.panel]
+    open_near_click_control_center = true
+    open_near_click_session = true
 
     [shell.screenshot]
     annotate = true
@@ -161,16 +182,22 @@ source = "community"
 wallpaper_scheme = "m3-content"
 
 [wallpaper.default]
-path = "/home/nvirellia/Pictures/wallhaven-5ypmx8.png"
+path = "/home/nvirellia/Pictures/wallhaven-7jx17y.jpg"
 
 [wallpaper.last]
-path = "/home/nvirellia/Pictures/wallhaven-5ypmx8.png"
+path = "/home/nvirellia/Pictures/wallhaven-7jx17y.jpg"
 
 [wallpaper.monitors.DP-1]
-path = "/home/nvirellia/Pictures/wallhaven-5ypmx8.png"
+path = "/home/nvirellia/Pictures/wallhaven-7jx17y.jpg"
 
 [wallpaper.monitors.DP-3]
-path = "/home/nvirellia/Pictures/wallhaven-5ypmx8.png"
+path = "/home/nvirellia/Pictures/wallhaven-7jx17y.jpg"
+
+[widget.bar]
+capsule = true
+capsule_padding = 12
+type = "felipeartur/ai-usagebar:bar"
+vendor = "openai"
 
 [widget.brightness]
 capsule = true
