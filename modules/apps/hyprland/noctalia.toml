@@ -9,9 +9,11 @@ order = [ "Status" ]
     [bar.Status]
     background_opacity = 0.79999998211860657
     concave_edge_corners = false
+    end = [ "group:g3", "group:g1", "group:g2", "battery", "tray", "notifications", "session" ]
     font_family = "FiraCode Nerd Font Mono Ret"
     margin_ends = 0
     radius = 0
+    start = [ "wallhaven", "workspaces", "media" ]
 
         [bar.Status.monitor.DP-3]
         center = []
