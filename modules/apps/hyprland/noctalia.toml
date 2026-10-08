@@ -8,50 +8,37 @@ order = [ "Status" ]
 
     [bar.Status]
     background_opacity = 0.79999998211860657
+    capsule_group = []
     concave_edge_corners = false
-    end = [ "group:g3", "group:g1", "group:g2", "battery", "tray", "notifications", "session" ]
-    font_family = "FiraCode Nerd Font Mono Ret"
+    end = [
+        "cpu",
+        "ram",
+        "temp",
+        "spacer_2",
+        "network",
+        "network_tx",
+        "network_rx",
+        "spacer_3",
+        "volume",
+        "brightness",
+        "battery",
+        "spacer_4",
+        "tray",
+        "notifications",
+        "session"
+    ]
+    font_family = "FiraCode Nerd Font Propo Ret"
+    font_weight = 400
     margin_ends = 0
     radius = 0
-    start = [ "wallhaven", "workspaces", "media" ]
+    scale = 0.95000000670552254
+    start = [ "wallhaven_2", "workspaces" ]
+    thickness = 30
 
         [bar.Status.monitor.DP-3]
         center = []
-        position = "bottom"
+        position = "top"
         start = [ "workspaces", "media" ]
-
-        [[bar.Status.capsule_group]]
-        accordion = false
-        accordion_direction = "end"
-        border_width = 1.0
-        enabled = true
-        fill = "surface_variant"
-        id = "g1"
-        members = [ "network", "network_tx", "network_rx" ]
-        opacity = 1.0
-        padding = 12.0
-
-        [[bar.Status.capsule_group]]
-        accordion = false
-        accordion_direction = "end"
-        border_width = 1.0
-        enabled = true
-        fill = "surface_variant"
-        id = "g2"
-        members = [ "volume", "brightness" ]
-        opacity = 1.0
-        padding = 12.0
-
-        [[bar.Status.capsule_group]]
-        accordion = false
-        accordion_direction = "end"
-        border_width = 1.0
-        enabled = true
-        fill = "surface_variant"
-        id = "g3"
-        members = [ "cpu", "ram", "temp" ]
-        opacity = 1.0
-        padding = 12.0
 
 [desktop_widgets]
 schema_version = 2
@@ -183,16 +170,16 @@ source = "builtin"
 wallpaper_scheme = "m3-content"
 
 [wallpaper.default]
-path = "/home/nvirellia/Pictures/wallhaven-7jx17y.jpg"
+path = "/home/nvirellia/Pictures/wallhaven-d8vv8j.jpg"
 
 [wallpaper.last]
-path = "/home/nvirellia/Pictures/wallhaven-7jx17y.jpg"
+path = "/home/nvirellia/Pictures/wallhaven-d8vv8j.jpg"
 
 [wallpaper.monitors.DP-1]
-path = "/home/nvirellia/Pictures/wallhaven-7jx17y.jpg"
+path = "/home/nvirellia/Pictures/wallhaven-d8vv8j.jpg"
 
 [wallpaper.monitors.DP-3]
-path = "/home/nvirellia/Pictures/wallhaven-7jx17y.jpg"
+path = "/home/nvirellia/Pictures/wallhaven-d8vv8j.jpg"
 
 [widget.bar]
 capsule = true
@@ -203,6 +190,9 @@ vendor = "openai"
 [widget.brightness]
 capsule = true
 
+[widget.launcher]
+glyph = "noctalia"
+
 [widget.media]
 hide_when_no_media = true
 show_progress = true
@@ -210,15 +200,26 @@ show_progress = true
 [widget.network]
 show_label = false
 
+[widget.spacer_2]
+type = "spacer"
+
+[widget.spacer_3]
+type = "spacer"
+
+[widget.spacer_4]
+type = "spacer"
+
 [widget.sysmon]
 stat = "swap_pct"
 
+[widget.taskbar]
+focused_output_only = true
+group_by_workspace = true
+show_all_outputs = true
+
 [widget.volume]
-capsule = true
+capsule = false
 capsule_padding = 12
 
-[widget.wallhaven]
+[widget.wallhaven_2]
 type = "noctalia/wallhaven:wallhaven"
-
-[widget.workspaces]
-style = "focus_hint"
