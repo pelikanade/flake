@@ -76,9 +76,8 @@ _: {
           config = {
             general = {
               layout = "dwindle";
-              # Each adjacent window contributes gaps_in to the shared gap.
-              gaps_in = 6;
-              gaps_out = 12;
+              gaps_in = 0;
+              gaps_out = 0;
               border_size = 2;
               resize_on_border = true;
               snap.enabled = true;
