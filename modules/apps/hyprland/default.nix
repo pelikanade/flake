@@ -213,6 +213,18 @@ _: {
           ];
 
           window_rule = [
+            # Sway's smart_borders: a lone tiled window draws no border, so the
+            # workspace edge does not read as a window frame. The window-count
+            # filter matches exactly one visible tiled window; as soon as a
+            # second appears, both regain the 2 px border.
+            {
+              name = "smart-border";
+              match = {
+                float = false;
+                workspace = "w[tv1]";
+              };
+              border_size = 0;
+            }
             {
               name = "authentication";
               match.title = "^Authentication Required$";
