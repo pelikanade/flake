@@ -156,6 +156,13 @@
         dns = {
           servers = [
             {
+              type = "tailscale";
+              tag = "tailnet-dns";
+              endpoint = "tailnet";
+              accept_default_resolvers = false;
+              accept_search_domain = true;
+            }
+            {
               type = "udp";
               tag = "home-dns";
               server = "10.0.0.3";
@@ -173,13 +180,6 @@
             }
             {
               type = "local";
-            }
-            {
-              type = "tailscale";
-              tag = "tailnet-dns";
-              endpoint = "tailnet";
-              accept_default_resolvers = false;
-              accept_search_domain = true;
             }
           ];
 
@@ -259,10 +259,6 @@
             route_exclude_address = [
               "10.0.0.0/8"
               "fe80::/10"
-              # The tailnet reaches its peers through its own interface, not the
-              # tun, so keep those ranges out of the tun's routes.
-              "100.64.0.0/10"
-              "fd7a:115c:a1e0::/48"
             ];
             # NetBird's interface: what arrives on it is already inside the
             # NetBird tunnel and must not enter the tun.
@@ -379,6 +375,7 @@
             accept_routes = true;
             advertise_exit_node = false;
             ssh_server = false;
+            listen_port = 41641;
           }
         ];
       };
@@ -387,21 +384,18 @@
       # Workstation policy and the tailnet aspect compose this same feature.
       key = "sing-box";
 
-      # UDP replies injected through the tun arrive on a different interface
-      # than the route to their source. Allow that asymmetry while still
-      # rejecting packets whose source has no route.
-      networking.firewall.checkReversePath = "loose";
+      networking.nftables.enable = true;
+      networking.firewall = {
+        backend = "nftables";
+        allowedUDPPorts = [ 41641 ];
+        trustedInterfaces = [ "tun0" ];
+        extraReversePathFilterRules = ''iifname "tun0" accept'';
+      };
 
-      # The Tailscale endpoint's peer transport. Peers reach it on this host's
-      # own addresses rather than through the tunnel, so it is open on every
-      # interface; each service admits its own TCP ports on `tailnet0`.
-      networking.firewall.allowedUDPPorts = [ 41641 ];
-
-      # sing-box publishes the tun as the interface resolver through
-      # systemd-resolved (dns_mode "hijack" -> SetLinkDNS with domain "~."), so
-      # without resolved nothing points the system at the tun and DNS keeps
-      # going to whatever DHCP handed out.
-      services.resolved.enable = true;
+      services.resolved = {
+        enable = true;
+        settings.Resolve.ResolveUnicastSingleLabel = true;
+      };
 
       # resolved only accepts those SetLinkDNS/SetDomains/SetDefaultRoute calls
       # from the sing-box user when polkit applies the rule shipped in the

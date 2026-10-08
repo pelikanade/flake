@@ -46,8 +46,9 @@ rereads the document.
 The `tailnet` endpoint uses persistent `/var/lib/sing-box/tailscale` state under
 the service's existing `StateDirectory`, `ephemeral=false`, the system interface
 `tailnet0`, and the WireGuard peer port `41641`. It omits `hostname`, so each
-host registers under its own system hostname. It does not accept subnet routes,
-use or advertise an exit node, enable Tailscale SSH or run Taildrop.
+host registers under its own system hostname. It accepts subnet routes advertised
+by other nodes, does not use or advertise an exit node, and enables neither
+Tailscale SSH nor Taildrop.
 
 ### DNS
 
@@ -73,11 +74,12 @@ without returning to sing-box's routing engine. The document therefore carries n
 — and inbound peer traffic is governed by the host firewall instead.
 
 `auto_redirect` still redirects locally generated connections into the tun before
-the kernel's route is used, so the tailnet's own ranges are declared `direct` in
-the route rules: `100.64.0.0/10` and `fd7a:115c:a1e0::/48` go out directly, and the
-same ranges stay out of the tun's routes. Without the direct rule a connection to
-a peer matches no rule, falls through to the `final` proxy and never reaches the
-peer — `ip_is_private` does not cover Tailscale's CGNAT range.
+the kernel's route is used, so the tailnet's own ranges are routed to the `tailnet`
+endpoint: `100.64.0.0/10` and `fd7a:115c:a1e0::/48` reach a peer through the
+endpoint, whose dialer binds `tailnet0`, and the same ranges stay out of the tun's
+routes. Without that rule a connection to a peer matches no rule, falls through to
+the `final` proxy and never reaches the peer — `ip_is_private` does not cover
+Tailscale's CGNAT range.
 
 Because a peer addresses the host's tailnet address rather than loopback, every
 service that peers should reach listens on all interfaces. The DNS section above is
@@ -86,7 +88,9 @@ applies.
 
 Turning `system_interface` off would put the endpoint back in sing-box's userspace
 network stack, where peer packets do reach the routing engine; that configuration
-would need inbound and endpoint-preference rules again.
+would need inbound and endpoint-preference rules again. Peer addresses would also
+have to come back into the tun's routes: with the ranges above still excluded, the
+kernel hands them to the default route, so nothing reaches a peer at all.
 
 ### Firewall
 
