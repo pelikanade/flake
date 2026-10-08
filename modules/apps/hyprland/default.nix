@@ -92,7 +92,7 @@ _: {
               force_split = 2;
             };
             decoration = {
-              rounding = 8;
+              rounding = 0;
               blur = {
                 enabled = true;
                 size = 3;
