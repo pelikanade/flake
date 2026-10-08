@@ -1,0 +1,36 @@
+# Keep the fast-moving agent tooling inputs current. Targets `omp` and
+# `llm-agents` only; every other input stays pinned as declared.
+name: Update flake inputs
+
+on:
+  schedule:
+    # 05:00 UTC daily.
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-flake-inputs
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+      - name: Update omp and llm-agents
+        run: nix flake update omp llm-agents
+      - name: Commit and push lockfile changes
+        run: |
+          if git diff --quiet -- flake.lock; then
+            echo "No lockfile changes; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add flake.lock
+          git commit -m "flake: update omp and llm-agents"
+          git push
