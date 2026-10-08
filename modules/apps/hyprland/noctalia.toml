@@ -174,11 +174,10 @@ polkit_agent = true
     annotate = true
 
 [theme]
-builtin = "Noctalia"
-community_palette = "Rose Pine Moon"
+builtin = "Nord"
 mode = "dark"
 shell_mode = "dark"
-source = "community"
+source = "builtin"
 wallpaper_scheme = "m3-content"
 
 [wallpaper.default]
