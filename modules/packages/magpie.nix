@@ -1,4 +1,4 @@
-_:
+{ inputs, ... }:
 let
   package =
     {
@@ -20,6 +20,8 @@ let
       dbus,
       python3,
       versionCheckHook,
+      grok,
+      claude-code,
     }:
     buildGoModule (finalAttrs: {
       pname = "magpie";
@@ -131,6 +133,12 @@ let
       preFixup = ''
         # Use a Nix-managed runtime instead of downloading generic Linux Bun.
         gappsWrapperArgs+=(--set-default MAGPIE_BUN "${lib.getExe bun}")
+        gappsWrapperArgs+=(--suffix PATH : "${
+          lib.makeBinPath [
+            grok
+            claude-code
+          ]
+        }")
         gappsWrapperArgs+=(--prefix PATH : "${
           lib.makeBinPath [
             xdg-utils
@@ -200,6 +208,9 @@ in
       # Magpie never runs a Bun older than its BunVersion floor (1.4.2), which
       # nixos-26.05 does not carry yet; take the unstable set's Bun and leave the
       # rest of the build on stable.
-      packages.magpie = pkgs.callPackage package { inherit (pkgsUnstable) bun; };
+      packages.magpie = pkgs.callPackage package {
+        inherit (pkgsUnstable) bun;
+        inherit (inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}) grok claude-code;
+      };
     };
 }
