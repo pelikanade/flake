@@ -39,3 +39,10 @@ creation_rules:
           - *neko-sphere
           - *asymmetry
           - *parallax
+  # The Paseo daemon password, read only by neko-sphere's daemon. The maintainer
+  # keeps the document editable.
+  - path_regex: ^modules/secrets/paseo\.yaml$
+    key_groups:
+      - age:
+          - *noa
+          - *neko-sphere
