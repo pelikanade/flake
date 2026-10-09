@@ -41,3 +41,11 @@ creation_rules:
           - *neko-sphere
           - *asymmetry
           - *parallax
+  # Magpie's own credentials: the gateway on neko-sphere reads the file, whose
+  # only value today is the browser UI's sign-in key, and the maintainer keeps
+  # the document editable, so replacing the value revokes the link.
+  - path_regex: ^modules/secrets/magpie\.yaml$
+    key_groups:
+      - age:
+          - *noa
+          - *neko-sphere

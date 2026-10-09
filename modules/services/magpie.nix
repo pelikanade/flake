@@ -13,14 +13,25 @@ _: {
       magpie = lib.getExe pkgs.selfPackages.magpie;
       install = "${pkgs.coreutils}/bin/install";
       directory = "/var/lib/magpie/.config/magpie";
+
+      # MAGPIE_WEB_KEY pins the sign-in link; without it magpie mints a new
+      # link, and a new key, on every start.
+      webStart = pkgs.writeShellScript "magpie-web" ''
+        set -euo pipefail
+        export MAGPIE_WEB_KEY="$(${pkgs.coreutils}/bin/cat "$CREDENTIALS_DIRECTORY/magpie-web-key")"
+        exec ${magpie} web --gateway --addr 0.0.0.0:3430 --no-open
+      '';
     in
     {
       key = "magpie";
 
-      # The gateway is reachable on the tailnet and on loopback only.
-      # `tailnet0` is the system interface of the sing-box Tailscale endpoint,
-      # which this host imports.
-      networking.firewall.interfaces.tailnet0.allowedTCPPorts = [ 3425 ];
+      # The gateway and the browser UI are reachable on the tailnet and on
+      # loopback only. `tailnet0` is the system interface of the sing-box
+      # Tailscale endpoint, which this host imports.
+      networking.firewall.interfaces.tailnet0.allowedTCPPorts = [
+        3425
+        3430
+      ];
 
       # The gateway resolves the two key-based providers from the shared
       # provider document. The copies stay root-owned and reach the dynamic
@@ -39,6 +50,14 @@ _: {
           format = "yaml";
           key = "openrouter_api_key";
           sopsFile = config.constants.resources.getSecretPath "omp-providers.yaml";
+          owner = "root";
+          group = "root";
+          mode = "0400";
+        };
+        "magpie-web-key" = {
+          format = "yaml";
+          key = "magpie_web_key";
+          sopsFile = config.constants.resources.getSecretPath "magpie.yaml";
           owner = "root";
           group = "root";
           mode = "0400";
@@ -84,7 +103,7 @@ _: {
       };
 
       systemd.services.magpie = {
-        description = "Magpie model gateway";
+        description = "Magpie model gateway and browser UI";
         wantedBy = [ "multi-user.target" ];
         wants = [ "network-online.target" ];
         after = [ "network-online.target" ];
@@ -115,12 +134,15 @@ _: {
           StateDirectory = "magpie";
           StateDirectoryMode = "0700";
           WorkingDirectory = "/var/lib/magpie";
-          LoadCredential = [ "providers.json:${config.sops.templates."magpie-providers".path}" ];
+          LoadCredential = [
+            "providers.json:${config.sops.templates."magpie-providers".path}"
+            "magpie-web-key:${config.sops.secrets."magpie-web-key".path}"
+          ];
           ExecStartPre = [
             "${install} -d -m 0700 ${directory}"
             "${install} -m 0600 %d/providers.json ${directory}/providers.json"
           ];
-          ExecStart = "${magpie} serve";
+          ExecStart = "${webStart}";
           Restart = "on-failure";
           RestartSec = 10;
           UMask = "0077";

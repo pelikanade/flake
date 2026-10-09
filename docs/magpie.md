@@ -6,22 +6,31 @@ window over a WebKitGTK view, with its own provider list, model picker and plugi
 host. `modules/packages/magpie.nix` builds it, and the workstation desktops
 install it through the `agent-desktops` aspect, so Asymmetry and Parallax carry
 `magpie` on `PATH` and a desktop entry. The same package runs the model gateway
-as `magpie.service` on neko-sphere through the `magpie` aspect ([the service](#the-gateway-service)).
+and its browser page on neko-sphere
+through the `magpie` aspect ([the service](#the-gateway-service)).
 
 ## The gateway service
 
-`modules/services/magpie.nix` runs `magpie serve` — the gateway alone on
-`0.0.0.0:3425` — as a headless daemon. It is the harnessed side of the package:
-no Agents, Sessions or Library surface, and the browser UI (`magpie web`) is
-deliberately not provisioned, because its sign-in link is a credential a
-tailnet peer could use to edit the daemon and see its keys once the link leaks.
+`modules/services/magpie.nix` runs `magpie web --gateway` — the browser page on
+`0.0.0.0:3430` with the gateway beside it on `0.0.0.0:3425`, one process, no
+desktop needed. Gateway mode is what a headless host wants: no Agents,
+Sessions or Library surface.
 
 Tailnet peers reach the OpenAI, OpenAI-Responses and Anthropic routes on
 `neko-sphere.leaffish-halfmoon.ts.net:3425`. Upstream accepts anything the
 gateway's loopback callers present and requires a key only when sharing is
 enabled, so the firewall is the boundary: `networking.firewall.interfaces.tailnet0`
-admits 3425 and loopback keeps working. The endpoint's MagicDNS name is handed
-to the gateway in `MAGPIE_PUBLIC_URL`.
+admits 3425 and 3430 and loopback keeps working. The endpoint's MagicDNS name
+is handed to the gateway in `MAGPIE_PUBLIC_URL`.
+
+The page signs in through the link the service prints into its journal on
+every start, which carries the sign-in key as `?k=`. `MAGPIE_WEB_KEY` pins
+that key across restarts, from the host-only document
+[modules/secrets/magpie.yaml](../modules/secrets/magpie.yaml): the browser
+stays signed in for 400 days instead of dying with a run's own key, and
+replacing the value in the document (edit with `sops`) revokes every link.
+Anyone with the link reaches the daemon — keep the journal line out of logs
+you share, and treat 3430 as tailnet-grant material.
 
 Nix declares the provider policy, and a restart of the unit reapplies it over
 whatever the gateway itself edited. `sops.templates."magpie-providers"` renders
@@ -32,7 +41,8 @@ shared provider document ([omp](omp.md#credentials)): the gateway resolves
 `deepseek_api_key` and `openrouter_api_key`, so its host's activation reads
 that document. The gateway's copies stay root-owned (`0400`) and only the
 service reaches them through systemd credentials; no agent process or Paseo
-service inherits a copy.
+service inherits a copy. The sign-in key reaches the service through its own
+credential the same way.
 
 The service runs as `DynamicUser` with a private persistent
 `StateDirectory=magpie` and `HOME=/var/lib/magpie`, hardened with
@@ -57,13 +67,15 @@ curl --fail --silent -X POST -H 'Authorization: Bearer magpie' \
   -H 'content-type: application/json' \
   http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/chat/completions \
   -d '{"model":"deepseek/deepseek-flash","max_tokens":8,"messages":[{"role":"user","content":"ping"}]}'
+curl --silent http://neko-sphere.leaffish-halfmoon.ts.net:3430/ -o /dev/null -w '%{http_code}\n'  # 401: the key guards every page
 ```
 
 `/v1/models` lists what the configured providers expose; a real chat round-trip
-proves the key resolves and the upstream still answers. Use
-`journalctl -u magpie.service` for startup failures, and keep any credential
-output out of shared logs. Evaluation and package builds alone cannot prove
-these behaviors.
+proves the key resolves and the upstream still answers. The browser signs in
+with the link from `journalctl -u magpie.service` — one line, once per start,
+and it stays valid while `magpie_web_key` is unchanged. Keep the link and any
+credential output out of shared logs. Evaluation and package builds alone
+cannot prove these behaviors.
 
 ## The package
 
