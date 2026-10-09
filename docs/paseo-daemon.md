@@ -69,11 +69,10 @@ processes. `Type=simple` records process startup, not API readiness.
 The service imports `omp` and installs its package set: omp with jq and Python.
 Its PATH also includes Paseo, Bash, Git, SSH, Nix, and ripgrep. Additional project
 tools belong in the consuming aspect's `systemd.services.paseo-daemon.path`. It
-does not inherit a desktop user's shell environment or Home Manager packages. Its
-omp is the only provider Paseo can offer, and the daemon reads the DeepSeek and
-OpenRouter keys from its own copies of
-[the provider document](omp.md#credentials), owned by the `paseo` account; a
-changed key restarts the unit.
+does not inherit a desktop user's shell environment or Home Manager packages.
+omp is the only installed agent provider Paseo can offer. The service runs upstream
+omp and sets `PI_CONFIG_FILES` to an overlay that loads the packaged Magpie
+extension, which reads the service account's NixOS-provisioned runtime credentials.
 
 Systemd creates the home with mode `0700`; the service uses umask `0077`.
 `ProtectHome=true` hides `/home`, `/root`, and `/run/user`, `ProtectSystem=full`
@@ -93,24 +92,21 @@ curl --fail http://127.0.0.1:6767/api/health
 
 Use `journalctl -u paseo-daemon.service` for startup failures. The daemon also
 writes `$PASEO_HOME/daemon.log`; redact credentials, pairing offers, and user code
-before sharing either log. The service has no `LoadCredential`: the DeepSeek and
-OpenRouter keys arrive as files owned by the `paseo` account (see
-[credentials](omp.md#credentials)). The pinned Paseo v0.11.0-beta.5 is a
-pre-release; it exposes no Cursor provider in its built-in manifest, and the
-built-in plugin providers it adds — Antigravity (the `agy` CLI) and Muse Code
-(the `muse` CLI) — need their own signed-in executables, which this host does
-not install. Only the key-based providers are therefore usable.
+before sharing either log. The pinned Paseo v0.11.0-beta.5 is a pre-release; it
+exposes no Cursor provider in its built-in manifest, and the built-in plugin
+providers it adds — Antigravity (the `agy` CLI) and Muse Code (the `muse` CLI) —
+need their own signed-in executables, which this host does not install.
 
-The service binds a read-only `models.yml` into
-`/var/lib/paseo/.omp/agent/models.yml`, declaring the DeepSeek and OpenRouter
-providers and reading each key by path. It does not generate or replace omp's
-`config.yml`. Paseo ships its built-in omp provider disabled and owns
-`$PASEO_HOME/config.json` for its own state, so enabling that provider is a manual
-change in that file, outside this repository. Paseo drives omp over RPC
-(`omp --mode rpc-ui`), so omp must be on the service's PATH. Select the DeepSeek or
-OpenRouter models in Paseo's omp provider. Cursor and Codex are not available to
-the daemon: they need an interactive `omp /login`, which only a desktop user can
-run. See [omp and its providers](omp.md).
+The service sets `OMP_MAGPIE_CONFIG=/run/secrets/paseo-omp-magpie`. NixOS activation
+renders only the endpoint and API key from `modules/secrets/magpie.yaml` into
+this file, owned by `paseo` with mode `0400`; changes restart the daemon. Fill its placeholders
+as described under [omp credentials](omp.md#credentials) before deployment.
+The service does not generate omp's `config.yml` or share desktop OAuth logins.
+
+Paseo ships its built-in omp provider disabled and owns `$PASEO_HOME/config.json`
+for its own state, so enabling that provider is a manual change in that file,
+outside this repository. Paseo drives omp over RPC (`omp --mode rpc-ui`), so
+omp must be on the service's PATH. See [omp and its providers](omp.md).
 
 Use `sudo systemctl restart paseo-daemon.service` for package, launch-environment,
 or startup-setting changes. It interrupts running work. `paseo reload` can apply
@@ -191,8 +187,8 @@ that interface to exist before Paseo starts; add its service dependency there.
 ## Verification scope
 
 Before use on a host, verify the service starts after reboot, the daemon's omp can
-discover and run its DeepSeek and OpenRouter models, project permissions work for
-`paseo`, an SSH client can reach the API, and a phone can pair and reconnect
+discover and run a model using the service account's configured credentials,
+project permissions work for `paseo`, an SSH client can reach the API, and a phone can pair and reconnect
 after a service restart. Confirm that stopping the service ends its agent and
 terminal processes. Configuration evaluation and package builds alone cannot
 prove these runtime behaviors.

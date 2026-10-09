@@ -4,7 +4,7 @@ This repository manages personal NixOS workstations and servers, including their
 
 The desktop retains the Rose Pine Moon theme and uses Sway-style window controls. See [desktop bindings and migration notes](docs/hyprland.md).
 
-Desktop hosts run [omp](docs/omp.md) with its providers declared in `models.yml`: the DeepSeek and OpenRouter keys come from sops, and Codex and Cursor sign in per host. Machines can also host coding agents for remote desktop and phone clients with the standalone [Paseo daemon](docs/paseo-daemon.md).
+Desktop hosts run [omp](docs/omp.md) with per-host Codex and Cursor logins and a preloaded Magpie gateway provider. Fill the encrypted Magpie endpoint and API-key placeholders before deployment. Machines can also host coding agents for remote desktop and phone clients with the standalone [Paseo daemon](docs/paseo-daemon.md), which uses the same packaged provider with credentials owned by its service account.
 
 Asymmetry and Parallax have a [Tailscale pilot](docs/tailscale.md) using sing-box's native endpoint, declared with the rest of the proxy configuration in [the sing-box module](docs/sing-box.md) and kept in the encrypted document only where it is secret. NetBird's desktop UI and its local daemon remain for workplace login.
 

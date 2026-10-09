@@ -32,8 +32,8 @@
       # None of the gateway's providers are declared here. The web UI is where
       # providers, their keys and their model lists are configured by hand, and
       # they persist as the service's own state under its StateDirectory, so a
-      # restart or a reboot keeps them. Only the sign-in key is provisioned,
-      # host-only, and a value change restarts the unit by itself.
+      # restart or a reboot keeps them. This service receives only the sign-in
+      # key; the shared document also holds omp's endpoint and gateway API key.
       sops.secrets."magpie-web-key" = {
         format = "yaml";
         key = "magpie_web_key";

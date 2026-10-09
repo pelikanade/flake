@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Magpie gateway provider and interactive login for omp",
+  "description": "Magpie gateway provider for omp with runtime YAML credentials",
   "omp": {
     "extensions": ["./index.ts"]
   }

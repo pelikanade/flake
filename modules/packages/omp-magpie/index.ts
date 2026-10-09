@@ -1,9 +1,10 @@
+import { YAML } from "bun";
+import { readFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { ExtensionAPI, ProviderModelConfig } from "@oh-my-pi/pi-coding-agent";
 
-const DEFAULT_ENDPOINT = "http://127.0.0.1:3425";
 const EFFORTS = ["minimal", "low", "medium", "high", "xhigh", "max"] as const;
-
-type MagpieCredentials = { endpoint: string; apiKey: string };
 
 type MagpieModel = {
 	id: string;
@@ -17,7 +18,7 @@ type MagpieModel = {
 };
 
 function endpointUrl(input: string): string {
-	const url = new URL(input.trim() || DEFAULT_ENDPOINT);
+	const url = new URL(input.trim());
 	if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
 		throw new Error("Use an HTTP(S) Magpie endpoint without credentials, a query, or a fragment.");
 	}
@@ -51,39 +52,22 @@ function modelConfig(model: MagpieModel, endpoint: string): ProviderModelConfig 
 	};
 }
 
-export default function magpie(pi: ExtensionAPI) {
+export default async function magpie(pi: ExtensionAPI) {
+	const configPath = process.env.OMP_MAGPIE_CONFIG || join(homedir(), ".omp/agent/magpie.yaml");
+	const config = YAML.parse(await readFile(configPath, "utf8"));
+	if (
+		!config || typeof config !== "object" ||
+		!("endpoint" in config) || typeof config.endpoint !== "string" || !config.endpoint.trim() ||
+		!("api_key" in config) || typeof config.api_key !== "string" || !config.api_key.trim()
+	) {
+		throw new Error(`Magpie configuration ${configPath} requires non-empty endpoint and api_key fields.`);
+	}
+	const endpoint = endpointUrl(config.endpoint);
 	pi.registerProvider("magpie", {
+		apiKey: config.api_key.trim(),
 		headers: { "User-Agent": "omp" },
-		oauth: {
-			name: "Magpie",
-			async login(callbacks) {
-				const endpoint = endpointUrl(await callbacks.onPrompt({
-					message: `Magpie endpoint (default: ${DEFAULT_ENDPOINT})`,
-					placeholder: DEFAULT_ENDPOINT,
-					allowEmpty: true,
-				}));
-				const key = (await callbacks.onPrompt({
-					message: "Magpie API key",
-					placeholder: "sk-magpie-key-...",
-					secret: true,
-				})).trim();
-				if (!key) throw new Error("A Magpie API key is required.");
-				callbacks.signal?.throwIfAborted();
-				return {
-					// Discovery peeks at access directly; inference calls getApiKey.
-					access: JSON.stringify({ endpoint, apiKey: key } satisfies MagpieCredentials),
-					refresh: "",
-					expires: Number.MAX_SAFE_INTEGER,
-					accountId: "magpie",
-				};
-			},
-			getApiKey(credentials) {
-				return (JSON.parse(credentials.access) as MagpieCredentials).apiKey;
-			},
-		},
-		async fetchDynamicModels(access) {
-			if (!access) return [];
-			const { endpoint, apiKey } = JSON.parse(access) as MagpieCredentials;
+		async fetchDynamicModels(apiKey) {
+			if (!apiKey) return [];
 			const response = await fetch(`${endpoint}/v1/models`, {
 				headers: { Authorization: `Bearer ${apiKey}`, "User-Agent": "omp" },
 				signal: AbortSignal.timeout(15_000),

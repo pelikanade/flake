@@ -2,59 +2,44 @@
 
 omp is the coding agent harness the desktop hosts run, and the standalone
 [Paseo daemon](paseo-daemon.md) runs it for remote clients. The `omp` aspect
-declares direct providers in `models.yml`. Its Home Manager contribution also
-installs the optional Magpie gateway plugin. The workstation role already
-composes the aspect.
+installs upstream omp and configures the packaged Magpie gateway extension.
+The workstation role already composes the aspect.
 
 ## Providers
 
-The `omp` aspect writes `~/.omp/agent/models.yml` with two key-based providers:
-
-- `deepseek`, the default provider
-- `openrouter`
-
-Both resolve their key through omp's command form (`apiKey: "!cat <path>"`), so no
-key value enters Nix evaluation, the Nix store, or the shell environment. omp runs
-the command when a request or a credential probe needs the key, and caches the
-output for the process lifetime.
+The `omp` aspect does not bundle DeepSeek or OpenRouter credentials or generate
+`~/.omp/agent/models.yml`. Magpie reads runtime YAML credentials; Codex and Cursor
+use omp's per-host login flow.
 
 Codex and Cursor are OAuth providers omp owns: a user runs `omp /login` per host,
-and the credential lives in omp's own auth store. That keeps a rotating OAuth
-token out of Nix and the store. The declared `settings.modelRoles` assignment
-puts the session default and the cheap roles (`smol`, `tiny`, `commit`, `memory`,
-`task`, `vision`) on the key-authenticated `deepseek/deepseek-flash`, while
-`plan` and `advisor` select Cursor's `cursor/claude-sonnet-5-5:high` and `slow`
-selects Codex's `openai-codex/gpt-6-astra:xhigh`. Those three OAuth-backed
-selectors resolve only on a host that ran the matching `omp /login`; the
-DeepSeek-backed roles always resolve. Search is omp's own tool set; the aspect
-adds nothing to a request.
+and the credential lives in omp's own auth store. The declared
+`settings.modelRoles` assigns `plan` and `advisor` to
+`cursor/claude-sonnet-5-5:high` and `slow` to
+`openai-codex/gpt-6-astra:xhigh`. These selectors require the matching login.
+The aspect leaves the default and other roles unassigned; it no longer pins
+them to DeepSeek. Search is omp's own tool set.
 
 `programs.omp.settings` writes `config.yml` as a writable copy, because omp flocks
-and atomically rewrites it. `models.yml` is read-only user configuration, so the
-aspect installs it as an ordinary Home Manager file.
+and atomically rewrites it. A runtime settings change is overwritten on the next
+switch; declare persistent model-role assignments in the aspect.
 
 ### Magpie gateway plugin
 
-`modules/apps/agents/omp-magpie/` is an installable omp plugin. Home Manager
-places it in `~/.omp/agent/extensions/magpie`, where omp discovers it automatically.
-It adds the `magpie` provider without changing any model-role assignments.
+`modules/packages/omp-magpie/` contains the plugin and its Nix package definition.
+`packages.omp-magpie` installs the extension. NixOS and Home Manager use the
+upstream omp package without a local wrapper. Home Manager sets `PI_CONFIG_FILES`
+at login, and the Paseo systemd service sets it in its own environment, pointing
+to a generated overlay that loads Magpie. Named profiles inherit the overlay.
 
-Inside an interactive omp session, run `/login magpie` (or choose **Magpie**
-from `/login`):
+The plugin reads `~/.omp/agent/magpie.yaml`, or the path in `OMP_MAGPIE_CONFIG`.
+It requires `endpoint` and `api_key`, registers the provider without an interactive
+login, and uses the key for discovery and inference. A trailing `/v1` is accepted
+on the endpoint; reverse-proxy path prefixes are preserved.
 
-1. Enter the Magpie endpoint, or submit an empty answer for
-   `http://127.0.0.1:3425`. A trailing `/v1` is accepted; reverse-proxy path
-   prefixes are preserved.
-2. Enter the gateway API key (`sk-magpie-key-...`). The in-session prompt masks
-   the key. Use a gateway key, not Magpie's web UI sign-in key.
-3. Select a discovered model with `/model`; selectors have the form
-   `magpie/<provider>/<model>` or `magpie/group/<group>`.
-
-The endpoint and key live together in omp's auth store, never in Nix or
-`models.yml`. Repeating `/login magpie` replaces the connection; cancelling
-leaves the previous login intact. Choose Magpie from `/logout` to remove it.
-The plugin uses omp's login interface for a non-expiring gateway key, not a
-browser OAuth flow.
+Select a discovered model with `/model`; selectors have the form
+`magpie/<provider>/<model>` or `magpie/group/<group>`. The package does not change
+model-role assignments. Magpie credentials come from the YAML file, so an old
+`/login magpie` entry does not override them.
 
 Discovery reads the gateway's `/v1/models` with that key. It preserves model
 IDs, context/output limits, image input and supported reasoning levels, and
@@ -64,63 +49,69 @@ which Magpie adapts for models requiring adaptive thinking. Missing token
 limits use omp's defaults (128,000 context and 16,384 output tokens); the
 gateway does not advertise prices, so cost is unreported.
 
-Run `omp models refresh magpie` after changing the gateway's model catalog.
-Login stores the connection; discovery and inference surface gateway
-availability or authorization failures. Magpie's loopback access policy may
-accept any key, so successful local discovery does not validate a remote key.
+Run `omp models refresh magpie` after changing the gateway's model catalog or
+endpoint. Restart omp after changing its credentials. Discovery and inference
+surface gateway availability or authorization failures. Magpie's loopback access
+policy may accept any key, so local discovery does not validate a remote key.
 See the [upstream gateway reference](https://github.com/yetone/magpie/blob/v0.1.1092/docs/reference.md#providers-and-the-gateway).
 
-To load the plugin directly from this checkout without a NixOS switch:
+To load the extension from this checkout before a NixOS switch, use upstream omp
+with a runtime credential file and an explicit extension path:
 
 ```sh
-omp -e ./modules/apps/agents/omp-magpie
-# Then run /login magpie inside omp.
+OMP_MAGPIE_CONFIG=/path/to/magpie.yaml omp models magpie -e ./modules/packages/omp-magpie
 ```
 
-The Home Manager installation applies to Asymmetry and Parallax, not the
-standalone Paseo service account or named omp profiles. Those can load the
-same plugin explicitly through their own omp extension configuration.
-
+The environment overlay supplies the `extensions` setting. Replacing
+`PI_CONFIG_FILES` or loading a later `--config` overlay can replace that list;
+include the Magpie extension when overriding it.
 
 ## Credentials
 
-`modules/secrets/omp-providers.yaml` holds the two provider keys:
+Edit the shared encrypted Magpie document with:
 
-| Encrypted document key | Use |
-| --- | --- |
-| `deepseek_api_key` | DeepSeek authentication |
-| `openrouter_api_key` | OpenRouter authentication |
+```sh
+nix develop --command sops modules/secrets/magpie.yaml
+```
 
-Every host that runs omp reads this document: neko-sphere, Asymmetry and Parallax. Its
-`.sops.yaml` rule names exactly those hosts plus the maintainer, and no catch-all
-matches it.
+The existing `magpie_web_key` is preserved. Two new fields contain placeholders:
 
-The aspect decrypts a copy for the desktop user at
-`/run/secrets/omp-deepseek-api-key` and `/run/secrets/omp-openrouter-api-key`,
-owner `nvirellia` with mode `0400`, and publishes those paths through
-`constants.resources.userSecretPaths`; `models.yml` reads them by path. It declares
-the secrets only on a host that has that user, so a server host provisions its own
-copy instead. No plaintext secret file is created; edit the document with `sops`.
+```yaml
+endpoint: https://magpie.example.invalid
+api_key: REPLACE_WITH_MAGPIE_GATEWAY_API_KEY
+```
 
-The Paseo daemon cannot log in interactively, so it declares its own copies owned
-by the `paseo` service account and a read-only `models.yml` bound into its home.
-See [Paseo daemon](paseo-daemon.md#systemd-lifecycle-and-execution-account).
+Replace both values before deployment. Use a Magpie gateway API key for
+`api_key`; `magpie_web_key` remains the browser UI sign-in key.
+
+NixOS activation extracts the endpoint and API key into root-owned files and
+uses `sops.templates` to render only those two fields for omp. Asymmetry and
+Parallax provision `/run/secrets/omp-magpie`, owned by the desktop user with mode
+`0400`; Home Manager sets `OMP_MAGPIE_CONFIG` to that runtime path at login.
+neko-sphere provisions `/run/secrets/paseo-omp-magpie`, owned by `paseo` with mode
+`0400`, and sets `OMP_MAGPIE_CONFIG` on the daemon. Template changes restart the
+daemon. The gateway service still receives only `magpie_web_key`.
+
+The document's access rule names these three reader hosts and the maintainer.
+Each host recipient can decrypt all three fields; the runtime client files omit
+the UI key. Decrypted values never enter Nix evaluation or the store.
+
+After switching, start a new login session so desktop applications inherit
+`PI_CONFIG_FILES` and `OMP_MAGPIE_CONFIG`. No Home Manager credential symlink is
+installed. The explicit extension command above also works from an existing
+terminal when pointed at `/run/secrets/omp-magpie`.
 
 ## Verification
 
 From a desktop host:
 
 ```sh
-omp models deepseek
-omp models openrouter
 omp models openai-codex   # after omp /login openai-codex
 omp models cursor         # after omp /login cursor
-omp models magpie         # after in-session /login magpie
+omp models magpie          # after filling the placeholders and switching
 ```
 
-Confirm `models.yml` resolves its keys (`omp models deepseek` lists models rather
-than reporting the provider unauthenticated), start a session and complete a
-tool-calling turn, and confirm a `!cat` failure surfaces as an unauthenticated
-provider rather than a crash. On neko-sphere, confirm the daemon's own `models.yml` is
-present and that Paseo can dispatch through a DeepSeek or OpenRouter model.
-Configuration evaluation and package builds alone cannot prove these behaviors.
+After switching, select an authenticated model and complete a tool-calling turn.
+On neko-sphere, verify Paseo can dispatch through Magpie. Local smoke checks use
+an isolated home and a test gateway to exercise packaged discovery, authentication
+and inference; they do not prove live credentials or remote gateway reachability.

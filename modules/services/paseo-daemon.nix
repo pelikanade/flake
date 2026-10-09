@@ -11,17 +11,6 @@
     }:
     let
       paseoDaemon = pkgs.selfPackages.paseo-daemon;
-
-      # The daemon has no interactive login, so it reaches the key-based
-      # providers only; Codex and Cursor stay with the desktops whose users run
-      # `omp /login`. Each key resolves when a request needs it.
-      modelsYaml = pkgs.writeText "paseo-omp-models.yml" ''
-        providers:
-          deepseek:
-            apiKey: "!cat /run/secrets/paseo-omp-deepseek-api-key"
-          openrouter:
-            apiKey: "!cat /run/secrets/paseo-omp-openrouter-api-key"
-      '';
     in
     {
       users.groups.paseo = { };
@@ -38,29 +27,16 @@
       # spawns see everything the omp aspect installs there, omp included.
       environment.systemPackages = [ paseoDaemon ];
 
-      # The daemon's omp is the only consumer of these keys, and it is not the
-      # desktop user's: decrypt a copy owned by the paseo service user. A key
-      # change restarts the unit because omp caches `!` command output for the
-      # process lifetime.
-      sops.secrets = {
-        paseo-omp-deepseek-api-key = {
-          format = "yaml";
-          key = "deepseek_api_key";
-          sopsFile = config.constants.resources.getSecretPath "omp-providers.yaml";
-          owner = "paseo";
-          group = "paseo";
-          mode = "0400";
-          restartUnits = [ "paseo-daemon.service" ];
+      sops.templates.paseo-omp-magpie = {
+        content = builtins.toJSON {
+          endpoint = config.sops.placeholder.omp-magpie-endpoint;
+          api_key = config.sops.placeholder.omp-magpie-api-key;
         };
-        paseo-omp-openrouter-api-key = {
-          format = "yaml";
-          key = "openrouter_api_key";
-          sopsFile = config.constants.resources.getSecretPath "omp-providers.yaml";
-          owner = "paseo";
-          group = "paseo";
-          mode = "0400";
-          restartUnits = [ "paseo-daemon.service" ];
-        };
+        path = "/run/secrets/paseo-omp-magpie";
+        owner = "paseo";
+        group = "paseo";
+        mode = "0400";
+        restartUnits = [ "paseo-daemon.service" ];
       };
 
       # Reachable on the tailnet and on loopback only. `tailnet0` is the system
@@ -82,6 +58,12 @@
         environment = {
           HOME = "/var/lib/paseo";
           PASEO_HOME = "/var/lib/paseo/.paseo";
+          OMP_MAGPIE_CONFIG = config.sops.templates.paseo-omp-magpie.path;
+          PI_CONFIG_FILES = toString (
+            (pkgs.formats.yaml { }).generate "omp-magpie-config.yml" {
+              extensions = [ "${pkgs.selfPackages.omp-magpie}/share/omp/extensions/magpie" ];
+            }
+          );
           # Tailnet peers reach the daemon on this host's tailnet address, so it
           # binds every interface; this module admits 6767 on tailnet0 only, and
           # loopback keeps working. Configure its password before relying on
@@ -106,11 +88,6 @@
           ];
           StateDirectoryMode = "0700";
           WorkingDirectory = "/var/lib/paseo";
-          # Paseo holds no OAuth logins. Its omp declares the key-based providers
-          # in this read-only models.yml and reads the keys by path from sops.
-          BindReadOnlyPaths = [
-            "${modelsYaml}:/var/lib/paseo/.omp/agent/models.yml"
-          ];
           ExecStart = "${lib.getExe paseoDaemon} daemon run";
           Restart = "on-failure";
           RestartSec = 5;

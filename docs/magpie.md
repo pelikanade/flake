@@ -25,7 +25,7 @@ is handed to the gateway in `MAGPIE_PUBLIC_URL`.
 
 The page signs in through the link the service prints into its journal on
 every start, which carries the sign-in key as `?k=`. `MAGPIE_WEB_KEY` pins
-that key across restarts, from the host-only document
+that key across restarts, from the shared encrypted document
 [modules/secrets/magpie.yaml](../modules/secrets/magpie.yaml): the browser
 stays signed in for 400 days instead of dying with a run's own key, and
 replacing the value in the document (edit with `sops`) revokes every link.
@@ -40,9 +40,11 @@ keeps every change: the state lives under the persistent `StateDirectory`,
 which the unit re-chowns to itself on each start. The keys typed into the UI
 therefore sit on the server's disk, protected by the `0700` state directory
 tree, the dynamic user and `ProtectSystem=strict` — not by this repository's
-sops documents. Only the sign-in key is provisioned, host-only
-[modules/secrets/magpie.yaml](../modules/secrets/magpie.yaml), and reaches the
-service through a systemd credential the same way.
+sops documents. This service receives only `magpie_web_key` through a systemd
+credential. The same [encrypted document](../modules/secrets/magpie.yaml) holds
+the endpoint and gateway API key for [omp clients](omp.md#credentials), and its
+recipients include Asymmetry, Parallax, neko-sphere and the maintainer. Each host
+recipient can decrypt the whole document; client runtime files omit the UI key.
 
 The service runs as `DynamicUser` with a private persistent
 `StateDirectory=magpie` and `HOME=/var/lib/magpie`, hardened with
