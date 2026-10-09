@@ -1,4 +1,4 @@
-_: {
+{ inputs, ... }: {
   flake.modules.nixos.magpie =
     {
       config,
@@ -8,8 +8,12 @@ _: {
     }:
     let
       magpie = lib.getExe pkgs.selfPackages.magpie;
+      grok = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.grok;
       webStart = pkgs.writeShellScript "magpie-web" ''
         set -euo pipefail
+        # magpie installs its own grok under $HOME/.grok/bin and never searches PATH; link that path to the Nix build.
+        mkdir -p "$HOME/.grok/bin"
+        ln -sfn ${grok}/bin/grok "$HOME/.grok/bin/grok"
         export MAGPIE_WEB_KEY="$(${pkgs.coreutils}/bin/cat "$CREDENTIALS_DIRECTORY/magpie-web-key")"
         exec ${magpie} web --gateway --addr 0.0.0.0:3430 --no-open
       '';
