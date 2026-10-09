@@ -25,6 +25,7 @@
         pkgs.selfPackages.deepseek-harness-desktop
         pkgs.selfPackages.tern
         pkgs.selfPackages.magpie
+        pkgs.selfPackages.agent-orchestrator
       ];
     };
 }
