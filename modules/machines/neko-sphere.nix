@@ -10,6 +10,7 @@
       sing-box
       magpie
       paseo-daemon
+      gh
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;
     hardware =
