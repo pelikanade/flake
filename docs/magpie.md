@@ -5,12 +5,65 @@ terminal interface for managing an AI agent's models and providers: a GTK3
 window over a WebKitGTK view, with its own provider list, model picker and plugin
 host. `modules/packages/magpie.nix` builds it, and the workstation desktops
 install it through the `agent-desktops` aspect, so Asymmetry and Parallax carry
-`magpie` on `PATH` and a desktop entry.
+`magpie` on `PATH` and a desktop entry. The same package runs the model gateway
+as `magpie.service` on neko-sphere through the `magpie` aspect ([the service](#the-gateway-service)).
 
-This is the application alone. The `magpie` gateway service that box ran, the
-`agent-providers.yaml` credentials it decrypted and omp's `magpie` extension were
-removed in the same commit as the package; omp's providers are declared in
-`models.yml` instead ([omp](omp.md)).
+## The gateway service
+
+`modules/services/magpie.nix` runs `magpie serve` — the gateway alone on
+`0.0.0.0:3425` — as a headless daemon. It is the harnessed side of the package:
+no Agents, Sessions or Library surface, and the browser UI (`magpie web`) is
+deliberately not provisioned, because its sign-in link is a credential a
+tailnet peer could use to edit the daemon and see its keys once the link leaks.
+
+Tailnet peers reach the OpenAI, OpenAI-Responses and Anthropic routes on
+`neko-sphere.leaffish-halfmoon.ts.net:3425`. Upstream accepts anything the
+gateway's loopback callers present and requires a key only when sharing is
+enabled, so the firewall is the boundary: `networking.firewall.interfaces.tailnet0`
+admits 3425 and loopback keeps working. The endpoint's MagicDNS name is handed
+to the gateway in `MAGPIE_PUBLIC_URL`.
+
+Nix declares the provider policy, and a restart of the unit reapplies it over
+whatever the gateway itself edited. `sops.templates."magpie-providers"` renders
+the DeepSeek and OpenRouter providers into `providers.json` at activation, and
+`LoadCredential` hands the templated file to the dynamic service, whose
+pre-start step installs it into the service home. The keys come from the
+shared provider document ([omp](omp.md#credentials)): the gateway resolves
+`deepseek_api_key` and `openrouter_api_key`, so its host's activation reads
+that document. The gateway's copies stay root-owned (`0400`) and only the
+service reaches them through systemd credentials; no agent process or Paseo
+service inherits a copy.
+
+The service runs as `DynamicUser` with a private persistent
+`StateDirectory=magpie` and `HOME=/var/lib/magpie`, hardened with
+`ProtectSystem=strict`, `ProtectHome` and `PrivateTmp`, and restarts on
+failure. The managed providers are DeepSeek `deepseek-flash` /
+`deepseek-v4-pro` and OpenRouter with its catalog-driven model list; narrow or
+extend a list with the provider's `models` field in
+`modules/services/magpie.nix`. Upstream rotates the model catalog on its own,
+and `/v1/models` lists served providers' models.
+
+A second gateway must not listen on 3425 anywhere on the tailnet; peers cannot
+tell them apart.
+
+### Verifying the gateway
+
+After separately authorized deployment, from a tailnet peer:
+
+```sh
+systemctl status magpie.service          # on neko-sphere
+curl --fail --silent http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/models | head
+curl --fail --silent -X POST -H 'Authorization: Bearer magpie' \
+  -H 'content-type: application/json' \
+  http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/chat/completions \
+  -d '{"model":"deepseek/deepseek-flash","max_tokens":8,"messages":[{"role":"user","content":"ping"}]}'
+```
+
+`/v1/models` lists what the configured providers expose; a real chat round-trip
+proves the key resolves and the upstream still answers. Use
+`journalctl -u magpie.service` for startup failures, and keep any credential
+output out of shared logs. Evaluation and package builds alone cannot prove
+these behaviors.
 
 ## The package
 
@@ -58,7 +111,11 @@ the installed wrapper and lists it, asserting that no Bun landed in
 
 Runtime state belongs to the user: providers, plugins and settings under
 `~/.config/magpie`, plugin and runtime data under `~/.cache/magpie`. Nothing in
-this repository provisions either; the app is not configured declaratively.
+this repository provisions the desktop app's state; the app is not configured
+declaratively. The gateway service's home is the exception there: its
+`providers.json` is reinstalled from the sops template on every unit start, so
+edits made through the gateway itself last only until the next restart, and
+provider policy belongs in `modules/services/magpie.nix`.
 
 ## Moving to a newer version
 
