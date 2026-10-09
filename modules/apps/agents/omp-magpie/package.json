@@ -1,0 +1,10 @@
+{
+  "name": "omp-provider-magpie",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Magpie gateway provider and interactive login for omp",
+  "omp": {
+    "extensions": ["./index.ts"]
+  }
+}

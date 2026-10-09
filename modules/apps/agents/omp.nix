@@ -3,11 +3,8 @@
   ...
 }:
 let
-  # omp is the harness the agent hosts run; its providers are declared in
-  # models.yml rather than discovered from a gateway. omp brings its own tools,
-  # shell and native code, so this adds what an agent host expects from the
-  # system anyway: the interpreter its eval cells use, jq for ad-hoc shell work,
-  # and the shell, git, ssh, nix and ripgrep its tool calls reach for.
+  # omp brings its own tools, shell and native code; add the interpreter its
+  # eval cells use and the system tools its calls reach for.
   ompPackages =
     pkgs:
     [ inputs.omp.packages.${pkgs.stdenv.hostPlatform.system}.omp ]
@@ -143,6 +140,10 @@ in
           # models.yml is read-only user configuration, so a store symlink is
           # safe unlike config.yml, which omp rewrites.
           file."${configDir}/models.yml".text = providersYaml config.constants.resources.userSecretPaths;
+          file."${configDir}/extensions/magpie" = {
+            source = ./omp-magpie;
+            recursive = true;
+          };
         };
       };
   };

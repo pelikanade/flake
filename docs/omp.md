@@ -1,10 +1,10 @@
 # omp and its providers
 
 omp is the coding agent harness the desktop hosts run, and the standalone
-[Paseo daemon](paseo-daemon.md) runs it for remote clients. Its providers are
-declared in `models.yml`; there is no gateway. Every machine that imports
-`inputs.self.modules.aspects.omp` installs omp and the provider declarations.
-The workstation role already composes the aspect.
+[Paseo daemon](paseo-daemon.md) runs it for remote clients. The `omp` aspect
+declares direct providers in `models.yml`. Its Home Manager contribution also
+installs the optional Magpie gateway plugin. The workstation role already
+composes the aspect.
 
 ## Providers
 
@@ -32,6 +32,55 @@ adds nothing to a request.
 `programs.omp.settings` writes `config.yml` as a writable copy, because omp flocks
 and atomically rewrites it. `models.yml` is read-only user configuration, so the
 aspect installs it as an ordinary Home Manager file.
+
+### Magpie gateway plugin
+
+`modules/apps/agents/omp-magpie/` is an installable omp plugin. Home Manager
+places it in `~/.omp/agent/extensions/magpie`, where omp discovers it automatically.
+It adds the `magpie` provider without changing any model-role assignments.
+
+Inside an interactive omp session, run `/login magpie` (or choose **Magpie**
+from `/login`):
+
+1. Enter the Magpie endpoint, or submit an empty answer for
+   `http://127.0.0.1:3425`. A trailing `/v1` is accepted; reverse-proxy path
+   prefixes are preserved.
+2. Enter the gateway API key (`sk-magpie-key-...`). The in-session prompt masks
+   the key. Use a gateway key, not Magpie's web UI sign-in key.
+3. Select a discovered model with `/model`; selectors have the form
+   `magpie/<provider>/<model>` or `magpie/group/<group>`.
+
+The endpoint and key live together in omp's auth store, never in Nix or
+`models.yml`. Repeating `/login magpie` replaces the connection; cancelling
+leaves the previous login intact. Choose Magpie from `/logout` to remove it.
+The plugin uses omp's login interface for a non-expiring gateway key, not a
+browser OAuth flow.
+
+Discovery reads the gateway's `/v1/models` with that key. It preserves model
+IDs, context/output limits, image input and supported reasoning levels, and
+uses native Responses or Anthropic Messages endpoints when advertised;
+other models use Chat Completions. Anthropic requests use budget thinking,
+which Magpie adapts for models requiring adaptive thinking. Missing token
+limits use omp's defaults (128,000 context and 16,384 output tokens); the
+gateway does not advertise prices, so cost is unreported.
+
+Run `omp models refresh magpie` after changing the gateway's model catalog.
+Login stores the connection; discovery and inference surface gateway
+availability or authorization failures. Magpie's loopback access policy may
+accept any key, so successful local discovery does not validate a remote key.
+See the [upstream gateway reference](https://github.com/yetone/magpie/blob/v0.1.1092/docs/reference.md#providers-and-the-gateway).
+
+To load the plugin directly from this checkout without a NixOS switch:
+
+```sh
+omp -e ./modules/apps/agents/omp-magpie
+# Then run /login magpie inside omp.
+```
+
+The Home Manager installation applies to Asymmetry and Parallax, not the
+standalone Paseo service account or named omp profiles. Those can load the
+same plugin explicitly through their own omp extension configuration.
+
 
 ## Credentials
 
@@ -66,6 +115,7 @@ omp models deepseek
 omp models openrouter
 omp models openai-codex   # after omp /login openai-codex
 omp models cursor         # after omp /login cursor
+omp models magpie         # after in-session /login magpie
 ```
 
 Confirm `models.yml` resolves its keys (`omp models deepseek` lists models rather
