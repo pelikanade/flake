@@ -107,8 +107,8 @@ service binds all interfaces so it is reachable on the host's tailnet address â€
 the Paseo daemon takes `0.0.0.0:6767` â€” and loopback keeps working. Nothing is
 admitted on a LAN or public interface.
 
-Restrict 6767 with tailnet grants and configure the Paseo password before relying
-on direct access.
+Restrict 6767 with tailnet grants before relying on direct access. The Paseo password
+comes from sops.
 
 ## Pilot verification
 

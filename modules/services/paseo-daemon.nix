@@ -27,6 +27,20 @@
       # spawns see everything the omp aspect installs there, omp included.
       environment.systemPackages = [ paseoDaemon ];
 
+      # The daemon hashes PASEO_PASSWORD at startup, and that hash takes precedence
+      # over any password stored in its config.json. The value lives in its own
+      # document, read only by this host.
+      sops.secrets.paseo-password = {
+        format = "yaml";
+        key = "password";
+        sopsFile = config.constants.resources.getSecretPath "paseo.yaml";
+      };
+
+      sops.templates.paseo-daemon-env = {
+        content = "PASEO_PASSWORD=${config.sops.placeholder.paseo-password}\n";
+        restartUnits = [ "paseo-daemon.service" ];
+      };
+
       sops.templates.paseo-omp-magpie = {
         content = builtins.toJSON {
           endpoint = config.sops.placeholder.omp-magpie-endpoint;
@@ -70,8 +84,8 @@
           );
           # Tailnet peers reach the daemon on this host's tailnet address, so it
           # binds every interface; this module admits 6767 on tailnet0 only, and
-          # loopback keeps working. Configure its password before relying on
-          # that: the tailnet is the other boundary.
+          # loopback keeps working. The password comes from the sops environment
+          # file below: the tailnet is the other boundary.
           PASEO_LISTEN = lib.mkDefault "0.0.0.0:6767";
           PASEO_NODE_ENV = "production";
           SHELL = lib.getExe pkgs.bashInteractive;
@@ -86,6 +100,7 @@
           Type = "simple";
           User = "paseo";
           Group = "paseo";
+          EnvironmentFile = config.sops.templates.paseo-daemon-env.path;
           StateDirectory = [
             "paseo"
             "paseo/.omp/agent"

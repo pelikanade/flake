@@ -118,7 +118,7 @@ the service or use its stop command to manage systemd's lifecycle.
 
 The service binds `0.0.0.0:6767`: loopback for local clients and the host's
 tailnet address for tailnet peers, admitted by the firewall only on `tailnet0`.
-Set the Paseo password before relying on that, and restrict 6767 with tailnet
+The password comes from `modules/secrets/paseo.yaml` through sops. Restrict 6767 with tailnet
 grants. Set `systemd.services.paseo-daemon.environment.PASEO_LISTEN` back to
 `127.0.0.1:6767` to keep it local. New Paseo homes start with relay disabled. The
 runtime `config.json` stays writable and is preserved across restarts; the module
@@ -174,8 +174,9 @@ and avoid storing it in shell history. See the [CLI reference](https://paseo.sh/
 ### Direct access over the tailnet
 
 The daemon already listens on the host's tailnet address, so a tailnet peer can
-connect without SSH or the relay. Set the password first: a direct connection
-uses it, and the tailnet carries it encrypted. Restrict 6767 with tailnet grants,
+connect without SSH or the relay. A direct connection uses the password from
+`modules/secrets/paseo.yaml`, and the tailnet carries it encrypted. Restrict 6767
+with tailnet grants,
 then add a **Direct connection** in the client with the host's tailnet name and
 port 6767. Password authentication does not encrypt traffic, so keep it on the
 tailnet rather than opening 6767 anywhere else.
