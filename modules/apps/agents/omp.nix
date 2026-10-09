@@ -34,6 +34,11 @@ in
         pkgs,
         ...
       }:
+      let
+        username = config.constants.nvirellia.username;
+        user = config.users.users.${username};
+        hasDesktopUser = lib.hasAttr username config.users.users;
+      in
       {
         key = "omp";
 
@@ -58,17 +63,24 @@ in
           };
         };
 
-        sops.templates.omp-magpie =
-          lib.mkIf (lib.hasAttr config.constants.nvirellia.username config.users.users)
-            {
-              content = builtins.toJSON {
-                endpoint = config.sops.placeholder.omp-magpie-endpoint;
-                api_key = config.sops.placeholder.omp-magpie-api-key;
-              };
-              path = config.constants.resources.userSecretPaths.ompMagpie;
-              owner = config.constants.nvirellia.username;
-              mode = "0400";
-            };
+        sops.templates.omp-magpie = lib.mkIf hasDesktopUser {
+          content = builtins.toJSON {
+            endpoint = config.sops.placeholder.omp-magpie-endpoint;
+            api_key = config.sops.placeholder.omp-magpie-api-key;
+          };
+          path = "${user.home}/.omp/agent/magpie.yaml";
+          owner = username;
+          mode = "0400";
+        };
+
+        systemd.tmpfiles.rules = lib.mkIf hasDesktopUser [
+          "d ${user.home}/.omp 0700 ${username} ${user.group} -"
+          "d ${user.home}/.omp/agent 0700 ${username} ${user.group} -"
+        ];
+        systemd.services.sops-install-secrets.after = [
+          "systemd-tmpfiles-setup.service"
+          "systemd-tmpfiles-resetup.service"
+        ];
       };
 
     flake.modules.homeManager.omp =
@@ -114,7 +126,6 @@ in
           packages = ompPackages pkgs;
 
           sessionVariables = {
-            OMP_MAGPIE_CONFIG = config.constants.resources.userSecretPaths.ompMagpie;
             PI_CONFIG_FILES = toString (
               (pkgs.formats.yaml { }).generate "omp-magpie-config.yml" {
                 extensions = [ "${pkgs.selfPackages.omp-magpie}/share/omp/extensions/magpie" ];

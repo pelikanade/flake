@@ -32,12 +32,17 @@
           endpoint = config.sops.placeholder.omp-magpie-endpoint;
           api_key = config.sops.placeholder.omp-magpie-api-key;
         };
-        path = "/run/secrets/paseo-omp-magpie";
+        path = "${config.users.users.paseo.home}/.omp/agent/magpie.yaml";
         owner = "paseo";
         group = "paseo";
         mode = "0400";
         restartUnits = [ "paseo-daemon.service" ];
       };
+
+      systemd.tmpfiles.rules = [
+        "d ${config.users.users.paseo.home}/.omp 0700 paseo paseo -"
+        "d ${config.users.users.paseo.home}/.omp/agent 0700 paseo paseo -"
+      ];
 
       # Reachable on the tailnet and on loopback only. `tailnet0` is the system
       # interface of the sing-box Tailscale endpoint.
@@ -58,7 +63,6 @@
         environment = {
           HOME = "/var/lib/paseo";
           PASEO_HOME = "/var/lib/paseo/.paseo";
-          OMP_MAGPIE_CONFIG = config.sops.templates.paseo-omp-magpie.path;
           PI_CONFIG_FILES = toString (
             (pkgs.formats.yaml { }).generate "omp-magpie-config.yml" {
               extensions = [ "${pkgs.selfPackages.omp-magpie}/share/omp/extensions/magpie" ];

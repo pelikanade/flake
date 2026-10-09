@@ -97,9 +97,10 @@ exposes no Cursor provider in its built-in manifest, and the built-in plugin
 providers it adds — Antigravity (the `agy` CLI) and Muse Code (the `muse` CLI) —
 need their own signed-in executables, which this host does not install.
 
-The service sets `OMP_MAGPIE_CONFIG=/run/secrets/paseo-omp-magpie`. NixOS activation
-renders only the endpoint and API key from `modules/secrets/magpie.yaml` into
-this file, owned by `paseo` with mode `0400`; changes restart the daemon. Fill its placeholders
+The plugin reads `/var/lib/paseo/.omp/agent/magpie.yaml`. NixOS activation renders
+only the endpoint and API key from `modules/secrets/magpie.yaml` and exposes the
+template at that path, owned by `paseo` with mode `0400`; changes restart the
+daemon. Systemd tmpfiles creates its parent directories before sops runs. Fill the placeholders
 as described under [omp credentials](omp.md#credentials) before deployment.
 The service does not generate omp's `config.yml` or share desktop OAuth logins.
 

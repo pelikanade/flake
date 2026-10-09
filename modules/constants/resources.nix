@@ -7,9 +7,6 @@
 
     config.constants.resources = {
       getSecretPath = fileName: "${inputs.self}/modules/secrets/${fileName}";
-
-      # Runtime paths provisioned by NixOS for Home Manager secret consumers.
-      userSecretPaths.ompMagpie = "/run/secrets/omp-magpie";
     };
   };
 }

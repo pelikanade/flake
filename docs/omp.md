@@ -31,7 +31,7 @@ upstream omp package without a local wrapper. Home Manager sets `PI_CONFIG_FILES
 at login, and the Paseo systemd service sets it in its own environment, pointing
 to a generated overlay that loads Magpie. Named profiles inherit the overlay.
 
-The plugin reads `~/.omp/agent/magpie.yaml`, or the path in `OMP_MAGPIE_CONFIG`.
+The plugin always reads `~/.omp/agent/magpie.yaml`, including in named profiles.
 It requires `endpoint` and `api_key`, registers the provider without an interactive
 login, and uses the key for discovery and inference. A trailing `/v1` is accepted
 on the endpoint; reverse-proxy path prefixes are preserved.
@@ -55,11 +55,11 @@ surface gateway availability or authorization failures. Magpie's loopback access
 policy may accept any key, so local discovery does not validate a remote key.
 See the [upstream gateway reference](https://github.com/yetone/magpie/blob/v0.1.1092/docs/reference.md#providers-and-the-gateway).
 
-To load the extension from this checkout before a NixOS switch, use upstream omp
-with a runtime credential file and an explicit extension path:
+To load the extension directly from this checkout after credentials have been
+provisioned at `~/.omp/agent/magpie.yaml`, use:
 
 ```sh
-OMP_MAGPIE_CONFIG=/path/to/magpie.yaml omp models magpie -e ./modules/packages/omp-magpie
+omp models magpie -e ./modules/packages/omp-magpie
 ```
 
 The environment overlay supplies the `extensions` setting. Replacing
@@ -86,20 +86,23 @@ Replace both values before deployment. Use a Magpie gateway API key for
 
 NixOS activation extracts the endpoint and API key into root-owned files and
 uses `sops.templates` to render only those two fields for omp. Asymmetry and
-Parallax provision `/run/secrets/omp-magpie`, owned by the desktop user with mode
-`0400`; Home Manager sets `OMP_MAGPIE_CONFIG` to that runtime path at login.
-neko-sphere provisions `/run/secrets/paseo-omp-magpie`, owned by `paseo` with mode
-`0400`, and sets `OMP_MAGPIE_CONFIG` on the daemon. Template changes restart the
-daemon. The gateway service still receives only `magpie_web_key`.
+Parallax expose the template at `~/.omp/agent/magpie.yaml`, owned by the desktop
+user with mode `0400`. neko-sphere exposes it at
+`/var/lib/paseo/.omp/agent/magpie.yaml`, owned by `paseo` with mode `0400`.
+Template changes restart the daemon. The gateway service still receives only
+`magpie_web_key`.
+
+Systemd tmpfiles creates each user's `.omp` and `.omp/agent` directories with
+mode `0700` before sops runs at boot or switch. sops links the rendered runtime
+file at the configured home path; Home Manager does not manage that link.
 
 The document's access rule names these three reader hosts and the maintainer.
 Each host recipient can decrypt all three fields; the runtime client files omit
 the UI key. Decrypted values never enter Nix evaluation or the store.
 
 After switching, start a new login session so desktop applications inherit
-`PI_CONFIG_FILES` and `OMP_MAGPIE_CONFIG`. No Home Manager credential symlink is
-installed. The explicit extension command above also works from an existing
-terminal when pointed at `/run/secrets/omp-magpie`.
+`PI_CONFIG_FILES`. No credential-path environment variable is required. The
+explicit extension command above also works from an existing terminal.
 
 ## Verification
 

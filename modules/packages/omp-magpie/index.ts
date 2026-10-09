@@ -53,7 +53,7 @@ function modelConfig(model: MagpieModel, endpoint: string): ProviderModelConfig 
 }
 
 export default async function magpie(pi: ExtensionAPI) {
-	const configPath = process.env.OMP_MAGPIE_CONFIG || join(homedir(), ".omp/agent/magpie.yaml");
+	const configPath = join(homedir(), ".omp/agent/magpie.yaml");
 	const config = YAML.parse(await readFile(configPath, "utf8"));
 	if (
 		!config || typeof config !== "object" ||
