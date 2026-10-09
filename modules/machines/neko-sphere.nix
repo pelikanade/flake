@@ -1,5 +1,5 @@
 { inputs, ... }: {
-  machines.box = {
+  machines.neko-sphere = {
     system = "x86_64-linux";
     imports = with inputs.self.modules.aspects; [
       base
@@ -24,7 +24,7 @@
         ];
 
         networking = {
-          hostName = "box";
+          hostName = "neko-sphere";
           domain = "lotus.local";
         };
         boot.initrd.availableKernelModules = [ "nvme" ];

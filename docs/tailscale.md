@@ -1,7 +1,8 @@
 # Native sing-box Tailscale pilot
 
 Every host that needs the tailnet ends up importing `sing-box`: the `workstation`
-role carries it for Asymmetry and Parallax, and box imports it alongside `server`.
+role carries it for Asymmetry and Parallax, and neko-sphere imports it alongside
+`server`.
 A host that should join the tailnet *without* sing-box needs its own `tailscaled`
 module, which does not exist yet. The endpoint, the MagicDNS server and the routing
 rules are declared in [modules/services/sing-box.nix](../modules/services/sing-box.nix)
@@ -11,7 +12,7 @@ enabled, and no separate Tailscale service or runtime configuration merge is use
 `modules/secrets/tailscale.yaml` holds only the tailnet auth key, so the same
 document serves the endpoint here and a `tailscaled` module later.
 `modules/secrets/sing-box.yaml` holds the proxy credentials and endpoints.
-Asymmetry, Parallax and box all read both and all run the endpoint, so filling the
+Asymmetry, Parallax and neko-sphere all read both and all run the endpoint, so filling the
 auth key enrolls every host that runs sing-box, not just the two workstations. Use a
 reusable auth key, because the same key is read by more than one host.
 
