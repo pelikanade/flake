@@ -1,5 +1,5 @@
 { inputs, ... }: {
-  machines.box = {
+  machines.neko-sphere = {
     system = "x86_64-linux";
     imports = with inputs.self.modules.aspects; [
       base
@@ -8,6 +8,7 @@
       i18n
       substituter-cn
       sing-box
+      magpie
       paseo-daemon
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;
@@ -24,7 +25,7 @@
         ];
 
         networking = {
-          hostName = "box";
+          hostName = "neko-sphere";
           domain = "lotus.local";
         };
         boot.initrd.availableKernelModules = [ "nvme" ];

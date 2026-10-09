@@ -1,6 +1,6 @@
 keys:
   - &noa age155rf8ggpnmdmcpwkd4gj3qy8j05wdtz7cwf96k50um6xly40h3wqc8pthy
-  - &box age1fca2dlmqukt48zg89lrd0k2s5q8w52f9z3tyrfzcr2r2sj8gegxssldpzp
+  - &neko-sphere age1fca2dlmqukt48zg89lrd0k2s5q8w52f9z3tyrfzcr2r2sj8gegxssldpzp
   - &asymmetry age1r6yhequnuznq8chh6l6zq4mwdmf3htcffsxndg4r542qffuj4chsdzlgws
   - &parallax age1umq8y8qy5af02krxupz4lfa3tg6x2mcdhzsdatlmmttgpdyz7fqs3w69rx
 creation_rules:
@@ -18,7 +18,7 @@ creation_rules:
       - age:
           - *noa
           - *asymmetry
-          - *box
+          - *neko-sphere
           - *parallax
   # The tailnet belongs to the host rather than to sing-box: every host that
   # joins it reads this key, through the sing-box endpoint now and through a
@@ -28,7 +28,7 @@ creation_rules:
       - age:
           - *noa
           - *asymmetry
-          - *box
+          - *neko-sphere
           - *parallax
   # Every host that runs omp resolves the DeepSeek and OpenRouter keys from this
   # document at request time. Codex and Cursor sign in per host through
@@ -38,6 +38,14 @@ creation_rules:
     key_groups:
       - age:
           - *noa
-          - *box
+          - *neko-sphere
           - *asymmetry
           - *parallax
+  # Magpie's own credentials: the gateway on neko-sphere reads the file, whose
+  # only value today is the browser UI's sign-in key, and the maintainer keeps
+  # the document editable, so replacing the value revokes the link.
+  - path_regex: ^modules/secrets/magpie\.yaml$
+    key_groups:
+      - age:
+          - *noa
+          - *neko-sphere

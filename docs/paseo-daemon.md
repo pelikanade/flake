@@ -26,7 +26,7 @@ imports = with inputs.self.modules.aspects; [
 ];
 ```
 
-Importing the aspect enables the service. box composes this list; any other daemon
+Importing the aspect enables the service. neko-sphere composes this list; any other daemon
 host composes it unchanged. A host that should join the tailnet without sing-box
 needs its own `tailscaled` module, which does not exist yet. Build that machine's
 NixOS configuration before separately authorizing deployment:

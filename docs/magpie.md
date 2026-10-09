@@ -5,12 +5,81 @@ terminal interface for managing an AI agent's models and providers: a GTK3
 window over a WebKitGTK view, with its own provider list, model picker and plugin
 host. `modules/packages/magpie.nix` builds it, and the workstation desktops
 install it through the `agent-desktops` aspect, so Asymmetry and Parallax carry
-`magpie` on `PATH` and a desktop entry.
+`magpie` on `PATH` and a desktop entry. The same package runs the model gateway
+and its browser page on neko-sphere
+through the `magpie` aspect ([the service](#the-gateway-service)).
 
-This is the application alone. The `magpie` gateway service that box ran, the
-`agent-providers.yaml` credentials it decrypted and omp's `magpie` extension were
-removed in the same commit as the package; omp's providers are declared in
-`models.yml` instead ([omp](omp.md)).
+## The gateway service
+
+`modules/services/magpie.nix` runs `magpie web --gateway` — the browser page on
+`0.0.0.0:3430` with the gateway beside it on `0.0.0.0:3425`, one process, no
+desktop needed. Gateway mode is what a headless host wants: no Agents,
+Sessions or Library surface.
+
+Tailnet peers reach the OpenAI, OpenAI-Responses and Anthropic routes on
+`neko-sphere.leaffish-halfmoon.ts.net:3425`. Upstream accepts anything the
+gateway's loopback callers present and requires a key only when sharing is
+enabled, so the firewall is the boundary: `networking.firewall.interfaces.tailnet0`
+admits 3425 and 3430 and loopback keeps working. The endpoint's MagicDNS name
+is handed to the gateway in `MAGPIE_PUBLIC_URL`.
+
+The page signs in through the link the service prints into its journal on
+every start, which carries the sign-in key as `?k=`. `MAGPIE_WEB_KEY` pins
+that key across restarts, from the host-only document
+[modules/secrets/magpie.yaml](../modules/secrets/magpie.yaml): the browser
+stays signed in for 400 days instead of dying with a run's own key, and
+replacing the value in the document (edit with `sops`) revokes every link.
+Anyone with the link reaches the daemon — keep the journal line out of logs
+you share, and treat 3430 as tailnet-grant material.
+
+Configuration is entirely by hand in the web UI: providers, their keys, model
+lists, routing groups and plugins are whatever it saves into
+`/var/lib/magpie/.config/magpie/providers.json` and the settings beside it.
+Nothing is rendered into the service home from Nix, and a restart or a reboot
+keeps every change: the state lives under the persistent `StateDirectory`,
+which the unit re-chowns to itself on each start. The keys typed into the UI
+therefore sit on the server's disk, protected by the `0700` state directory
+tree, the dynamic user and `ProtectSystem=strict` — not by this repository's
+sops documents. Only the sign-in key is provisioned, host-only
+[modules/secrets/magpie.yaml](../modules/secrets/magpie.yaml), and reaches the
+service through a systemd credential the same way.
+
+The service runs as `DynamicUser` with a private persistent
+`StateDirectory=magpie` and `HOME=/var/lib/magpie`, hardened with
+`ProtectSystem=strict`, `ProtectHome` and `PrivateTmp`, and restarts on
+failure. The UI's Providers page adds keyed vendors (`magpie provider add
+deepseek sk-…` is the same thing from a shell) and accounts; whatever it lists,
+the gateway serves, and `/v1/models` shows served providers' models. Upstream
+rotates the model catalog on its own.
+
+A second gateway must not listen on 3425 anywhere on the tailnet; peers cannot
+tell them apart.
+
+### Verifying the gateway
+
+After separately authorized deployment, from a tailnet peer:
+
+```sh
+systemctl status magpie.service          # on neko-sphere
+curl --fail --silent http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/models | head
+curl --silent http://neko-sphere.leaffish-halfmoon.ts.net:3430/ -o /dev/null -w '%{http_code}\n'  # 401: the key guards every page
+```
+
+`/v1/models` is the catalog the UI has configured — empty until the first
+provider is added there. A real chat round-trip against one of its models
+proves the key resolves and the upstream still answers:
+
+```sh
+curl --fail --silent -X POST -H 'Authorization: Bearer magpie' \
+  -H 'content-type: application/json' \
+  http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/chat/completions \
+  -d '{"model":"<provider>/<model>","max_tokens":8,"messages":[{"role":"user","content":"ping"}]}'
+```
+
+`journalctl -u magpie.service` holds the sign-in link and any startup
+failures; keep the link and any credential output out of shared logs. The
+link arrives once per start and stays valid while `magpie_web_key` is
+unchanged. Evaluation and package builds alone cannot prove these behaviors.
 
 ## The package
 
@@ -58,7 +127,10 @@ the installed wrapper and lists it, asserting that no Bun landed in
 
 Runtime state belongs to the user: providers, plugins and settings under
 `~/.config/magpie`, plugin and runtime data under `~/.cache/magpie`. Nothing in
-this repository provisions either; the app is not configured declaratively.
+this repository provisions the desktop app's state; the app is not configured
+declaratively. The gateway service's home is the same shape: every provider,
+key, model list and setting it is given is claimed through the web UI and
+stored under the service home, and nothing here renders into that home.
 
 ## Moving to a newer version
 

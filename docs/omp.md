@@ -42,7 +42,7 @@ aspect installs it as an ordinary Home Manager file.
 | `deepseek_api_key` | DeepSeek authentication |
 | `openrouter_api_key` | OpenRouter authentication |
 
-Every host that runs omp reads this document: box, Asymmetry and Parallax. Its
+Every host that runs omp reads this document: neko-sphere, Asymmetry and Parallax. Its
 `.sops.yaml` rule names exactly those hosts plus the maintainer, and no catch-all
 matches it.
 
@@ -71,6 +71,6 @@ omp models cursor         # after omp /login cursor
 Confirm `models.yml` resolves its keys (`omp models deepseek` lists models rather
 than reporting the provider unauthenticated), start a session and complete a
 tool-calling turn, and confirm a `!cat` failure surfaces as an unauthenticated
-provider rather than a crash. On box, confirm the daemon's own `models.yml` is
+provider rather than a crash. On neko-sphere, confirm the daemon's own `models.yml` is
 present and that Paseo can dispatch through a DeepSeek or OpenRouter model.
 Configuration evaluation and package builds alone cannot prove these behaviors.
