@@ -7,15 +7,7 @@ _: {
       ...
     }:
     let
-      # The gateway runs the key-based providers only. Codex and Cursor sign
-      # in per host through `omp /login`, so this host needs neither of
-      # their CLI logins nor the community plugin that seeds them.
       magpie = lib.getExe pkgs.selfPackages.magpie;
-      install = "${pkgs.coreutils}/bin/install";
-      directory = "/var/lib/magpie/.config/magpie";
-
-      # MAGPIE_WEB_KEY pins the sign-in link; without it magpie mints a new
-      # link, and a new key, on every start.
       webStart = pkgs.writeShellScript "magpie-web" ''
         set -euo pipefail
         export MAGPIE_WEB_KEY="$(${pkgs.coreutils}/bin/cat "$CREDENTIALS_DIRECTORY/magpie-web-key")"
@@ -33,73 +25,19 @@ _: {
         3430
       ];
 
-      # The gateway resolves the two key-based providers from the shared
-      # provider document. The copies stay root-owned and reach the dynamic
-      # service through systemd credentials; no other consumer inherits them.
-      # A key change restarts the unit.
-      sops.secrets = {
-        "magpie-deepseek-api-key" = {
-          format = "yaml";
-          key = "deepseek_api_key";
-          sopsFile = config.constants.resources.getSecretPath "omp-providers.yaml";
-          owner = "root";
-          group = "root";
-          mode = "0400";
-        };
-        "magpie-openrouter-api-key" = {
-          format = "yaml";
-          key = "openrouter_api_key";
-          sopsFile = config.constants.resources.getSecretPath "omp-providers.yaml";
-          owner = "root";
-          group = "root";
-          mode = "0400";
-        };
-        "magpie-web-key" = {
-          format = "yaml";
-          key = "magpie_web_key";
-          sopsFile = config.constants.resources.getSecretPath "magpie.yaml";
-          owner = "root";
-          group = "root";
-          mode = "0400";
-        };
-      };
-
-      # Nix declares the provider policy; sops renders the keys into this
-      # template at activation and the pre-start step installs it. A restart
-      # of the unit reapplies the managed list over whatever the gateway
-      # itself may have edited.
-      sops.templates."magpie-providers" = {
+      # None of the gateway's providers are declared here. The web UI is where
+      # providers, their keys and their model lists are configured by hand, and
+      # they persist as the service's own state under its StateDirectory, so a
+      # restart or a reboot keeps them. Only the sign-in key is provisioned,
+      # host-only, and a value change restarts the unit by itself.
+      sops.secrets."magpie-web-key" = {
+        format = "yaml";
+        key = "magpie_web_key";
+        sopsFile = config.constants.resources.getSecretPath "magpie.yaml";
+        owner = "root";
+        group = "root";
         mode = "0400";
         restartUnits = [ "magpie.service" ];
-        content = builtins.toJSON {
-          providers = [
-            {
-              id = "deepseek";
-              name = "DeepSeek";
-              key = config.sops.placeholder."magpie-deepseek-api-key";
-              chat = "https://api.deepseek.com/v1";
-              responses = "https://api.deepseek.com/v1";
-              anthropic = "https://api.deepseek.com/anthropic";
-              catalog = "deepseek";
-              models = [
-                "deepseek-flash"
-                "deepseek-v4-pro"
-              ];
-              off = false;
-              hidden = false;
-            }
-            {
-              id = "openrouter";
-              name = "OpenRouter";
-              key = config.sops.placeholder."magpie-openrouter-api-key";
-              chat = "https://openrouter.ai/api/v1";
-              anthropic = "https://openrouter.ai/api";
-              catalog = "openrouter";
-              off = false;
-              hidden = false;
-            }
-          ];
-        };
       };
 
       systemd.services.magpie = {
@@ -118,10 +56,11 @@ _: {
           XDG_CONFIG_HOME = "/var/lib/magpie/.config";
           XDG_CACHE_HOME = "/var/lib/magpie/.cache";
           # The gateway binds every interface so tailnet peers reach it on this
-          # host's tailnet address; this module admits 3425 on tailnet0 only,
-          # and loopback keeps working. Upstream accepts only loopback callers
-          # unless the socket is opened deliberately, which this variable does
-          # and the sing-box endpoint's firewall bounds to the tailnet.
+          # host's tailnet address; this module admits 3425 and 3430 on tailnet0
+          # only, and loopback keeps working. Upstream accepts only loopback
+          # callers unless the socket is opened deliberately, which this
+          # variable does and the sing-box endpoint's firewall bounds to the
+          # tailnet.
           MAGPIE_ADDR = "0.0.0.0:3425";
           # The banner and the CLIs advertise the gateway by its MagicDNS name;
           # the resolver does not expand a bare peer name.
@@ -134,14 +73,7 @@ _: {
           StateDirectory = "magpie";
           StateDirectoryMode = "0700";
           WorkingDirectory = "/var/lib/magpie";
-          LoadCredential = [
-            "providers.json:${config.sops.templates."magpie-providers".path}"
-            "magpie-web-key:${config.sops.secrets."magpie-web-key".path}"
-          ];
-          ExecStartPre = [
-            "${install} -d -m 0700 ${directory}"
-            "${install} -m 0600 %d/providers.json ${directory}/providers.json"
-          ];
+          LoadCredential = [ "magpie-web-key:${config.sops.secrets."magpie-web-key".path}" ];
           ExecStart = "${webStart}";
           Restart = "on-failure";
           RestartSec = 10;

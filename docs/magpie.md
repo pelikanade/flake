@@ -32,26 +32,25 @@ replacing the value in the document (edit with `sops`) revokes every link.
 Anyone with the link reaches the daemon — keep the journal line out of logs
 you share, and treat 3430 as tailnet-grant material.
 
-Nix declares the provider policy, and a restart of the unit reapplies it over
-whatever the gateway itself edited. `sops.templates."magpie-providers"` renders
-the DeepSeek and OpenRouter providers into `providers.json` at activation, and
-`LoadCredential` hands the templated file to the dynamic service, whose
-pre-start step installs it into the service home. The keys come from the
-shared provider document ([omp](omp.md#credentials)): the gateway resolves
-`deepseek_api_key` and `openrouter_api_key`, so its host's activation reads
-that document. The gateway's copies stay root-owned (`0400`) and only the
-service reaches them through systemd credentials; no agent process or Paseo
-service inherits a copy. The sign-in key reaches the service through its own
-credential the same way.
+Configuration is entirely by hand in the web UI: providers, their keys, model
+lists, routing groups and plugins are whatever it saves into
+`/var/lib/magpie/.config/magpie/providers.json` and the settings beside it.
+Nothing is rendered into the service home from Nix, and a restart or a reboot
+keeps every change: the state lives under the persistent `StateDirectory`,
+which the unit re-chowns to itself on each start. The keys typed into the UI
+therefore sit on the server's disk, protected by the `0700` state directory
+tree, the dynamic user and `ProtectSystem=strict` — not by this repository's
+sops documents. Only the sign-in key is provisioned, host-only
+[modules/secrets/magpie.yaml](../modules/secrets/magpie.yaml), and reaches the
+service through a systemd credential the same way.
 
 The service runs as `DynamicUser` with a private persistent
 `StateDirectory=magpie` and `HOME=/var/lib/magpie`, hardened with
 `ProtectSystem=strict`, `ProtectHome` and `PrivateTmp`, and restarts on
-failure. The managed providers are DeepSeek `deepseek-flash` /
-`deepseek-v4-pro` and OpenRouter with its catalog-driven model list; narrow or
-extend a list with the provider's `models` field in
-`modules/services/magpie.nix`. Upstream rotates the model catalog on its own,
-and `/v1/models` lists served providers' models.
+failure. The UI's Providers page adds keyed vendors (`magpie provider add
+deepseek sk-…` is the same thing from a shell) and accounts; whatever it lists,
+the gateway serves, and `/v1/models` shows served providers' models. Upstream
+rotates the model catalog on its own.
 
 A second gateway must not listen on 3425 anywhere on the tailnet; peers cannot
 tell them apart.
@@ -63,19 +62,24 @@ After separately authorized deployment, from a tailnet peer:
 ```sh
 systemctl status magpie.service          # on neko-sphere
 curl --fail --silent http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/models | head
-curl --fail --silent -X POST -H 'Authorization: Bearer magpie' \
-  -H 'content-type: application/json' \
-  http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/chat/completions \
-  -d '{"model":"deepseek/deepseek-flash","max_tokens":8,"messages":[{"role":"user","content":"ping"}]}'
 curl --silent http://neko-sphere.leaffish-halfmoon.ts.net:3430/ -o /dev/null -w '%{http_code}\n'  # 401: the key guards every page
 ```
 
-`/v1/models` lists what the configured providers expose; a real chat round-trip
-proves the key resolves and the upstream still answers. The browser signs in
-with the link from `journalctl -u magpie.service` — one line, once per start,
-and it stays valid while `magpie_web_key` is unchanged. Keep the link and any
-credential output out of shared logs. Evaluation and package builds alone
-cannot prove these behaviors.
+`/v1/models` is the catalog the UI has configured — empty until the first
+provider is added there. A real chat round-trip against one of its models
+proves the key resolves and the upstream still answers:
+
+```sh
+curl --fail --silent -X POST -H 'Authorization: Bearer magpie' \
+  -H 'content-type: application/json' \
+  http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/chat/completions \
+  -d '{"model":"<provider>/<model>","max_tokens":8,"messages":[{"role":"user","content":"ping"}]}'
+```
+
+`journalctl -u magpie.service` holds the sign-in link and any startup
+failures; keep the link and any credential output out of shared logs. The
+link arrives once per start and stays valid while `magpie_web_key` is
+unchanged. Evaluation and package builds alone cannot prove these behaviors.
 
 ## The package
 
@@ -124,10 +128,9 @@ the installed wrapper and lists it, asserting that no Bun landed in
 Runtime state belongs to the user: providers, plugins and settings under
 `~/.config/magpie`, plugin and runtime data under `~/.cache/magpie`. Nothing in
 this repository provisions the desktop app's state; the app is not configured
-declaratively. The gateway service's home is the exception there: its
-`providers.json` is reinstalled from the sops template on every unit start, so
-edits made through the gateway itself last only until the next restart, and
-provider policy belongs in `modules/services/magpie.nix`.
+declaratively. The gateway service's home is the same shape: every provider,
+key, model list and setting it is given is claimed through the web UI and
+stored under the service home, and nothing here renders into that home.
 
 ## Moving to a newer version
 
