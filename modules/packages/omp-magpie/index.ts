@@ -63,22 +63,59 @@ export default async function magpie(pi: ExtensionAPI) {
 		throw new Error(`Magpie configuration ${configPath} requires non-empty endpoint and api_key fields.`);
 	}
 	const endpoint = endpointUrl(config.endpoint);
+	let notify: ((message: string) => void) | undefined;
+	let pendingWarning: string | undefined;
+	let lastWarning: string | undefined;
+	pi.on("session_start", (_event, ctx) => {
+		notify = ctx.hasUI ? message => ctx.ui.notify(message, "warning") : undefined;
+		if (notify && pendingWarning) {
+			notify(pendingWarning);
+			pendingWarning = undefined;
+		}
+	});
+	pi.on("session_shutdown", () => {
+		notify = undefined;
+	});
 	pi.registerProvider("magpie", {
 		apiKey: config.api_key.trim(),
 		headers: { "User-Agent": "omp" },
 		async fetchDynamicModels(apiKey) {
 			if (!apiKey) return [];
-			const response = await fetch(`${endpoint}/v1/models`, {
-				headers: { Authorization: `Bearer ${apiKey}`, "User-Agent": "omp" },
-				signal: AbortSignal.timeout(15_000),
-				redirect: "error",
-			});
-			if (!response.ok) throw new Error(`Magpie model discovery failed (HTTP ${response.status}).`);
-			const catalog = await response.json() as { data?: MagpieModel[] };
-			if (!Array.isArray(catalog.data) || catalog.data.some(model => !model || typeof model.id !== "string" || !model.id)) {
-				throw new Error("Magpie returned an invalid model catalog.");
+			let failure = "connection error";
+			try {
+				const response = await fetch(`${endpoint}/v1/models`, {
+					headers: { Authorization: `Bearer ${apiKey}`, "User-Agent": "omp" },
+					signal: AbortSignal.timeout(15_000),
+					redirect: "error",
+				});
+				failure = `HTTP ${response.status}`;
+				if (!response.ok) throw new Error(`Magpie model discovery failed (${failure}).`);
+				failure = "invalid model catalog";
+				const catalog = await response.json() as { data?: MagpieModel[] };
+				if (!Array.isArray(catalog.data) || catalog.data.some(model => !model || typeof model.id !== "string" || !model.id)) {
+					throw new Error("Magpie returned an invalid model catalog.");
+				}
+				const models = catalog.data.map(model => modelConfig(model, endpoint));
+				pendingWarning = undefined;
+				lastWarning = undefined;
+				return models;
+			} catch (error) {
+				const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+				const reason = typeof code === "string" && /^[A-Z][A-Z0-9_]{0,63}$/.test(code)
+					? code
+					: error instanceof Error && error.name === "TimeoutError" ? "timeout after 15 seconds" : failure;
+				const message = `Magpie model discovery failed (${reason}). Check the endpoint host/port and API key in ~/.omp/agent/magpie.yaml, then refresh models.`;
+				if (message !== lastWarning) {
+					lastWarning = message;
+					if (notify) {
+						notify(message);
+					} else {
+						console.warn(`Warning: ${message}`);
+						pendingWarning = message;
+					}
+				}
+				throw error;
 			}
-			return catalog.data.map(model => modelConfig(model, endpoint));
 		},
 	});
 }

@@ -50,9 +50,13 @@ limits use omp's defaults (128,000 context and 16,384 output tokens); the
 gateway does not advertise prices, so cost is unreported.
 
 Run `omp models refresh magpie` after changing the gateway's model catalog or
-endpoint. Restart omp after changing its credentials. Discovery and inference
-surface gateway availability or authorization failures. Magpie's loopback access
-policy may accept any key, so local discovery does not validate a remote key.
+endpoint. Restart omp after changing its credentials. Failed discovery emits a
+warning with the connection error code or HTTP status and a pointer to the runtime
+configuration. Interactive omp shows the warning once its UI is ready; CLI commands
+write it to stderr. Warnings omit the endpoint and API key, and discovery still fails
+normally rather than treating the failure as an empty catalog. Inference errors
+remain handled by omp. Magpie's loopback access policy may accept any key, so local
+discovery does not validate a remote key.
 See the [upstream gateway reference](https://github.com/yetone/magpie/blob/v0.1.1092/docs/reference.md#providers-and-the-gateway).
 
 To load the extension directly from this checkout after credentials have been
