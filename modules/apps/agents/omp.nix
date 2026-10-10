@@ -3,12 +3,15 @@
   ...
 }:
 let
-  # omp brings its own tools, shell and native code; add the interpreter its
-  # eval cells use and the system tools its calls reach for.
+  # omp brings its own tools, shell, native code and browser; add the
+  # interpreter its eval cells use, the system tools its calls reach for, and
+  # the Chromium its browser tool finds on PATH (upstream's managed download
+  # does not run on NixOS).
   ompPackages =
     pkgs:
     (with pkgs; [
       bashInteractive
+      chromium
       git
       jq
       nix
