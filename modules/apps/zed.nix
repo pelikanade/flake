@@ -1,6 +1,6 @@
 { inputs, ... }: {
-  flake-file.inputs.rose-pine-zed = {
-    url = "github:rose-pine/zed";
+  flake-file.inputs.zed-glassy-nord = {
+    url = "github:matt-gilb/zed_glassy-nord";
     flake = false;
   };
 
@@ -21,115 +21,41 @@
         ];
       };
 
-      rosePine =
-        variant: builtins.fromJSON (builtins.readFile (inputs.rose-pine-zed + "/themes/${variant}.json"));
+      glassyNord = builtins.fromJSON (
+        builtins.readFile (inputs.zed-glassy-nord + "/themes/glassy_nord.json")
+      );
 
-      # The glass this desktop already had, as the alpha each Zed style key
-      # carries. These are the effective values of the theme this replaces, not
-      # the ones it declares: Zed draws drop shadows and fade gradients over a
-      # surface assuming it has an opaque base, so the `40` entries below keep
-      # the faint tint that hides those artifacts instead of going fully
-      # transparent. Everything else is unchanged, so only the palette moves:
-      # the window and the two bars keep a translucent base, the editor and the
-      # panels take that tint, and the interactive tints stay where they were
-      # tuned. The Rosé Pine themes define every key here except `hidden` and
-      # `pane.focused_border`, which keep their inherited values.
-      glassAlpha = {
-        background = "cf";
-        border = "66";
-        "border.disabled" = "3d";
-        "border.transparent" = "3d";
-        "border.variant" = "66";
-        conflict = "99";
-        created = "99";
-        deleted = "99";
-        "drop_target.background" = "99";
-        "editor.active_line.background" = "0f";
-        "editor.active_line_number" = "8f";
-        "editor.active_wrap_guide" = "80";
-        "editor.background" = "40";
-        "editor.document_highlight.read_background" = "66";
-        "editor.document_highlight.write_background" = "66";
-        "editor.gutter.background" = "40";
-        "editor.highlighted_line.background" = "40";
-        "editor.invisible" = "00";
-        "editor.line_number" = "2e";
-        "editor.subheader.background" = "40";
-        "editor.wrap_guide" = "66";
-        "element.active" = "66";
-        "element.background" = "66";
-        "element.hover" = "66";
-        "element.selected" = "c2";
-        "elevated_surface.background" = "61";
-        "error.background" = "9e";
-        "ghost_element.hover" = "33";
-        "ghost_element.selected" = "66";
-        hidden = "66";
-        "hint.background" = "9e";
-        ignored = "66";
-        "info.background" = "9e";
-        modified = "99";
-        "pane.focused_border" = "00";
-        "panel.background" = "40";
-        "panel.focused_border" = "00";
-        "scrollbar.thumb.background" = "99";
-        "scrollbar.thumb.hover_background" = "aa";
-        "scrollbar.track.border" = "66";
-        "search.match_background" = "33";
-        "status_bar.background" = "cf";
-        "surface.background" = "40";
-        "tab.active_background" = "55";
-        "tab.inactive_background" = "00";
-        "tab_bar.background" = "0f";
-        "terminal.background" = "40";
-        "text.disabled" = "33";
-        "text.muted" = "cc";
-        "text.placeholder" = "66";
-        "title_bar.background" = "cf";
-        "toolbar.background" = "40";
-        "warning.background" = "9e";
-      };
+      # Zed draws drop shadows and fade gradients assuming each surface has an
+      # opaque base. The theme leaves its editor/panel/terminal backgrounds
+      # fully transparent, so those effects render as hard-edged dark patches
+      # over the blurred compositor background. Give every fully transparent
+      # `*.background` a faint tint of the variant's base colour so they blend.
+      tintAlpha = "40";
 
-      glassTheme =
+      tintTheme =
         theme:
         let
-          # The window's own base colour, standing in for the surfaces the port
-          # leaves undefined so that they can still carry a tint.
           base = builtins.substring 0 7 theme.style.background;
-
-          glassify =
+        in
+        theme
+        // {
+          style = builtins.mapAttrs (
             name: value:
-            if !(builtins.hasAttr name glassAlpha) then
-              value
+            if
+              (name == "background" || lib.hasSuffix ".background" name)
+              && lib.isString value
+              && builtins.stringLength value == 9
+              && lib.hasSuffix "00" value
+            then
+              "${base}${tintAlpha}"
             else
-              let
-                alpha = glassAlpha.${name};
-                rgb =
-                  if value == null then
-                    base
-                  else if lib.isString value && builtins.match "#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?" value != null then
-                    builtins.substring 0 7 value
-                  else
-                    null;
-              in
-              if rgb == null then value else "${rgb}${alpha}";
-        in
-        theme
-        // {
-          style = builtins.mapAttrs glassify theme.style // {
-            "background.appearance" = "blurred";
-          };
+              value
+          ) theme.style;
         };
 
-      glassyTheme =
-        variant:
-        let
-          theme = rosePine variant;
-        in
-        theme
-        // {
-          themes = map glassTheme theme.themes;
-        };
+      tintedTheme = glassyNord // {
+        themes = map tintTheme glassyNord.themes;
+      };
     in
     {
       programs.zed-editor = {
@@ -145,12 +71,11 @@
           "nvim-nightfox"
           "biome"
           "terraform"
+          "nordic-theme"
+          "nord"
         ];
 
-        themes = {
-          rose-pine-moon = builtins.toJSON (glassyTheme "rose-pine-moon");
-          rose-pine-dawn = builtins.toJSON (glassyTheme "rose-pine-dawn");
-        };
+        themes.glassy_nord = builtins.toJSON tintedTheme;
 
         userSettings = {
           agent_servers = {
@@ -251,8 +176,8 @@
             scrollbar.show = "never";
           };
           theme = {
-            dark = "Rosé Pine Moon";
-            light = "Rosé Pine Dawn";
+            dark = "Glassy Nord Dark";
+            light = "Glassy Nord Light";
             mode = "dark";
           };
           title_bar.show_user_picture = false;

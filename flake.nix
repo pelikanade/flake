@@ -58,10 +58,6 @@
       url = "github:can1357/oh-my-pi";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    rose-pine-zed = {
-      url = "github:rose-pine/zed";
-      flake = false;
-    };
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -75,5 +71,9 @@
       };
     };
     systems.url = "github:nix-systems/default";
+    zed-glassy-nord = {
+      url = "github:matt-gilb/zed_glassy-nord";
+      flake = false;
+    };
   };
 }

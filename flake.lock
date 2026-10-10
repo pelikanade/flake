@@ -800,26 +800,10 @@
         "nixvim": "nixvim",
         "noctalia": "noctalia",
         "omp": "omp",
-        "rose-pine-zed": "rose-pine-zed",
         "sops-nix": "sops-nix",
         "stylix": "stylix",
-        "systems": "systems_4"
-      }
-    },
-    "rose-pine-zed": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1790369762,
-        "narHash": "sha256-VBF3W+/XC/XKDlhptJCmHxLJqKqHwUQnoM2iLFUpdYQ=",
-        "owner": "rose-pine",
-        "repo": "zed",
-        "rev": "1446d31a2eec6bee627883d523ec63ef5c78ec9b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "rose-pine",
-        "repo": "zed",
-        "type": "github"
+        "systems": "systems_4",
+        "zed-glassy-nord": "zed-glassy-nord"
       }
     },
     "rust-overlay": {
@@ -1108,6 +1092,22 @@
       "original": {
         "owner": "numtide",
         "repo": "treefmt-nix",
+        "type": "github"
+      }
+    },
+    "zed-glassy-nord": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1749327740,
+        "narHash": "sha256-r5JeK82KIrWOfPDchLhYcPUECJyOkFg+kxTjRpI6T54=",
+        "owner": "matt-gilb",
+        "repo": "zed_glassy-nord",
+        "rev": "85a30524c022eb7a84852089a1b2c276c901234b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "matt-gilb",
+        "repo": "zed_glassy-nord",
         "type": "github"
       }
     }
