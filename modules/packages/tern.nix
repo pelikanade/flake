@@ -5,7 +5,7 @@ let
   # a redirect to auth.stencil.so, so fetchurl cannot take it and no Nix build can
   # reach it. requireFile pins the artifact and names the missing tarball, and the
   # build succeeds only once its hash is in the store. See docs/tern.md.
-  build = "20261007-073820-0e39682";
+  build = "20261010-153042-487bca1";
 
   package =
     {
@@ -28,14 +28,14 @@ let
     }:
     stdenv.mkDerivation (finalAttrs: {
       pname = "tern";
-      version = "0.6.0";
+      version = "0.7.1";
 
       # The glibc artifact. NixOS is glibc, and the published musl artifact needs
       # /lib/ld-musl-x86_64.so.1 plus a musl libstdc++, so it saves nothing here.
       src = requireFile {
         name = "Tern-${finalAttrs.version}-linux-x86_64.tar.gz";
         url = "https://build.stencil.so/d/tern/${build}/Tern-${finalAttrs.version}-linux-x86_64.tar.gz";
-        hash = "sha256-E3hYK1PmNGnqTIXY/H9i7NoQcrTDOBvWfh3B4/+Mjbc=";
+        hash = "sha256-cLJAECXSNFYLJZgi9XeOxOhjmb01Ce2It2eI8tJOA9w=";
       };
 
       # The archive holds tern/tern and nothing else.
