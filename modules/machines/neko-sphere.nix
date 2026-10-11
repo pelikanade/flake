@@ -9,7 +9,7 @@
       substituter-cn
       sing-box
       magpie
-      paseo-daemon
+      paseo-docker
       gh
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;

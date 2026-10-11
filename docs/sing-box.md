@@ -49,6 +49,19 @@ the client's interface and a rule sending NetBird's own ranges
 proxied. Both are present only on a host that configures a NetBird client, and no
 cgroup measurement or packet mark is involved any more.
 
+## Docker bridge traffic
+
+When Docker and sing-box run together, the Docker module permits TCP traffic
+from `docker0` that the kernel has already marked as destination-NATed. This
+lets `auto_redirect` deliver container egress to sing-box's local proxy listener;
+otherwise the NixOS input firewall drops the redirected connection even though
+container DNS and ordinary LAN forwarding work. The rule neither trusts the
+whole bridge nor opens a fixed host port. It is enabled only with sing-box and
+the nftables firewall backend.
+
+Validate this path with an HTTPS request and a real repository clone from a
+bridge-networked container, in addition to the sandbox's local execution checks.
+
 ## Change a value
 
 ```sh
