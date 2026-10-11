@@ -19,7 +19,7 @@ service user.
 `modules/services/sing-box.nix` declares one `sops.secrets.<name>` per encrypted
 value with `owner = "root"` and `restartUnits = [ "sing-box.service" ]`, so changing
 a value restarts the service. Proxy and tailnet credentials use mode `0400`;
-the management API credential uses group `sing-box-api` and mode `0440`.
+the management API credential uses group `tailscale` and mode `0440`.
 
 ## What stays encrypted
 
@@ -58,20 +58,23 @@ at `http://127.0.0.1:9090` on every importing machine. This requires sing-box
 provide certificate RPCs.
 
 NixOS activation provisions the document's `api_key` as
-`/run/secrets/sing-box-api-key`, owned by `root:sing-box-api` with mode `0440`.
+`/run/secrets/sing-box-api-key`, owned by `root:tailscale` with mode `0440`.
 The root pre-start renderer reads that same path into the runtime configuration.
 The API key grants control of the entire sing-box instance, including certificate
 private-key export; it is not restricted to certificate operations. Authentication
 remains required on loopback because the userspace Tailscale endpoint can forward
 local ports. No API firewall port is opened.
 
-The common module creates the `sing-box-api` group without assigning clients.
-Each consumer module must explicitly grant its account membership and, for a
-systemd service, add `SupplementaryGroups = [ "sing-box-api" ]`. The
-[Paseo consumer](../modules/services/paseo-daemon.nix) does this when sing-box is
-enabled, so host agents can obtain certificates. Other accounts have no access
-by default. Keep the key file and `BOX_API_SECRET` out of application and sandbox
-container environments; pass the variable only to the sing-box CLI subprocess.
+The common module creates the shared `tailscale` group. The
+[human account](../modules/users/nvirellia.nix) and
+[Paseo consumer](../modules/services/paseo-daemon.nix) join it wherever they are
+configured with sing-box. Paseo's unit also declares
+`SupplementaryGroups = [ "tailscale" ]`. This grants the same management API
+access to human users and host agents. Other clients can join the group through
+their own consumer configuration. Human sessions must log in again after a group
+change; Paseo restarts on activation. Keep the key file and `BOX_API_SECRET` out
+of application and sandbox container environments; pass the variable only to
+the sing-box CLI subprocess.
 
 Build the affected configurations before an administrator activates them:
 

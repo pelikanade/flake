@@ -7,7 +7,12 @@ _: {
   };
 
   flake.modules.nixos.nvirellia =
-    { config, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
       inherit (config.constants) nvirellia;
     in
@@ -21,7 +26,8 @@ _: {
           "networkmanager"
           "input"
           "podman"
-        ];
+        ]
+        ++ lib.optional config.services.sing-box.enable "tailscale";
         shell = pkgs.fish;
         initialHashedPassword = nvirellia.hashedPassword;
         openssh.authorizedKeys.keys = [ nvirellia.sshPubKey ];
