@@ -443,12 +443,10 @@
         tailscale_auth_key = secretFrom "tailscale.yaml" "tailscale_auth_key";
         sing-box-api-key = (secretFrom "sing-box-api.yaml" "api_key") // {
           path = "/run/secrets/sing-box-api-key";
-          group = "tailscale";
+          group = "sing-box";
           mode = "0440";
         };
       };
-
-      users.groups.tailscale = { };
 
       services.sing-box = {
         enable = true;
