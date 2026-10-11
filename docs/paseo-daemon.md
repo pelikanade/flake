@@ -72,6 +72,16 @@ The service imports `omp` and installs its package set: omp with jq and Python.
 Its PATH also includes Paseo, Bash, Git, SSH, Nix, and ripgrep. Additional project
 tools belong in the consuming aspect's `systemd.services.paseo-daemon.path`. It
 does not inherit a desktop user's shell environment or Home Manager packages.
+
+When sing-box is enabled, this consumer adds the `paseo` account and daemon unit
+to `sing-box-api`. That group can read `/run/secrets/sing-box-api-key` and grants
+full management access to the local sing-box API, including tailnet certificate
+export. The [common API contract](sing-box.md#management-and-tailscale-certificate-api)
+defines authentication and certificate export. Keep this credential out of
+application processes and sandbox containers; host agents pass it only to the
+sing-box CLI subprocess. Activating this group change restarts Paseo, so reconnect
+before using it.
+
 omp is the only installed agent provider Paseo can offer. The service runs upstream
 omp and sets `PI_CONFIG_FILES` to an overlay that loads the packaged Magpie
 extension, which reads the service account's NixOS-provisioned runtime credentials.
