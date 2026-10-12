@@ -153,6 +153,18 @@
           timestamp = true;
         };
 
+        services = [
+          {
+            type = "api";
+            tag = "management-api";
+            listen = "127.0.0.1";
+            listen_port = 9090;
+            # Userspace tailnet forwarding can reach loopback. Every caller
+            # must authenticate; this credential controls the whole instance.
+            secret = secret "sing-box-api-key";
+          }
+        ];
+
         dns = {
           servers = [
             {
@@ -381,7 +393,7 @@
       };
     in
     {
-      # Workstation policy and the tailnet aspect compose this same feature.
+      # Machine and workstation policy compose this same feature.
       key = "sing-box";
 
       networking.nftables.enable = true;
@@ -424,14 +436,19 @@
       # proxied, so its ranges leave through the NetBird interface instead.
       # Nothing here marks packets by cgroup any more.
 
-      # One root-owned, root-only file per value. The nixpkgs module renders
-      # them into the runtime configuration as root before the service starts,
-      # so the sing-box user never reads a secret file itself. The tailnet key
-      # comes from its own document: a host that joins the tailnet through
-      # tailscaled instead of this endpoint needs the same key.
+      # The root pre-start renderer reads these files into the runtime config;
+      # sing-box itself never needs direct secret-file access. API clients gain
+      # read access through a group assigned by their own consumer modules.
       sops.secrets = lib.genAttrs singBoxSecrets (secretFrom "sing-box.yaml") // {
         tailscale_auth_key = secretFrom "tailscale.yaml" "tailscale_auth_key";
+        sing-box-api-key = (secretFrom "sing-box-api.yaml" "api_key") // {
+          path = "/run/secrets/sing-box-api-key";
+          group = "sing-box-api";
+          mode = "0440";
+        };
       };
+
+      users.groups.sing-box-api = { };
 
       services.sing-box = {
         enable = true;

@@ -10,7 +10,6 @@
       sing-box
       magpie
       paseo-docker
-      openswe-tailnet-api
       gh
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;

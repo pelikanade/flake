@@ -17,6 +17,9 @@
       users.users.paseo = {
         isSystemUser = true;
         group = "paseo";
+        # Host agents may export tailnet certificates. This grants full
+        # sing-box management access, so the consumer owns this authorization.
+        extraGroups = lib.optional config.services.sing-box.enable "sing-box-api";
         home = "/var/lib/paseo";
         createHome = true;
         homeMode = "0700";
@@ -100,6 +103,7 @@
           Type = "simple";
           User = "paseo";
           Group = "paseo";
+          SupplementaryGroups = lib.optional config.services.sing-box.enable "sing-box-api";
           EnvironmentFile = config.sops.templates.paseo-daemon-env.path;
           StateDirectory = [
             "paseo"
