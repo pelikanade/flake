@@ -27,8 +27,13 @@
       };
 
       # The unit takes the whole system profile as its PATH, so the agents it
-      # spawns see everything the omp aspect installs there, omp included.
-      environment.systemPackages = [ paseoDaemon ];
+      # spawns see everything installed here, omp included. Agents run `devenv`
+      # for project dev shells; the workstation role installs it only for desktop
+      # users, and this account has no Home Manager.
+      environment.systemPackages = [
+        paseoDaemon
+        pkgs.devenv
+      ];
 
       # The daemon hashes PASEO_PASSWORD at startup, and that hash takes precedence
       # over any password stored in its config.json. The value lives in its own

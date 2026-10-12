@@ -70,8 +70,11 @@ processes. `Type=simple` records process startup, not API readiness.
 
 The service imports `omp` and installs its package set: omp with jq and Python.
 Its PATH also includes Paseo, Bash, Git, SSH, Nix, and ripgrep. Additional project
-tools belong in the consuming aspect's `systemd.services.paseo-daemon.path`. It
-does not inherit a desktop user's shell environment or Home Manager packages.
+tools belong in the consuming aspect's `systemd.services.paseo-daemon.path`, which
+merges with the module's list. It does not inherit a desktop user's shell
+environment or Home Manager packages, so the module installs devenv into the
+system profile for the agents that run project dev shells; the workstation role's
+devenv install stays with desktop users.
 
 When sing-box is enabled, this consumer adds the `paseo` account and daemon unit
 to the shared `sing-box` group. Human users join the same group through their
