@@ -74,7 +74,7 @@ tools belong in the consuming aspect's `systemd.services.paseo-daemon.path`. It
 does not inherit a desktop user's shell environment or Home Manager packages.
 
 When sing-box is enabled, this consumer adds the `paseo` account and daemon unit
-to the shared `tailscale` group. Human users join the same group through their
+to the shared `sing-box` group. Human users join the same group through their
 account module. It can read `/run/secrets/sing-box-api-key` and grants
 full management access to the local sing-box API, including tailnet certificate
 export. The [common API contract](sing-box.md#management-and-tailscale-certificate-api)

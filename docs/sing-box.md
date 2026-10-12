@@ -12,14 +12,14 @@ configuration is declared in
 The nixpkgs module renders the settings to JSON, and its pre-start hook replaces
 each `{ _secret = "<path>"; }` with the contents of that file, writing the result
 to `/run/sing-box/config.json`. The hook runs as root before the service starts;
-`sing-box.service` then reads only that runtime file as user `sing-box`. No secret
-reaches Nix evaluation, the store or git, and no secret file is readable by the
-service user.
+`sing-box.service` then reads that runtime file as user `sing-box`. No secret
+reaches Nix evaluation, the store or git. Proxy and tailnet credential files
+remain root-only; the API credential is readable by the shared service group.
 
 `modules/services/sing-box.nix` declares one `sops.secrets.<name>` per encrypted
 value with `owner = "root"` and `restartUnits = [ "sing-box.service" ]`, so changing
 a value restarts the service. Proxy and tailnet credentials use mode `0400`;
-the management API credential uses group `tailscale` and mode `0440`.
+the management API credential uses group `sing-box` and mode `0440`.
 
 ## What stays encrypted
 
@@ -58,18 +58,18 @@ at `http://127.0.0.1:9090` on every importing machine. This requires sing-box
 provide certificate RPCs.
 
 NixOS activation provisions the document's `api_key` as
-`/run/secrets/sing-box-api-key`, owned by `root:tailscale` with mode `0440`.
+`/run/secrets/sing-box-api-key`, owned by `root:sing-box` with mode `0440`.
 The root pre-start renderer reads that same path into the runtime configuration.
 The API key grants control of the entire sing-box instance, including certificate
 private-key export; it is not restricted to certificate operations. Authentication
 remains required on loopback because the userspace Tailscale endpoint can forward
 local ports. No API firewall port is opened.
 
-The common module creates the shared `tailscale` group. The
+The API reuses the existing `sing-box` service group. The
 [human account](../modules/users/nvirellia.nix) and
 [Paseo consumer](../modules/services/paseo-daemon.nix) join it wherever they are
 configured with sing-box. Paseo's unit also declares
-`SupplementaryGroups = [ "tailscale" ]`. This grants the same management API
+`SupplementaryGroups = [ "sing-box" ]`. This grants the same management API
 access to human users and host agents. Other clients can join the group through
 their own consumer configuration. Human sessions must log in again after a group
 change; Paseo restarts on activation. Keep the key file and `BOX_API_SECRET` out

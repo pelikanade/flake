@@ -27,7 +27,7 @@ _: {
           "input"
           "podman"
         ]
-        ++ lib.optional config.services.sing-box.enable "tailscale";
+        ++ lib.optional config.services.sing-box.enable "sing-box";
         shell = pkgs.fish;
         initialHashedPassword = nvirellia.hashedPassword;
         openssh.authorizedKeys.keys = [ nvirellia.sshPubKey ];
