@@ -26,19 +26,19 @@ let
     }:
     buildNpmPackage (finalAttrs: {
       pname = "paseo-desktop";
-      version = "0.11.0-beta.5";
+      version = "0.11.2";
 
       src = fetchFromGitHub {
         owner = "getpaseo";
         repo = "paseo";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-6eIt8oD9h3h8dh6Jz/A/XdqgMdDOzprprKPiNSJUG58=";
+        hash = "sha256-ENDRZDdNrmmrnDAlc6PpG9aSxW0oJie+7Zq5OCat1hk=";
       };
 
       nodejs = nodejs_22;
 
       npmDepsFetcherVersion = 2;
-      npmDepsHash = "sha256-v770OfIPOfLhKHVi8YnE2iWdNGdYs4b8u0xi07pfRUg=";
+      npmDepsHash = "sha256-6OlgZPYqgdBG6/bB/rdpZy3N8rZCiEn+hRQIOf9OyYc=";
 
       # Prevent onnxruntime-node's install script from running during automatic
       # npm rebuild. We manually rebuild only node-pty in buildPhase.
