@@ -87,15 +87,16 @@ nix build --no-link --print-out-paths \
 
 On `neko-sphere`, use its resulting system store path from the build above.
 Run the switch from the administrator's separate SSH session in a detached unit
-so a tailnet interruption does not kill deployment. `--store-path` activates the
-already-built system without evaluating the checkout as root or requiring root
-to trust a Git repository owned by another user:
+so a tailnet interruption does not kill deployment. `--store-path` selects the
+already-built system, and `--no-reexec` skips rebuilding nixos-rebuild itself
+from `<nixpkgs/nixos>`. Both are needed to avoid Nix search-path dependencies
+and evaluating the checkout as root:
 
 ```sh
 read -r -p 'Built neko-sphere system store path: ' system
 sudo systemd-run --unit=sing-box-api-deploy --collect --no-block \
   --setenv=PATH=/run/current-system/sw/bin \
-  /run/current-system/sw/bin/nixos-rebuild switch --store-path "$system"
+  /run/current-system/sw/bin/nixos-rebuild switch --no-reexec --store-path "$system"
 sudo journalctl -u sing-box-api-deploy -f
 ```
 
