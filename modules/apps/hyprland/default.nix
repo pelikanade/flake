@@ -112,7 +112,12 @@ _: {
                 drag_lock = true;
               };
             };
-            cursor.hide_on_key_press = true;
+            cursor = {
+              hide_on_key_press = true;
+              # Keyboard focus is independent of the pointer
+              # (input.follow_mouse = 2), so switching windows must not move it.
+              no_warps = true;
+            };
             binds = {
               workspace_back_and_forth = true;
               allow_workspace_cycles = true;
