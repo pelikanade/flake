@@ -26,10 +26,12 @@ imports = with inputs.self.modules.aspects; [
 ];
 ```
 
-Importing the aspect enables the service. neko-sphere composes this list; any other daemon
-host composes it unchanged. A host that should join the tailnet without sing-box
-needs its own `tailscaled` module, which does not exist yet. Build that machine's
-NixOS configuration before separately authorizing deployment:
+Importing the aspect enables the service. neko-sphere uses `paseo-docker`, which
+composes this service with Docker and the execution account's daemon access.
+Other daemon hosts can use `paseo-daemon` without Docker. A host that should join
+the tailnet without sing-box needs its own `tailscaled` module, which does not
+exist yet. Build that machine's NixOS configuration before separately authorizing
+deployment:
 
 ```sh
 nix develop
@@ -113,6 +115,65 @@ Use `sudo systemctl restart paseo-daemon.service` for package, launch-environmen
 or startup-setting changes. It interrupts running work. `paseo reload` can apply
 runtime-safe configuration changes. Do not run `paseo daemon start` alongside
 the service or use its stop command to manage systemd's lifecycle.
+
+## Docker for OpenSandbox
+
+Only neko-sphere imports `paseo-docker`. This aspect imports `docker` and
+`paseo-daemon`, adds `paseo` to the `docker` group, and gives the service an
+explicit supplementary `docker` group. It starts Docker before Paseo. Docker
+uses its local `/run/docker.sock`; no TCP daemon endpoint or firewall port is
+enabled. The separate `docker` aspect enables Docker without granting user
+access and does not change hosts that use Podman.
+
+The host-side OpenSandbox server runs as `paseo` and uses that socket. Docker
+access is root-equivalent, including for other host processes running as
+`paseo`; `NoNewPrivileges` does not restrict requests to the Docker daemon.
+Keep generated agent workloads in containers without the Docker socket,
+project `.env`, or broad host bind mounts. Bind the OpenSandbox control API to
+`127.0.0.1:8080` and load its API key from a private runtime environment file.
+The Open SWE project owns that server's runtime configuration and sandbox image.
+
+Activation changes Paseo's unit and restarts it to acquire its new supplementary
+group. This ends its active agents and terminals, so perform the switch from an
+independent administrator session. Existing processes cannot acquire the group
+merely because `/etc/group` changed.
+
+From an administrator's normal session, inspect the Justfile and use the
+repository's deployment recipe after building and reviewing the change:
+
+```sh
+nix develop -c just deploy
+```
+
+`deploy` runs `nh os switch .`. The `elevate` recipe runs
+`pkexec /run/current-system/sw/bin/bash -c COMMAND`; it requires an administrator's
+polkit authentication. Neither recipe can elevate a terminal inherited from
+`paseo-daemon`: the service retains `NoNewPrivileges=true`, and no deployment
+polkit rule is granted to `paseo`.
+
+The server role already authorizes the maintainer's SSH key for root, and SSH
+permits key-based root login on the tailnet. From a separate administrator's
+session holding that key, deploy the prepared checkout in a detached system unit:
+
+```sh
+ssh root@neko-sphere 'systemd-run --unit=openswe-docker-deploy --collect --no-block --setenv=PATH=/run/current-system/sw/bin /run/current-system/sw/bin/nixos-rebuild --flake /var/lib/paseo/Projects/flake#neko-sphere switch -L'
+```
+
+The system manager owns this command, so a Paseo restart or SSH disconnect does
+not terminate activation. Follow its result with
+`ssh root@neko-sphere 'journalctl -u openswe-docker-deploy -f'`.
+
+Use a reachable tailnet address if the host name does not resolve. Alternatively,
+from an identical checkout on the administrator's machine, run
+`nix develop -c just rdeploy neko-sphere root@neko-sphere`. Both SSH routes require
+the already-authorized private key or a forwarded SSH agent and a verified host
+key; they do not require changing sudo, polkit, or the Paseo service sandbox.
+
+After the switch, check `systemctl status docker.service paseo-daemon.service`
+and run `docker info` as `paseo` in a fresh process. Complete an OpenSandbox
+create/execute/delete cycle and inspect the resulting container mounts before
+dispatching Open SWE work. These are deployment checks, not configuration-only
+guarantees.
 
 ## Connect after startup
 
