@@ -43,7 +43,10 @@
     programs.lazygit = {
       enable = true;
       settings = {
-        git.commit.signOff = true;
+        git = {
+          commit.signOff = true;
+          overrideGpg = true;
+        };
       };
     };
 
