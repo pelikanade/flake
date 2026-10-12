@@ -42,8 +42,8 @@
     # system-wide gitconfig that both read.
     nixosModule = {
       programs.git.config.user = {
-        name = "Mira Virellia";
-        email = "mira@neko-sphere.lotus.local";
+        name = "Felis catus 'Clonazepam' Suzume";
+        email = "suzume@neko-sphere.lotus.local";
       };
     };
   };
