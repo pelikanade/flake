@@ -6,8 +6,10 @@ optional desktop integration (file chooser portal, folder handling, encrypted
 volume unlock).
 
 `modules/packages/strata/default.nix` builds upstream release `v1.0.0` from
-source. Nothing installs it by default; add `pkgs.selfPackages.strata` where a
-machine wants it.
+source, and `modules/apps/strata.nix` installs it for every machine that imports
+the `workstation` role. The aspect claims no defaults: the folder handler, the
+FileManager1 "Open file location" service, and the file chooser portal stay
+per-user opt-ins through Settings or `strata --install-*`.
 
 ## Why the unstable set
 

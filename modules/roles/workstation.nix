@@ -35,6 +35,7 @@
     skills
     splayer-next
     starship
+    strata
     udiskie
     unix-tools
     xpipe
