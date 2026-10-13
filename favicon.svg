@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Personal NixOS flake">
+  <!-- Project icon for Paseo, which auto-discovers favicon.svg at the repository root.
+       Square, well under its 32 KiB limit, and vector so every client size stays sharp.
+       Rose Pine Moon surface/base background, foam snowflake, iris hub. -->
+  <title>Personal NixOS flake</title>
+  <defs>
+    <linearGradient id="flake-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a273f"/>
+      <stop offset="1" stop-color="#232136"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#flake-bg)"/>
+  <path fill="none" stroke="#9ccfd8" stroke-width="18" stroke-linecap="round" d="M51.8 84.0L204.2 172.0M128.0 40.0L128.0 216.0M204.2 84.0L51.8 172.0M171.3 153.0L173.9 182.9M171.3 153.0L198.5 140.3M128.0 178.0L103.4 195.2M128.0 178.0L152.6 195.2M84.7 153.0L57.5 140.3M84.7 153.0L82.1 182.9M84.7 103.0L82.1 73.1M84.7 103.0L57.5 115.7M128.0 78.0L152.6 60.8M128.0 78.0L103.4 60.8M171.3 103.0L198.5 115.7M171.3 103.0L173.9 73.1"/>
+  <circle cx="128" cy="128" r="15" fill="#c4a7e7"/>
+</svg>
