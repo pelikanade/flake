@@ -351,7 +351,6 @@ _: {
           brightnessctl
           ristretto
           seahorse
-          thunar
           tumbler
           wl-clipboard
           xarchiver

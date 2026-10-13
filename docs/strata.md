@@ -7,9 +7,25 @@ volume unlock).
 
 `modules/packages/strata/default.nix` builds upstream release `v1.0.0` from
 source, and `modules/apps/strata.nix` installs it for every machine that imports
-the `workstation` role. The aspect claims no defaults: the folder handler, the
-FileManager1 "Open file location" service, and the file chooser portal stay
-per-user opt-ins through Settings or `strata --install-*`.
+the `workstation` role.
+
+## Desktop integration
+
+The aspect makes Strata that workstation's file manager, in the same terms
+upstream's installer uses:
+
+- `xdg.mimeApps.defaultApplications."inode/directory"`, so folders open in Strata.
+  Thunar was the previous handler and is no longer in the desktop package set.
+- A per-user `io.github.lgse.Strata.FileManager1.service`, so "Reveal in file
+  manager" and "Open containing folder" reach Strata. Its `Exec` is the package's
+  wrapper, so the D-Bus-activated instance has the GIO and GStreamer environment a
+  launched one gets.
+- `services.gvfs.enable`, because SMB shares, SFTP servers, and phone storage are
+  GVfs mounts.
+
+The file chooser portal stays a separate opt-in (`strata --install-portal`, or
+**Settings → General**): it replaces Open and Save dialogs for every application,
+which upstream deliberately leaves to the user.
 
 ## Why the unstable set
 
@@ -74,15 +90,16 @@ still wins because those directories are searched first.
 Without the helper, the app logs `the bubblewrap sandbox is unavailable` and
 refuses the preview instead of rendering it unsandboxed.
 
-Features that never enter the sandbox still come from the host: `gvfs` plus a
-backend (`gvfs-smb`, `gvfs-mtp`, `gvfs-afc`, `gvfs-gphoto2`) for network shares
-and phones, `xdg-terminal-exec` for the preferred terminal launcher, and
-`udiskie` (deliberately not installed here) for encrypted-volume unlock.
+Features that never enter the sandbox still come from the host:
+`xdg-terminal-exec` for the preferred terminal launcher, and `udiskie`
+(deliberately not installed here) for encrypted-volume unlock. Network shares and
+phone storage need no extra package: the aspect enables GVfs, whose SMB, MTP,
+AFC, and PTP backends are what GIO mounts those locations through.
 
-The desktop entry and the scalable icon are installed for launchers; the D-Bus
-`FileManager1` service stays an explicit per-user opt-in (`strata
---install-file-manager`, or **Settings → General**), which is why no system
-service directory gets it.
+The package installs the desktop entry and the scalable icon. The per-user
+`FileManager1` service comes from the app aspect rather than the package, because
+upstream installs it under `$XDG_DATA_HOME`; nothing is ever placed in a system
+service directory, where several providers of that name would be ambiguous.
 
 ## Checks
 
