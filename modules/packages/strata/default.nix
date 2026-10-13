@@ -11,12 +11,20 @@ let
       versionCheckHook,
       bubblewrap,
       cairo,
+      coreutils,
+      ffmpeg,
+      ffmpegthumbnailer,
       fontconfig,
       glib,
       gst_all_1,
       gtk4,
       gtksourceview5,
+      imagemagick,
+      librsvg,
+      libraw,
       poppler,
+      squashfs-tools,
+      util-linux,
     }:
     rustPlatform.buildRustPackage (finalAttrs: {
       pname = "strata";
@@ -33,10 +41,11 @@ let
       };
 
       # Two Nix-specific integrations, neither of which upstream's AUR packages
-      # need. The updater learns that an executable under /nix/store is owned by
+      # need, because NixOS has neither /usr nor a system profile a sandbox can
+      # see. The updater learns that an executable under /nix/store is owned by
       # Nix -- a store path cannot be replaced in place, and upstream reserves
-      # its `share/strata/install-source.toml` marker for pacman -- and the
-      # trusted-helper lookup accepts the bubblewrap that a closure supplies.
+      # its `share/strata/install-source.toml` marker for pacman -- and trusted
+      # helper lookup accepts the closure's bubblewrap.
       patches = [ ./nix-integration.patch ];
 
       cargoHash = "sha256-vuhHierqb4WsMdg890NpkaztYnfsnck2FxMz5cPMwCQ=";
@@ -53,16 +62,46 @@ let
         glib
         gst_all_1.gstreamer
         gst_all_1.gst-plugins-base
+        gst_all_1.gst-plugins-good
+        gst_all_1.gst-libav
         gtk4
         gtksourceview5
+        librsvg
         poppler
       ];
 
       env = {
         STRATA_BUILD_COMMIT = lib.substring 0 12 finalAttrs.src.rev;
-        # Previews and thumbnails run inside bwrap, which the app resolves from
-        # trusted system directories and never from PATH. A closure copy is how
-        # it reaches NixOS, which keeps such tools out of the system profile.
+
+        # Previews and thumbnails run inside a bubblewrap namespace whose
+        # environment is cleared, so everything the helpers need is bound and
+        # baked here at build time; launching-time variables have no effect.
+        # Upstream documents the same knobs for Nix in docs/preview-sandbox.md.
+        #
+        # `/nix/store` replaces `/usr` as the sandbox's read-only runtime tree:
+        # it carries the executable's loader and libraries, the GdkPixbuf
+        # loaders, and every helper below. The system profile is not part of it
+        # and cannot be, so hosts cannot supply these tools.
+        STRATA_SANDBOX_ROOT = "/nix/store";
+        STRATA_SANDBOX_PRLIMIT = lib.getExe' util-linux "prlimit";
+        STRATA_SANDBOX_GDK_PIXBUF_MODULE_FILE = "${librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache";
+        # Every helper the sandboxed workers exec by name: ffmpeg/ffprobe and
+        # ffmpegthumbnailer for video, ImageMagick and libraw for camera RAW,
+        # `nice` and `prlimit` around the media decoder, `fc-list` for text in
+        # documents, and `unsquashfs` for AppImage icons.
+        STRATA_SANDBOX_PATH = lib.makeBinPath [
+          coreutils
+          ffmpeg
+          ffmpegthumbnailer
+          fontconfig
+          imagemagick
+          libraw
+          squashfs-tools
+          util-linux
+        ];
+
+        # bubblewrap itself is resolved from trusted system directories and never
+        # from PATH, so the closure supplies it.
         STRATA_HELPER_PATH = lib.makeBinPath [ bubblewrap ];
       };
 

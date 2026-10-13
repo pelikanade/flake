@@ -38,30 +38,49 @@ because build.rs finds no git checkout in the sandbox and would otherwise report
 
 ## Runtime
 
-Every preview and thumbnail renders inside a bubblewrap sandbox, and the app
-resolves `bwrap` only from fixed trusted directories (`/usr/bin`, `/sbin`,
-`/run/wrappers/bin`, `/run/current-system/sw/bin`, …) — never from `PATH`. A
-package cannot install into the system profile, and `nixos-26.05` does not carry
-`bubblewrap` there by default, so `nix-integration.patch` adds
-`STRATA_HELPER_PATH`: a colon-separated list baked at build time that contributes
-directories to that lookup. The expression sets it to the closure's `bubblewrap`.
-Trust is unchanged, because a candidate still has to canonicalize under a trust
-root, and `/nix/store` is one; a host's own copy still wins, since the fixed
-directories are searched first.
+Every preview and thumbnail renders inside a bubblewrap namespace that runs with
+a **cleared environment**, in a mount namespace containing only what the
+expression binds and bakes at build time. NixOS has no `/usr`, no system profile
+inside that namespace, and no way for a package to install into one, so the
+defaults cannot work: with the stock `STRATA_SANDBOX_ROOT=/usr`, the helper cannot
+even exec (its ELF interpreter lives in the store) and the app reports
+`Preview unavailable — Connection reset by peer (os error 104)`. The expression
+therefore sets upstream's documented knobs (see upstream
+`docs/preview-sandbox.md`) plus one added by `nix-integration.patch`:
 
-Without that helper the app logs `the bubblewrap sandbox is unavailable` and
-refuses those previews rather than rendering them unsandboxed.
+| Build-time variable | Value here |
+| --- | --- |
+| `STRATA_SANDBOX_ROOT` | `/nix/store`, replacing `/usr` as the read-only runtime tree |
+| `STRATA_SANDBOX_PRLIMIT` | `util-linux`'s `prlimit`, the resource-limit launcher |
+| `STRATA_SANDBOX_GDK_PIXBUF_MODULE_FILE` | `librsvg`'s `loaders.cache` (GdkPixbuf's loaders plus SVG) |
+| `STRATA_SANDBOX_PATH` | `coreutils`, `ffmpeg`, `ffmpegthumbnailer`, `fontconfig`, `imagemagick`, `libraw`, `squashfs-tools`, `util-linux` |
+| `STRATA_HELPER_PATH` | the closure's `bubblewrap` |
+
+The sandboxed workers exec those helpers by name for video frames and thumbnails,
+camera RAW, document text (`fc-list`), AppImage icons (`unsquashfs`), and the
+`nice`/`prlimit` pair around the media decoder, so they are dependencies rather
+than upstream's AUR optdepends: `/run/current-system/sw/bin` is not mounted, and
+host tools cannot be reached from inside the namespace. The application process
+itself is not sandboxed, so its GStreamer audio player keeps the plugin path
+`wrapGAppsHook4` builds from `gst-plugins-good` and `gst-libav`.
+
+`bwrap` is resolved from fixed trusted directories, never `PATH`, which is why
+`STRATA_HELPER_PATH` exists; trust is unchanged, since a candidate still has to
+canonicalize under a trust root, and `/nix/store` is one, while a host's own copy
+still wins because those directories are searched first.
+
+Without the helper, the app logs `the bubblewrap sandbox is unavailable` and
+refuses the preview instead of rendering it unsandboxed.
+
+Features that never enter the sandbox still come from the host: `gvfs` plus a
+backend (`gvfs-smb`, `gvfs-mtp`, `gvfs-afc`, `gvfs-gphoto2`) for network shares
+and phones, `xdg-terminal-exec` for the preferred terminal launcher, and
+`udiskie` (deliberately not installed here) for encrypted-volume unlock.
 
 The desktop entry and the scalable icon are installed for launchers; the D-Bus
 `FileManager1` service stays an explicit per-user opt-in (`strata
 --install-file-manager`, or **Settings → General**), which is why no system
 service directory gets it.
-
-Optional capabilities follow upstream's AUR packaging: `ffmpeg` and
-`ffmpegthumbnailer` for video previews, `imagemagick` or `libraw` for camera RAW,
-`gvfs` plus a backend (`gvfs-smb`, `gvfs-mtp`, `gvfs-afc`, `gvfs-gphoto2`) for
-network shares and phones, and `xdg-terminal-exec` for the preferred terminal
-launcher. None are dependencies of this package.
 
 ## Checks
 
@@ -73,6 +92,10 @@ runs even though this package does not.
 
 Neither addition has an in-sandbox test that exercises it end to end, so verify
 them on the machine: `strata` logs `this installation is managed by Nix; in-app
-updates are disabled` when it resolves its update method, and a rendered preview
-logs `browser sandbox started` (or a media worker starting) instead of
-`the bubblewrap sandbox is unavailable`.
+updates are disabled` when it resolves its update method, and with
+`RUST_LOG=strata=debug` a directory holding an image, a PDF or a video logs
+`browser worker completed operation=Image|Pdf|Video` and writes
+`~/.cache/thumbnails/large`. A preview that fails instead logs
+`the bubblewrap sandbox is unavailable`, or surfaces the helper's
+`Connection reset by peer (os error 104)` in the preview pane — the signature of a
+sandbox whose helper cannot exec.
