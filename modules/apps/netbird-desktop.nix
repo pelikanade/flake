@@ -36,13 +36,10 @@ _: {
   flake.modules.homeManager.netbird-desktop =
     { lib, pkgs, ... }:
     let
-      uiPackage = pkgs.unstable.netbird-ui.overrideAttrs (oldAttrs: {
-        tags = (oldAttrs.tags or [ ]) ++ [ "gtk3" ];
-        buildInputs = (oldAttrs.buildInputs or [ ]) ++ [
-          pkgs.gtk3
-          pkgs.webkitgtk_4_1
-        ];
-      });
+      # 0.79.0's UI is a Wails 3 app whose GTK/WebKit dependencies come from
+      # wails3 in the same nixpkgs as the package itself. Adding the 26.05 GTK
+      # stack here mixed two glibc generations into one closure.
+      uiPackage = pkgs.unstable.netbird-ui;
       launcher = pkgs.writeShellScript "netbird-ui-launcher" ''
         if [[ "''${XDG_CURRENT_DESKTOP:-}" == *KDE* ]]; then
           export GDK_BACKEND=wayland
