@@ -90,14 +90,18 @@ The binary links GTK3, WebKitGTK and the GStreamer plugins the view plays media
 with; `wrapGAppsHook3` supplies the GTK environment; `ldflags` stamps the version
 the CLI reports. `copyDesktopItems` installs a `Development` entry claiming
 `x-scheme-handler/magpie`, which is how the app is handed its own links, and the
-icon is installed into hicolor at 1024x1024.
+icon is installed into hicolor at 1024x1024. The toolchain is the channel's
+`go_1_27`, because upstream's `go.mod` demands go >= 1.26.8 and nixos-26.05's
+default Go is 1.26.7.
 
 Three patches keep a Nix-managed copy from fighting its store path:
 
-- `internal/gui/update.go` drops the `update.CanElevate()` arm, so the in-app
-  updater never asks polkit to replace the store binary.
-- `update_cli.go` refuses every `magpie update` except `update check` and tells
-  the user to update the Nix package instead.
+- `internal/gui/update.go` makes the page's `canElevate` refuse elevation, so
+  the in-app updater never asks polkit to replace the store binary.
+- `internal/cli/update_cli.go` drops the terminal updater's download-and-replace
+  tail. `magpie update` reports what is out through the release feed and then
+  refuses, telling the user to update the Nix package instead; `update check`
+  returns before that, as upstream has it.
 - `internal/gui/scheme_linux.go` and `internal/autostart/autostart.go` rewrite an
   `os.Executable()` path ending in `.magpie-wrapped` back to `magpie`, because
   the desktop entry and the login autostart entry are launched outside the
@@ -118,12 +122,14 @@ wrapper prepends `xdg-utils` and `desktop-file-utils` to `PATH` and unsets
 `APPIMAGE`.
 
 `preCheck` rewrites the test suite's absolute `/bin/cat`, `/bin/mkdir`,
-`/usr/bin:/bin` and `--session` references to store paths, and widens the
-source-policy test to accept the vendored tree, before
-`go test -tags=production,gtk3 ./...` runs. The install check runs the finished
-`magpie --version` and, without network or sign-in, adds a test plugin through
-the installed wrapper and lists it, asserting that no Bun landed in
-`$XDG_CACHE_HOME`.
+`/usr/bin:/bin` and `--session` references to store paths — the `os` import one
+such rewrite leaves unused goes with them — gives the WSL probe's PATH
+`coreutils` and `bash`, and widens the source-policy test to accept the vendored
+tree, before `go test -tags=production,gtk3 ./...` runs. The check inputs add
+`procps`, for the tests that read a process's name out of `ps`, beside the Nix
+Bun. The install check runs the finished `magpie --version` and, without network
+or sign-in, adds a test plugin through the installed wrapper and lists it,
+asserting that no Bun landed in `$XDG_CACHE_HOME`.
 
 ## State
 
@@ -137,5 +143,7 @@ stored under the service home, and nothing here renders into that home.
 ## Moving to a newer version
 
 Bump `version` together with the `hash` of the new tag, and `vendorHash` when
-`go.mod` changes. The in-app updater cannot help and neither can `magpie update`:
-the store is read-only and the terminal path refuses on purpose.
+`go.mod` changes. A raised `go` directive needs a channel Go that meets it:
+`packages.magpie` pins `go_1_27` today. The in-app updater cannot help and
+neither can `magpie update`: the store is read-only and the terminal path refuses
+on purpose.

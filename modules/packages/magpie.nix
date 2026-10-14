@@ -4,6 +4,7 @@ let
     {
       lib,
       buildGoModule,
+      go,
       fetchFromGitHub,
       bun,
       pkg-config,
@@ -19,22 +20,24 @@ let
       coreutils,
       dbus,
       python3,
+      bash,
+      procps,
       versionCheckHook,
       grok,
       claude-code,
     }:
-    buildGoModule (finalAttrs: {
+    (buildGoModule.override { inherit go; }) (finalAttrs: {
       pname = "magpie";
-      version = "0.1.1092";
+      version = "0.1.1231";
 
       src = fetchFromGitHub {
         owner = "yetone";
         repo = "magpie";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-2LrIgl8rZAVS8aOL+iQ43dwSGl860IHHX6bffPUqZ7g=";
+        hash = "sha256-TmF+1WxDsvC8HQvCYb2SxGys0EpwTaJCreZVlMYxFxY=";
       };
 
-      vendorHash = "sha256-dqFc8UTREaRFt3G3DS7IllBx8ysOlcA5JUqGaQ/XlcI=";
+      vendorHash = "sha256-RevP93sHMwgwQxSh4WzKkNIupNQhU/sP3b/g/lpMS+E=";
 
       subPackages = [ "." ];
       tags = [
@@ -63,13 +66,16 @@ let
       ];
 
       postPatch = ''
-        # Updates belong to Nix; never ask polkit to replace the store binary.
+        # Updates belong to Nix; never ask polkit to replace the store binary,
+        # and never download a release the store cannot take.
         substituteInPlace internal/gui/update.go \
-          --replace-fail '(update.Writable(filepath.Dir(exe)) || update.CanElevate())' \
-          'update.Writable(filepath.Dir(exe))'
-        substituteInPlace update_cli.go \
-          --replace-fail 'ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)' \
-          'if len(args) < 2 || args[1] != "check" { return fmt.Errorf("this magpie is managed by Nix; update its Nix package instead") }; ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)'
+          --replace-fail '// canElevate is update.CanElevate, inContainer gateway.InContainer; tests' \
+          '// canElevate never elevates under Nix, inContainer is gateway.InContainer; tests' \
+          --replace-fail $'\tcanElevate  = update.CanElevate' \
+          $'\tcanElevate  = func() bool { return false }'
+        substituteInPlace internal/cli/update_cli.go \
+          --replace-fail $'\tfmt.Println(muted.Render("  downloading " + update.BinaryAsset() + via(ctx) + " …"))\n\tif err := update.ReplaceBinary(ctx, rel); err != nil {\n\t\treturn err\n\t}\n\tfmt.Println(green.Render("✓"), "updated to", rel.Version)\n\treturn nil' \
+          $'\treturn fmt.Errorf("this magpie is managed by Nix; update its Nix package instead")'
 
         # A failed init call races the host's own death: the write to its stdin
         # hits EPIPE as soon as the host is gone, before the reader goroutine
@@ -97,6 +103,7 @@ let
       nativeCheckInputs = [
         dbus
         bun
+        procps
       ];
       preCheck = ''
         export MAGPIE_BUN="${lib.getExe bun}"
@@ -112,11 +119,26 @@ let
         # The fake CLIs deliberately clear PATH, so use absolute store paths.
         substituteInPlace internal/agent/cliupdate_test.go internal/library/rtk_upgrade_test.go \
           --replace-fail '/bin/cat' '${coreutils}/bin/cat'
+        substituteInPlace internal/agent/cliupdate_admin_test.go internal/daemon/daemon_test.go \
+          --replace-fail '/bin/cat' '${coreutils}/bin/cat'
+        # The WSL probe resolves nvm versions with ls and sort and reads nvm.sh
+        # with bash, none of which the PATH the test gives it reaches.
+        substituteInPlace internal/agent/wsl_nvm_test.go \
+          --replace-fail ':/usr/bin:/bin' ':${
+            lib.makeBinPath [
+              coreutils
+              bash
+            ]
+          }'
+        # The fish stand-in prints its answer through a PATH of its own.
+        substituteInPlace internal/proc/path_other_test.go \
+          --replace-fail "#!/bin/sh\ncat '" "#!/bin/sh\n${coreutils}/bin/cat '"
         substituteInPlace internal/library/rtk_test.go \
           --replace-fail '/bin/mkdir' '${coreutils}/bin/mkdir'
         substituteInPlace internal/gui/providers_fetching_unix_test.go \
           --replace-fail '"/usr/bin"+string(os.PathListSeparator)+"/bin"' \
-          '"${lib.makeBinPath [ coreutils ]}"'
+          '"${lib.makeBinPath [ coreutils ]}"' \
+          --replace-fail $'\t"os"\n' '''
         substituteInPlace internal/agent/zed_credential_secret_test.go \
           --replace-fail '"--session"' '"--config-file=${dbus}/share/dbus-1/session.conf"'
         # This source-policy test applies only to Magpie, not vendored libraries.
@@ -207,9 +229,12 @@ in
     {
       # Magpie never runs a Bun older than its BunVersion floor (1.4.2), which
       # nixos-26.05 does not carry yet; take the unstable set's Bun and leave the
-      # rest of the build on stable.
+      # rest of the build on stable. Its go.mod demands go >= 1.26.8, past the
+      # channel's default Go (1.26.7), so build with the channel's newer go_1_27
+      # rather than with another package set's toolchain.
       packages.magpie = pkgs.callPackage package {
         inherit (pkgsUnstable) bun;
+        go = pkgs.go_1_27;
         inherit (inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}) grok claude-code;
       };
     };
