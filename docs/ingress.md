@@ -92,13 +92,14 @@ the variable `CLOUDFLARE_API_TOKEN` in a root-only environment file, which the
 Caddyfile reaches as `{env.CLOUDFLARE_API_TOKEN}`; Caddy reads it at start and
 Caddy's own storage holds the issued certificate under `/var/lib/caddy`.
 
-Until the document holds a real token, Caddy starts and every request fails TLS:
-the placeholder `REPLACE_WITH_CLOUDFLARE_API_TOKEN` is not a credential. Fill it
-from a checkout with `sops modules/secrets/ingress.yaml`, and give the zone's
-records time to exist before the first issuance — the DNS-01 challenge waits for
-the TXT record it creates, but not for anything else. `journalctl -u caddy` names
-the failure; a staging run with a real token is the fastest way to see a
-certificate without burning production rate limits.
+A document that still holds its placeholder (`REPLACE_WITH_CLOUDFLARE_API_TOKEN`)
+is not a credential: Caddy starts, and every request fails TLS until it is filled
+from a checkout with `sops modules/secrets/ingress.yaml`. The zone's records must
+exist before the first issuance — the DNS-01 challenge waits for the TXT record it
+creates, but for nothing else. `journalctl -u caddy` names the failure: a token
+without DNS edit rights on that zone is refused there, and a staging run with a
+real token is the fastest way to see a certificate without burning production rate
+limits.
 
 ## Reachability
 
