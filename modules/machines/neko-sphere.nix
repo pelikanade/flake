@@ -9,6 +9,7 @@
       substituter-cn
       sing-box
       magpie
+      netbird-userspace
       obsidian-headless
       podman
       portainer
@@ -82,6 +83,15 @@
       programs.git.config.user = {
         name = "Felis catus 'Clonazepam' Suzume";
         email = "suzume@neko-sphere.lotus.local";
+      };
+
+      # Another network's HTTP endpoint, served here on loopback. Neither the
+      # endpoint's address nor the network it belongs to is public: the client's
+      # management URL and setup key come from its own encrypted document.
+      services.netbird-userspace.tunnels.techinteaching = {
+        localPort = 18083;
+        address = "172.0.161.24";
+        port = 8083;
       };
     };
   };
