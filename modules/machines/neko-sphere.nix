@@ -14,6 +14,7 @@
       portainer
       paseo-daemon
       gh
+      ingress
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;
     hardware =
@@ -27,6 +28,40 @@
         imports = [
           (modulesPath + "/installer/scan/not-detected.nix")
         ];
+
+        # Every service this host runs is published here, under the zone whose
+        # records point at this host; the ingress module knows about TLS and
+        # reachability, not about which services exist. One interface carries both
+        # the LAN and the machine's public addresses, so the LAN is admitted as a
+        # source rather than an interface.
+        services.ingress = {
+          domain = "neko-sphere.nvirellia.im";
+          lanSources = [ "10.0.0.0/24" ];
+
+          proxies = {
+            # Magpie's browser page and its gateway API are one process on two
+            # ports; the API takes its own name so every route upstream serves
+            # stays reachable without guessing path prefixes.
+            magpie = {
+              upstream = "127.0.0.1:3430";
+            };
+            magpie-api = {
+              upstream = "127.0.0.1:3425";
+            };
+
+            # Portainer serves its own listener with the self-signed certificate
+            # it generates into /data.
+            portainer = {
+              upstream = "https://127.0.0.1:9443";
+              upstreamInsecureTls = true;
+            };
+
+            # The Paseo daemon serves HTTP and WebSocket on one port.
+            paseo = {
+              upstream = "127.0.0.1:6767";
+            };
+          };
+        };
 
         networking = {
           hostName = "neko-sphere";

@@ -89,12 +89,16 @@ The image is pinned. Updating means editing `image` in
 exist upstream if you prefer a moving reference.
 
 Only `9443` is published. Rootless Podman forwards that port with a userspace
-process running as the account, so it is an ordinary host socket and
-`networking.firewall` decides who reaches it; this module admits it on `tailnet0`
-only, exactly like the daemon's own port. The image's HTTP listener and edge
-tunnel stay unpublished and unreachable. Portainer serves HTTPS with a
+process running as the account, so it is an ordinary host socket, and nothing in
+the firewall admits it: a tailnet peer's connection is delivered to loopback by
+sing-box, so Portainer's own login is what bounds it. The image's HTTP listener
+and edge tunnel stay unpublished and unreachable. Portainer serves HTTPS with a
 self-signed certificate it generates into `/data`, so browsers warn until you
-accept it. Reach it at `https://neko-sphere.leaffish-halfmoon.ts.net:9443/`.
+accept it. Reach it through [the ingress](ingress.md), which terminates the
+trusted certificate and republishes this listener as
+`https://portainer.neko-sphere.nvirellia.im/`; the direct
+`https://neko-sphere.leaffish-halfmoon.ts.net:9443/` address is then only for
+diagnosing the container itself.
 
 ## First start
 

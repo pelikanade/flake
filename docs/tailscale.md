@@ -45,8 +45,8 @@ rereads the document.
 ### Endpoint
 
 The `tailnet` endpoint uses persistent `/var/lib/sing-box/tailscale` state under
-the service's existing `StateDirectory`, `ephemeral=false`, the system interface
-`tailnet0`, and the WireGuard peer port `41641`. It omits `hostname`, so each
+the service's existing `StateDirectory`, `ephemeral=false`, sing-box's userspace
+network stack, and the WireGuard peer port `41641`. It omits `hostname`, so each
 host registers under its own system hostname. It accepts subnet routes advertised
 by other nodes, does not use or advertise an exit node, and enables neither
 Tailscale SSH nor Taildrop.
@@ -68,47 +68,56 @@ name for a module that needs the address.
 
 ### Routes
 
-With `system_interface: true` the endpoint owns the real interface `tailnet0` and
-the kernel owns its routes: peer traffic enters and leaves through `tailnet0`
-without returning to sing-box's routing engine. The document therefore carries no
-`inbound: "tailnet"` or endpoint-preference route rules — they would match nothing
-— and inbound peer traffic is governed by the host firewall instead.
+The endpoint runs in sing-box's userspace network stack, so peer packets reach
+its Netstack rather than a real interface. A peer that dials this host's tailnet
+address lands there, and sing-box rewrites the destination to loopback before the
+routing engine sees it: it then dials `127.0.0.1:<port>` and the service answers a
+local connection. Nothing of the kind traverses the host firewall, and no
+`tailnet0` exists for a rule to name.
 
-`auto_redirect` still redirects locally generated connections into the tun before
-the kernel's route is used, so the tailnet's own ranges are routed to the `tailnet`
-endpoint: `100.64.0.0/10` and `fd7a:115c:a1e0::/48` reach a peer through the
-endpoint, whose dialer binds `tailnet0`, and the same ranges stay out of the tun's
-routes. Without that rule a connection to a peer matches no rule, falls through to
-the `final` proxy and never reaches the peer — `ip_is_private` does not cover
-Tailscale's CGNAT range.
+Locally generated traffic to a peer takes the other direction. `auto_redirect`
+sends new connections into the tun before the kernel's route is used, and the rule
+for `100.64.0.0/10` and `fd7a:115c:a1e0::/48` routes them to the `tailnet`
+endpoint, which dials the peer over the tunnel. Without that rule such a connection
+would match no rule, fall through to the `final` proxy and never reach the peer:
+`ip_is_private` does not cover Tailscale's CGNAT range.
 
-Because a peer addresses the host's tailnet address rather than loopback, every
-service that peers should reach listens on all interfaces. The DNS section above is
-unaffected: sing-box resolves names itself, so the `tailnet-dns` rule still
-applies.
+Because delivery is to loopback, a service that peers should reach only has to
+listen there; every service on this host binds every interface, which covers it.
+The DNS section above is unaffected: sing-box resolves names itself, so the
+`tailnet-dns` rule still applies.
 
-Turning `system_interface` off would put the endpoint back in sing-box's userspace
-network stack, where peer packets do reach the routing engine; that configuration
-would need inbound and endpoint-preference rules again. Peer addresses would also
-have to come back into the tun's routes: with the ranges above still excluded, the
-kernel hands them to the default route, so nothing reaches a peer at all.
+`system_interface: true` would replace all of that with a real `tailnet0` whose
+routes the kernel owns. Peer traffic would then enter the host's firewall, where
+the input chain's policy drops what it is not told to admit, and a host that turns
+it on has to name every port peers should reach.
 
 ### Firewall
 
 `modules/services/sing-box.nix` opens UDP 41641 for the endpoint's peer transport,
 because peers reach that port on the host's own addresses rather than through the
-tunnel. Every other port belongs to the service that listens on it, and each one
-admits only the tailnet interface `tailnet0`: `ssh` opens 22 and `paseo-daemon`
-6767. A service that is not imported opens nothing, and none of them needs
-`openFirewall`.
+tunnel. Nothing else is opened for the tailnet, and no service needs
+`openFirewall`: with the endpoint in its userspace stack, a peer's connection
+arrives as a local dial and never reaches the input chain, so a `tailnet0` rule
+would match nothing.
 
-The firewall, not the route rules, is what admits inbound peer traffic. Every
-service binds all interfaces so it is reachable on the host's tailnet address —
-the Paseo daemon takes `0.0.0.0:6767` — and loopback keeps working. Nothing is
-admitted on a LAN or public interface.
+One port is nonetheless admitted everywhere: `services.openssh.openFirewall`
+defaults to true in nixos-26.05, and its `allowedTCPPorts` entry puts 22 on every
+interface, this host's public address included. Nothing else on this host is
+reachable without a key or a password, and that rule is the only thing that admits
+SSH on a LAN address; `openFirewall = false` in
+[modules/services/ssh.nix](../modules/services/ssh.nix) would close it.
 
-Restrict 6767 with tailnet grants before relying on direct access. The Paseo password
-comes from sops.
+The tailnet's ACLs and each service's own authentication are therefore the whole
+boundary for peer traffic. Every service binds every interface, so the endpoint
+forwards anything a peer asks for, loopback listeners included — the Paseo daemon
+takes `0.0.0.0:6767` and keeps its password, and SSH keeps its keys. Restrict 6767
+with tailnet grants before relying on direct access.
+
+The [HTTPS ingress](ingress.md) is the one thing the firewall still names, and it
+matches this host's LAN subnet as a packet source rather than an interface: the
+host's LAN and public addresses share one interface, so the LAN is what a local
+override resolves to and the public address must stay closed.
 
 ## Pilot verification
 

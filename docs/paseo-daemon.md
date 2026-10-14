@@ -76,16 +76,6 @@ environment or Home Manager packages, so the module installs devenv into the
 system profile for the agents that run project dev shells; the workstation role's
 devenv install stays with desktop users.
 
-When sing-box is enabled, this consumer adds the `paseo` account and daemon unit
-to the shared `sing-box` group. Human users join the same group through their
-account module. It can read `/run/secrets/sing-box-api-key` and grants
-full management access to the local sing-box API, including tailnet certificate
-export. The [common API contract](sing-box.md#management-and-tailscale-certificate-api)
-defines authentication and certificate export. Keep this credential out of
-application processes and sandbox containers; host agents pass it only to the
-sing-box CLI subprocess. Activating this group change restarts Paseo, so reconnect
-before using it.
-
 omp is the only installed agent provider Paseo can offer. The service runs upstream
 omp and sets `PI_CONFIG_FILES` to an overlay that loads the packaged Magpie
 extension, which reads the service account's NixOS-provisioned runtime credentials.
@@ -214,10 +204,11 @@ not configuration-only guarantees.
 
 ## Connect after startup
 
-The service binds `0.0.0.0:6767`: loopback for local clients and the host's
-tailnet address for tailnet peers, admitted by the firewall only on `tailnet0`.
-The password comes from `modules/secrets/paseo.yaml` through sops. Restrict 6767 with tailnet
-grants. Set `systemd.services.paseo-daemon.environment.PASEO_LISTEN` back to
+The service binds `0.0.0.0:6767`: loopback for local clients, and for tailnet peers
+through the endpoint's userspace delivery, which no firewall rule bounds. The
+password comes from `modules/secrets/paseo.yaml` through sops; restrict 6767 with
+tailnet grants as well. Set
+`systemd.services.paseo-daemon.environment.PASEO_LISTEN` back to
 `127.0.0.1:6767` to keep it local. New Paseo homes start with relay disabled. The
 runtime `config.json` stays writable and is preserved across restarts; the module
 does not replace it or set `PASEO_RELAY_ENABLED`. This lets pairing persist its

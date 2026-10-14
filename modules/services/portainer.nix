@@ -78,8 +78,7 @@
         unitConfig.RequiresMountsFor = lib.mkForce [ ];
       };
 
-      # Reachable on the tailnet and on loopback only. `tailnet0` is the system
-      # interface of the sing-box Tailscale endpoint, which this host imports.
-      networking.firewall.interfaces.tailnet0.allowedTCPPorts = [ 9443 ];
+      # Nothing is opened for the tailnet: a peer reaches this host's tailnet
+      # address, which sing-box's userspace endpoint delivers to loopback.
     };
 }

@@ -21,14 +21,6 @@
     {
       key = "magpie";
 
-      # The gateway and the browser UI are reachable on the tailnet and on
-      # loopback only. `tailnet0` is the system interface of the sing-box
-      # Tailscale endpoint, which this host imports.
-      networking.firewall.interfaces.tailnet0.allowedTCPPorts = [
-        3425
-        3430
-      ];
-
       # None of the gateway's providers are declared here. The web UI is where
       # providers, their keys and their model lists are configured by hand, and
       # they persist as the service's own state under its StateDirectory, so a
@@ -60,11 +52,10 @@
           XDG_CONFIG_HOME = "/var/lib/magpie/.config";
           XDG_CACHE_HOME = "/var/lib/magpie/.cache";
           # The gateway binds every interface so tailnet peers reach it on this
-          # host's tailnet address; this module admits 3425 and 3430 on tailnet0
-          # only, and loopback keeps working. Upstream accepts only loopback
-          # callers unless the socket is opened deliberately, which this
-          # variable does and the sing-box endpoint's firewall bounds to the
-          # tailnet.
+          # host's tailnet address, which sing-box's userspace endpoint delivers
+          # to loopback. Upstream requires a key only when sharing is enabled, so
+          # the gateway accepts whatever reaches the port; the sign-in key guards
+          # the page beside it.
           MAGPIE_ADDR = "0.0.0.0:3425";
           # The banner and the CLIs advertise the gateway by its MagicDNS name;
           # the resolver does not expand a bare peer name.

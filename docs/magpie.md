@@ -17,11 +17,24 @@ desktop needed. Gateway mode is what a headless host wants: no Agents,
 Sessions or Library surface.
 
 Tailnet peers reach the OpenAI, OpenAI-Responses and Anthropic routes on
-`neko-sphere.leaffish-halfmoon.ts.net:3425`. Upstream accepts anything the
-gateway's loopback callers present and requires a key only when sharing is
-enabled, so the firewall is the boundary: `networking.firewall.interfaces.tailnet0`
-admits 3425 and 3430 and loopback keeps working. The endpoint's MagicDNS name
+`neko-sphere.leaffish-halfmoon.ts.net:3425`. Who may call it depends on how the
+request arrives, and the gateway decides that from the request itself: a direct
+loopback caller — this host's own agents, and the endpoint's userspace delivery of
+a peer's connection — needs no key, while a request that carries a forwarding
+header such as `X-Forwarded-For` is answered as one from another machine and needs
+an enabled gateway key (`Authorization: Bearer <key>` or `x-api-key`; the key in
+[the encrypted document](../modules/secrets/magpie.yaml) is one). Settings → Share
+on local network is what lets another machine in at all.
+[The ingress](ingress.md) fronts the gateway and Caddy sends `X-Forwarded-For`, so
+every call that arrives through it carries that key. The endpoint's MagicDNS name
 is handed to the gateway in `MAGPIE_PUBLIC_URL`.
+
+[The ingress](ingress.md) republishes both listeners under the host's own zone,
+with a trusted certificate and no port number: the page answers at
+`https://magpie.neko-sphere.nvirellia.im/` and the gateway at
+`https://magpie-api.neko-sphere.nvirellia.im/`, which is the base URL a client
+that wants HTTPS should carry. The gateway's own names and the key policy do not
+change with it.
 
 The page signs in through the link the service prints into its journal on
 every start, which carries the sign-in key as `?k=`. `MAGPIE_WEB_KEY` pins
@@ -65,6 +78,13 @@ After separately authorized deployment, from a tailnet peer:
 systemctl status magpie.service          # on neko-sphere
 curl --fail --silent http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/models | head
 curl --silent http://neko-sphere.leaffish-halfmoon.ts.net:3430/ -o /dev/null -w '%{http_code}\n'  # 401: the key guards every page
+```
+
+Through the ingress, from a LAN client or a tailnet peer:
+
+```sh
+curl --fail --silent https://magpie-api.neko-sphere.nvirellia.im/v1/models | head
+curl --silent https://magpie.neko-sphere.nvirellia.im/ -o /dev/null -w '%{http_code}\n'  # 401, same key
 ```
 
 `/v1/models` is the catalog the UI has configured — empty until the first

@@ -20,14 +20,6 @@ creation_rules:
           - *asymmetry
           - *neko-sphere
           - *parallax
-  # Every sing-box host activates the authenticated management API.
-  - path_regex: ^modules/secrets/sing-box-api\.yaml$
-    key_groups:
-      - age:
-          - *noa
-          - *asymmetry
-          - *neko-sphere
-          - *parallax
   # The tailnet belongs to the host rather than to sing-box: every host that
   # joins it reads this key, through the sing-box endpoint now and through a
   # tailscaled module on hosts that do not run sing-box later.
@@ -50,6 +42,14 @@ creation_rules:
   # The Paseo daemon password, read only by neko-sphere's daemon. The maintainer
   # keeps the document editable.
   - path_regex: ^modules/secrets/paseo\.yaml$
+    key_groups:
+      - age:
+          - *noa
+          - *neko-sphere
+  # The Cloudflare API token that lets neko-sphere's ingress answer the ACME
+  # DNS-01 challenge for its wildcard certificate. Only that host's Caddy reads
+  # it; the maintainer keeps the document editable.
+  - path_regex: ^modules/secrets/ingress\.yaml$
     key_groups:
       - age:
           - *noa
