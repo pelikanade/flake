@@ -10,7 +10,8 @@
       sing-box
       magpie
       obsidian-headless
-      paseo-docker
+      docker
+      paseo-daemon
       gh
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;

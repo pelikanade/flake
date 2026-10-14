@@ -11,6 +11,7 @@
     }:
     let
       paseoDaemon = pkgs.selfPackages.paseo-daemon;
+      dockerEnabled = config.virtualisation.docker.enable;
     in
     {
       users.groups.paseo = { };
@@ -19,7 +20,11 @@
         group = "paseo";
         # Host agents may export tailnet certificates. This grants full
         # sing-box management access, so the consumer owns this authorization.
-        extraGroups = lib.optional config.services.sing-box.enable "sing-box";
+        # Docker access is root-equivalent, and it exists only for the sandbox
+        # server the consumer runs as paseo; sandbox workloads must never
+        # inherit that socket or host bind mounts.
+        extraGroups =
+          lib.optional config.services.sing-box.enable "sing-box" ++ lib.optional dockerEnabled "docker";
         home = "/var/lib/paseo";
         createHome = true;
         homeMode = "0700";
@@ -73,10 +78,9 @@
       systemd.services.paseo-daemon = {
         description = "Paseo host for coding agents and terminals";
         wantedBy = [ "multi-user.target" ];
-        wants = [ "network-online.target" ];
-        after = [
-          "network-online.target"
-        ];
+        # Docker owns the socket the sandbox server uses, so it starts first.
+        wants = [ "network-online.target" ] ++ lib.optional dockerEnabled "docker.service";
+        after = [ "network-online.target" ] ++ lib.optional dockerEnabled "docker.service";
 
         # systemd's path option replaces the unit's PATH rather than extending it,
         # so point it at the system profile instead of listing packages again.
@@ -108,7 +112,8 @@
           Type = "simple";
           User = "paseo";
           Group = "paseo";
-          SupplementaryGroups = lib.optional config.services.sing-box.enable "sing-box";
+          SupplementaryGroups =
+            lib.optional config.services.sing-box.enable "sing-box" ++ lib.optional dockerEnabled "docker";
           EnvironmentFile = config.sops.templates.paseo-daemon-env.path;
           StateDirectory = [
             "paseo"
