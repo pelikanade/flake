@@ -167,10 +167,6 @@
         };
 
         networking.firewall = {
-          # The tailnet reaches the ingress through its own interface, like every
-          # other service on this host.
-          interfaces.tailnet0.allowedTCPPorts = ports;
-
           extraInputRules = lib.concatMapStrings (source: ''
             ip saddr ${source} tcp dport { ${portList} } accept
           '') config.services.ingress.lanSources;

@@ -204,10 +204,11 @@ not configuration-only guarantees.
 
 ## Connect after startup
 
-The service binds `0.0.0.0:6767`: loopback for local clients and the host's
-tailnet address for tailnet peers, admitted by the firewall only on `tailnet0`.
-The password comes from `modules/secrets/paseo.yaml` through sops. Restrict 6767 with tailnet
-grants. Set `systemd.services.paseo-daemon.environment.PASEO_LISTEN` back to
+The service binds `0.0.0.0:6767`: loopback for local clients, and for tailnet peers
+through the endpoint's userspace delivery, which no firewall rule bounds. The
+password comes from `modules/secrets/paseo.yaml` through sops; restrict 6767 with
+tailnet grants as well. Set
+`systemd.services.paseo-daemon.environment.PASEO_LISTEN` back to
 `127.0.0.1:6767` to keep it local. New Paseo homes start with relay disabled. The
 runtime `config.json` stays writable and is preserved across restarts; the module
 does not replace it or set `PASEO_RELAY_ENABLED`. This lets pairing persist its

@@ -78,10 +78,6 @@
         "d ${config.users.users.paseo.home}/.omp/agent 0700 paseo paseo -"
       ];
 
-      # Reachable on the tailnet and on loopback only. `tailnet0` is the system
-      # interface of the sing-box Tailscale endpoint.
-      networking.firewall.interfaces.tailnet0.allowedTCPPorts = [ 6767 ];
-
       systemd.services.paseo-daemon = {
         description = "Paseo host for coding agents and terminals";
         wantedBy = [ "multi-user.target" ];
@@ -100,10 +96,10 @@
               extensions = [ "${pkgs.selfPackages.omp-magpie}/share/omp/extensions/magpie" ];
             }
           );
-          # Tailnet peers reach the daemon on this host's tailnet address, so it
-          # binds every interface; this module admits 6767 on tailnet0 only, and
-          # loopback keeps working. The password comes from the sops environment
-          # file below: the tailnet is the other boundary.
+          # Tailnet peers reach the daemon on this host's tailnet address, which
+          # sing-box's userspace endpoint delivers to loopback, so it binds every
+          # interface and the password from the sops environment file below is
+          # what bounds it.
           PASEO_LISTEN = lib.mkDefault "0.0.0.0:6767";
           PASEO_NODE_ENV = "production";
           SHELL = lib.getExe pkgs.bashInteractive;

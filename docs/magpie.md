@@ -18,10 +18,11 @@ Sessions or Library surface.
 
 Tailnet peers reach the OpenAI, OpenAI-Responses and Anthropic routes on
 `neko-sphere.leaffish-halfmoon.ts.net:3425`. Upstream accepts anything the
-gateway's loopback callers present and requires a key only when sharing is
-enabled, so the firewall is the boundary: `networking.firewall.interfaces.tailnet0`
-admits 3425 and 3430 and loopback keeps working. The endpoint's MagicDNS name
-is handed to the gateway in `MAGPIE_PUBLIC_URL`.
+gateway's callers present and requires a key only when sharing is enabled, so
+whoever reaches the port uses it: the endpoint delivers a peer's connection to
+loopback, no firewall rule stands in the way, and the sign-in key is what guards
+the page beside the gateway. The endpoint's MagicDNS name is handed to the gateway
+in `MAGPIE_PUBLIC_URL`.
 
 [The ingress](ingress.md) republishes both listeners under the host's own zone,
 with a trusted certificate and no port number: the page answers at

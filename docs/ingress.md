@@ -100,15 +100,15 @@ certificate without burning production rate limits.
 
 ## Reachability
 
-`networking.firewall` admits 80 and 443 on `tailnet0`, the interface the sing-box
-Tailscale endpoint presents to peers, exactly as the other service ports on this
-host are admitted. The host carries its LAN and its public addresses on one
-interface, so admitting the LAN by interface would also admit the internet:
-`services.ingress.lanSources` lists the IPv4 sources that may reach the ingress,
-and the module renders one `ip saddr <source> tcp dport { 80, 443 } accept` rule
-for each. The machine definition lists only its LAN subnet, which is what a device
-that overrides the zone locally needs; nothing is admitted on the host's public
-addresses.
+The tailnet needs no firewall rule: a peer reaches this host's tailnet address and
+sing-box's userspace endpoint delivers the connection to loopback, which never
+enters the input chain. The firewall's only job here is the LAN, and the host
+carries its LAN and its public addresses on one interface, so admitting the LAN by
+interface would also admit the internet: `services.ingress.lanSources` lists the
+IPv4 sources that may reach the ingress, and the module renders one
+`ip saddr <source> tcp dport { 80, 443 } accept` rule for each. The machine
+definition lists only its LAN subnet, which is what a device that overrides the
+zone locally needs; nothing is admitted on the host's public addresses.
 
 Two things this does not do:
 
@@ -116,16 +116,13 @@ Two things this does not do:
   so a request from outside cannot reach a listener anyway, and no rule admits one.
   Making the ingress public is a separate decision that needs records, a firewall
   rule and an honest look at the four upstreams' own authentication.
-- The tailnet half is a firewall boundary only while the endpoint owns
-  `tailnet0`. Today `modules/services/sing-box.nix` leaves `system_interface` at
-  its default, so the Tailscale endpoint runs in sing-box's userspace network
-  stack: a connection to this node's tailnet address is rewritten to loopback
-  inside sing-box and dialled as a local connection, which never traverses this
-  host's firewall, where every `tailnet0` rule is inert. The ingress still answers
-  peers — loopback keeps working — but the rule above is not what restricts them,
-  and every other loopback listener is reachable the same way. A host that needs
-  the firewall to bound peer access has to turn `system_interface` on and verify
-  the routes it changes.
+- Nothing bounds a peer beyond the tailnet's ACLs and the upstreams' own
+  authentication: the endpoint runs in sing-box's userspace stack, so a peer's
+  connection to this host's tailnet address becomes a local dial, and every
+  listener on the host accepts what the endpoint forwards, not only the ingress.
+  A host that wants the firewall to bound peer access has to turn
+  `system_interface` on — which puts peer traffic on a real interface — and then
+  name every port peers should reach, because the input chain drops the rest.
 
 ## Adding a service
 
