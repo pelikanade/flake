@@ -8,6 +8,8 @@ Desktop hosts run [omp](docs/omp.md) with per-host Codex and Cursor logins and a
 
 Asymmetry and Parallax have a [Tailscale pilot](docs/tailscale.md) using sing-box's native endpoint, declared with the rest of the proxy configuration in [the sing-box module](docs/sing-box.md) and kept in the encrypted document only where it is secret. NetBird's desktop UI and its local daemon remain for workplace login.
 
+neko-sphere's own services answer under a wildcard subdomain of the maintainer's domain with a Let's Encrypt certificate, through [the HTTPS ingress](docs/ingress.md), so a client on the tailnet or the LAN uses a browser-trusted name instead of a per-service certificate and a port number.
+
 It is intended for the maintainer's machines and for people comfortable adapting a NixOS configuration. The machine definitions target `x86_64-linux` and include personal accounts, hardware, disk paths, network settings, and trusted keys. Adopting the configuration requires replacing those values and supplying your own secrets and recipients.
 
 ## Get started

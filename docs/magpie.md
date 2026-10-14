@@ -23,6 +23,13 @@ enabled, so the firewall is the boundary: `networking.firewall.interfaces.tailne
 admits 3425 and 3430 and loopback keeps working. The endpoint's MagicDNS name
 is handed to the gateway in `MAGPIE_PUBLIC_URL`.
 
+[The ingress](ingress.md) republishes both listeners under the host's own zone,
+with a trusted certificate and no port number: the page answers at
+`https://magpie.neko-sphere.nvirellia.im/` and the gateway at
+`https://magpie-api.neko-sphere.nvirellia.im/`, which is the base URL a client
+that wants HTTPS should carry. The gateway's own names and the key policy do not
+change with it.
+
 The page signs in through the link the service prints into its journal on
 every start, which carries the sign-in key as `?k=`. `MAGPIE_WEB_KEY` pins
 that key across restarts, from the shared encrypted document
@@ -65,6 +72,13 @@ After separately authorized deployment, from a tailnet peer:
 systemctl status magpie.service          # on neko-sphere
 curl --fail --silent http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/models | head
 curl --silent http://neko-sphere.leaffish-halfmoon.ts.net:3430/ -o /dev/null -w '%{http_code}\n'  # 401: the key guards every page
+```
+
+Through the ingress, from a LAN client or a tailnet peer:
+
+```sh
+curl --fail --silent https://magpie-api.neko-sphere.nvirellia.im/v1/models | head
+curl --silent https://magpie.neko-sphere.nvirellia.im/ -o /dev/null -w '%{http_code}\n'  # 401, same key
 ```
 
 `/v1/models` is the catalog the UI has configured — empty until the first

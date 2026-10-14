@@ -104,8 +104,10 @@ admits only the tailnet interface `tailnet0`: `ssh` opens 22 and `paseo-daemon`
 
 The firewall, not the route rules, is what admits inbound peer traffic. Every
 service binds all interfaces so it is reachable on the host's tailnet address —
-the Paseo daemon takes `0.0.0.0:6767` — and loopback keeps working. Nothing is
-admitted on a LAN or public interface.
+the Paseo daemon takes `0.0.0.0:6767` — and loopback keeps working.
+[The ingress](ingress.md) admits 80 and 443 on `tailnet0` the same way, and
+matches this host's LAN as a packet source besides, because one interface carries
+both. Nothing is admitted on a public interface.
 
 Restrict 6767 with tailnet grants before relying on direct access. The Paseo password
 comes from sops.

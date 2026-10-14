@@ -94,7 +94,11 @@ process running as the account, so it is an ordinary host socket and
 only, exactly like the daemon's own port. The image's HTTP listener and edge
 tunnel stay unpublished and unreachable. Portainer serves HTTPS with a
 self-signed certificate it generates into `/data`, so browsers warn until you
-accept it. Reach it at `https://neko-sphere.leaffish-halfmoon.ts.net:9443/`.
+accept it. Reach it through [the ingress](ingress.md), which terminates the
+trusted certificate and republishes this listener as
+`https://portainer.neko-sphere.nvirellia.im/`; the direct
+`https://neko-sphere.leaffish-halfmoon.ts.net:9443/` address is then only for
+diagnosing the container itself.
 
 ## First start
 
