@@ -54,3 +54,11 @@ creation_rules:
       - age:
           - *noa
           - *neko-sphere
+  # The NetBird endpoint and setup key of the userspace client. neko-sphere is
+  # the only host that runs it, so it is the only host that reads the document;
+  # the maintainer keeps it editable.
+  - path_regex: ^modules/secrets/netbird-userspace\.yaml$
+    key_groups:
+      - age:
+          - *noa
+          - *neko-sphere

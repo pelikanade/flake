@@ -27,7 +27,6 @@
     kitty
     neovim
     netbird-desktop
-    netbird-user
     hyprland
     noctalia
     obsidian

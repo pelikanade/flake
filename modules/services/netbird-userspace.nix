@@ -1,5 +1,5 @@
 {
-  flake.modules.nixos.netbird-user =
+  flake.modules.nixos.netbird-userspace =
     {
       config,
       lib,
@@ -7,21 +7,29 @@
       ...
     }:
     let
-      cfg = config.services.netbird-user;
+      cfg = config.services.netbird-userspace;
 
       # A userspace (netstack) client: WireGuard runs on a Go TCP/IP stack
       # instead of a TUN device, so an unprivileged service user runs it, and it
       # touches no interface, route, resolver entry or firewall rule of the host.
       # Its only opening is a SOCKS5 proxy on loopback, which is what the
-      # tunnels below dial; see docs/netbird-user.md. The workplace client from
-      # apps/netbird-desktop.nix is a different peer and stays as it is.
+      # tunnels below dial; see docs/netbird-userspace.md.
       netbird = pkgs.unstable.netbird;
+
+      # The endpoint and the setup key are data in this feature's own encrypted
+      # document, so neither is a repository value and neither reaches the Nix
+      # store. netbird reads the endpoint from an environment variable, so a
+      # wrapper hands it over from the provisioned file wherever a login runs;
+      # the client itself stores it in its profile at registration, which is what
+      # the daemon reads afterwards.
+      managementUrl = config.sops.secrets."netbird-userspace-management-url".path;
+      setupKey = config.sops.secrets."netbird-userspace-setup-key".path;
 
       # None of these are options: nothing else on the host depends on them, and
       # the tunnels are the only consumer of the proxy.
-      stateDir = "/var/lib/netbird-user";
+      stateDir = "/var/lib/netbird-userspace";
       socksPort = 1080;
-      daemonAddr = "unix:///run/netbird-user/sock";
+      daemonAddr = "unix:///run/netbird-userspace/sock";
 
       # One environment for the daemon, the registration unit and the CLI, so
       # all three address the same client and the same state.
@@ -34,29 +42,33 @@
         # start without a writable log, so it logs to the journal instead.
         NB_LOG_FILE = "console";
       }
-      // lib.optionalAttrs (cfg.managementUrl != null) { NB_MANAGEMENT_URL = cfg.managementUrl; }
       // lib.optionalAttrs (cfg.hostname != null) { NB_HOSTNAME = cfg.hostname; };
 
       envLines = lib.concatLines (
         lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg value}") clientEnv
       );
 
-      # The CLI carries the same environment, so `netbird-user` talks to this
-      # client rather than to the workplace daemon's socket.
-      cli = pkgs.writeShellScriptBin "netbird-user" ''
-        ${envLines}
-        exec ${lib.getExe netbird} "$@"
+      endpointWrapper = pkgs.writeShellScript "netbird-userspace-endpoint" ''
+        export NB_MANAGEMENT_URL="$(${lib.getExe' pkgs.coreutils "cat"} ${managementUrl})"
+        exec "$@"
       '';
 
-      # socat terminates the loopback connection and dials the peer through the
+      # The CLI carries the same environment, so `netbird-userspace` talks to
+      # this client rather than to another daemon, and the same endpoint.
+      cli = pkgs.writeShellScriptBin "netbird-userspace" ''
+        ${envLines}
+        exec ${endpointWrapper} ${lib.getExe netbird} "$@"
+      '';
+
+      # socat terminates the loopback connection and dials the target through the
       # client's SOCKS5 proxy, which is unauthenticated and loopback-only:
       # neither listener is reachable from the LAN.
       tunnelService =
         _name: tunnel:
-        lib.nameValuePair "netbird-user-tunnel-${toString tunnel.localPort}" {
+        lib.nameValuePair "netbird-userspace-tunnel-${toString tunnel.localPort}" {
           description = "Forward 127.0.0.1:${toString tunnel.localPort} to ${tunnel.address}:${toString tunnel.port} over NetBird";
-          after = [ "netbird-user.service" ];
-          wants = [ "netbird-user.service" ];
+          after = [ "netbird-userspace.service" ];
+          wants = [ "netbird-userspace.service" ];
           wantedBy = [ "multi-user.target" ];
           serviceConfig = {
             ExecStart = "${lib.getExe pkgs.socat} TCP-LISTEN:${toString tunnel.localPort},bind=127.0.0.1,fork,reuseaddr SOCKS5-CONNECT:127.0.0.1:${tunnel.address}:${toString tunnel.port},socksport=${toString socksPort}";
@@ -75,17 +87,7 @@
       localPorts = lib.mapAttrsToList (_: tunnel: tunnel.localPort) cfg.tunnels;
     in
     {
-      options.services.netbird-user = {
-        managementUrl = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          example = "https://api.example.com:443";
-          description = ''
-            Management server to join. A self-hosted deployment needs it; the
-            default is NetBird's own.
-          '';
-        };
-
+      options.services.netbird-userspace = {
         hostname = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
@@ -93,22 +95,6 @@
           description = ''
             Name this host registers under inside the network, when the machine
             hostname is not the one to use.
-          '';
-        };
-
-        setupKeyFile = lib.mkOption {
-          type = lib.types.nullOr lib.types.path;
-          default = null;
-          example = "/run/secrets/netbird-setup-key";
-          description = ''
-            File holding a setup key, for a network that issues them.
-
-            With one, the host registers unattended at every boot. Without one,
-            joining the network is a manual step: `sudo netbird-user up` prints
-            an activation URL for the network's SSO login.
-
-            The file has to be readable by the `netbird-user` service user,
-            which is the user that runs both the registration and the client.
           '';
         };
 
@@ -132,16 +118,16 @@
                     route the network advertises through a routing peer.
 
                     Userspace mode has no resolver inside the tunnel, so this is
-                    never a name; `sudo netbird-user status --detail` lists the
-                    peers, and `sudo netbird-user networks list` the network
-                    routes with their state.
+                    never a name; `sudo netbird-userspace status --detail` lists
+                    the peers, and `sudo netbird-userspace networks list` the
+                    network routes with their state.
                   '';
                 };
 
                 port = lib.mkOption {
                   type = lib.types.port;
                   description = ''
-                    Port the service listens on, on the peer.
+                    Port the service listens on, on the target.
                   '';
                 };
               };
@@ -150,7 +136,7 @@
           default = { };
           description = ''
             Services on the NetBird network to serve on loopback, one
-            `netbird-user-tunnel-<localPort>` service each.
+            `netbird-userspace-tunnel-<localPort>` service each.
 
             A tunnel carries TCP only: the client's SOCKS5 proxy offers no UDP.
           '';
@@ -161,26 +147,50 @@
         assertions = [
           {
             assertion = localPorts == lib.unique localPorts;
-            message = "services.netbird-user: two tunnels cannot share a localPort.";
+            message = "services.netbird-userspace: two tunnels cannot share a localPort.";
           }
           {
             assertion = lib.all (port: port > 1023) localPorts;
-            message = "services.netbird-user: a tunnel listens unprivileged, so every localPort must be 1024 or above.";
+            message = "services.netbird-userspace: a tunnel listens unprivileged, so every localPort must be 1024 or above.";
           }
         ];
 
         environment.systemPackages = [ cli ];
 
-        users.groups.netbird-user = { };
+        # Both values live in one document, because a host recipient decrypts the
+        # whole of it and only this feature's client reads it. The service user
+        # is what needs them: registration runs as that user, and root reads the
+        # same files through the CLI.
+        sops.secrets."netbird-userspace-management-url" = {
+          format = "yaml";
+          key = "management_url";
+          sopsFile = config.constants.resources.getSecretPath "netbird-userspace.yaml";
+          owner = "netbird-userspace";
+          group = "netbird-userspace";
+          mode = "0400";
+          restartUnits = [ "netbird-userspace-register.service" ];
+        };
 
-        users.users.netbird-user = {
+        sops.secrets."netbird-userspace-setup-key" = {
+          format = "yaml";
+          key = "setup_key";
+          sopsFile = config.constants.resources.getSecretPath "netbird-userspace.yaml";
+          owner = "netbird-userspace";
+          group = "netbird-userspace";
+          mode = "0400";
+          restartUnits = [ "netbird-userspace-register.service" ];
+        };
+
+        users.groups.netbird-userspace = { };
+
+        users.users.netbird-userspace = {
           description = "NetBird userspace client";
           isSystemUser = true;
-          group = "netbird-user";
+          group = "netbird-userspace";
         };
 
         systemd.services = {
-          netbird-user = {
+          netbird-userspace = {
             description = "NetBird client (userspace)";
             documentation = [ "https://docs.netbird.io/use-cases/cloud/netbird-on-faas" ];
             after = [ "network-online.target" ];
@@ -191,14 +201,14 @@
 
             serviceConfig = {
               ExecStart = "${lib.getExe netbird} service run";
-              User = "netbird-user";
-              Group = "netbird-user";
+              User = "netbird-userspace";
+              Group = "netbird-userspace";
 
-              StateDirectory = "netbird-user";
+              StateDirectory = "netbird-userspace";
               StateDirectoryMode = "0700";
-              RuntimeDirectory = "netbird-user";
+              RuntimeDirectory = "netbird-userspace";
               RuntimeDirectoryMode = "0700";
-              # Keys, config and the daemon socket all land in those
+              # Keys, profile and the daemon socket all land in those
               # directories. The socket itself is created 0666, so the
               # owner-only directory is what keeps every other user on the host
               # out of the daemon; the umask covers the files netbird writes
@@ -212,27 +222,27 @@
           };
 
           # Registration is a CLI step against the running daemon; it stores the
-          # account in the state directory, after which the client reconnects on
-          # its own. Running it again is harmless.
-          netbird-user-register = lib.mkIf (cfg.setupKeyFile != null) {
-            description = "Register the NetBird userspace client with a setup key";
+          # account and the endpoint in the state directory, after which the
+          # client reconnects on its own. Running it again is harmless.
+          netbird-userspace-register = {
+            description = "Register the NetBird userspace client with its setup key";
             after = [
-              "netbird-user.service"
+              "netbird-userspace.service"
               "sops-install-secrets.service"
             ];
-            wants = [ "netbird-user.service" ];
+            wants = [ "netbird-userspace.service" ];
             wantedBy = [ "multi-user.target" ];
 
             environment = clientEnv // {
-              NB_SETUP_KEY_FILE = cfg.setupKeyFile;
+              NB_SETUP_KEY_FILE = setupKey;
             };
 
             serviceConfig = {
               Type = "oneshot";
-              ExecStart = "${lib.getExe netbird} up";
-              User = "netbird-user";
-              Group = "netbird-user";
-              StateDirectory = "netbird-user";
+              ExecStart = "${endpointWrapper} ${lib.getExe netbird} up";
+              User = "netbird-userspace";
+              Group = "netbird-userspace";
+              StateDirectory = "netbird-userspace";
               StateDirectoryMode = "0700";
               Restart = "on-failure";
               RestartSec = 30;
