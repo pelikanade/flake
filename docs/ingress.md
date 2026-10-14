@@ -16,7 +16,7 @@ question, answered by the firewall below.
 | Name | Upstream | Notes |
 | --- | --- | --- |
 | `magpie.neko-sphere.nvirellia.im` | `127.0.0.1:3430` | Magpie's browser page, guarded by `magpie_web_key` |
-| `magpie-api.neko-sphere.nvirellia.im` | `127.0.0.1:3425` | The model gateway, every route upstream serves; Caddy flushes a streamed response immediately, so no buffering option is needed |
+| `magpie-api.neko-sphere.nvirellia.im` | `127.0.0.1:3425` | The model gateway, every route upstream serves. Caddy's forwarding header makes upstream treat the call as one from another machine, so it needs an enabled gateway key; Caddy flushes a streamed response immediately, so no buffering option is needed |
 | `portainer.neko-sphere.nvirellia.im` | `https://127.0.0.1:9443` | Portainer's own listener with its self-signed certificate, which the ingress cannot verify |
 | `paseo.neko-sphere.nvirellia.im` | `127.0.0.1:6767` | The Paseo daemon, HTTP and WebSocket |
 
@@ -30,11 +30,13 @@ as `services.ingress.proxies` — one entry per service, keyed by the label it
 answers under — and the ingress module knows nothing about which services run
 beside it, only how to terminate TLS, route by name and admit what may reach it.
 
-The ingress adds no authentication of its own. Each upstream keeps whatever it
-has: the page needs `magpie_web_key`, Portainer needs its login, the Paseo daemon
-needs its password, and the gateway accepts what it always accepted — upstream
-requires a key only when sharing is enabled, so a caller that reaches the port
-uses it. Widening `lanSources` therefore widens access to all four.
+The ingress adds no authentication of its own, and it changes what each upstream
+sees. Magpie's gateway reads a forwarding header as "not this machine" and then
+requires an enabled gateway key, so calls through the ingress carry one, exactly
+as a client of the shared gateway does; a caller that reaches the port directly on
+loopback needs none. The page beside it needs its own sign-in key, Portainer needs
+its login, and the Paseo daemon needs its password. Widening `lanSources`
+therefore widens access to all four, subject to those credentials.
 
 The services keep advertising their own addresses: `MAGPIE_PUBLIC_URL` is still
 the MagicDNS name, and the omp endpoint in
@@ -146,7 +148,8 @@ peer, and from a LAN client that resolves the zone through the LAN:
 
 ```sh
 curl -sI https://magpie.neko-sphere.nvirellia.im/ | head -1        # 401 or 200
-curl -s  https://magpie-api.neko-sphere.nvirellia.im/v1/models | head
+curl -s -H "Authorization: Bearer $MAGPIE_KEY" \
+  https://magpie-api.neko-sphere.nvirellia.im/v1/models | head   # $MAGPIE_KEY: the gateway key from modules/secrets/magpie.yaml
 openssl s_client -connect magpie.neko-sphere.nvirellia.im:443 -servername magpie.neko-sphere.nvirellia.im \
   </dev/null 2>/dev/null | openssl x509 -noout -subject -dates
 curl -sI https://portainer.neko-sphere.nvirellia.im/ | head -1     # Portainer's login page

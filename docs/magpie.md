@@ -17,12 +17,17 @@ desktop needed. Gateway mode is what a headless host wants: no Agents,
 Sessions or Library surface.
 
 Tailnet peers reach the OpenAI, OpenAI-Responses and Anthropic routes on
-`neko-sphere.leaffish-halfmoon.ts.net:3425`. Upstream accepts anything the
-gateway's callers present and requires a key only when sharing is enabled, so
-whoever reaches the port uses it: the endpoint delivers a peer's connection to
-loopback, no firewall rule stands in the way, and the sign-in key is what guards
-the page beside the gateway. The endpoint's MagicDNS name is handed to the gateway
-in `MAGPIE_PUBLIC_URL`.
+`neko-sphere.leaffish-halfmoon.ts.net:3425`. Who may call it depends on how the
+request arrives, and the gateway decides that from the request itself: a direct
+loopback caller — this host's own agents, and the endpoint's userspace delivery of
+a peer's connection — needs no key, while a request that carries a forwarding
+header such as `X-Forwarded-For` is answered as one from another machine and needs
+an enabled gateway key (`Authorization: Bearer <key>` or `x-api-key`; the key in
+[the encrypted document](../modules/secrets/magpie.yaml) is one). Settings → Share
+on local network is what lets another machine in at all.
+[The ingress](ingress.md) fronts the gateway and Caddy sends `X-Forwarded-For`, so
+every call that arrives through it carries that key. The endpoint's MagicDNS name
+is handed to the gateway in `MAGPIE_PUBLIC_URL`.
 
 [The ingress](ingress.md) republishes both listeners under the host's own zone,
 with a trusted certificate and no port number: the page answers at
