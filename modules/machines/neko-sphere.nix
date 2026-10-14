@@ -11,6 +11,7 @@
       magpie
       obsidian-headless
       podman
+      portainer
       paseo-daemon
       gh
     ];
