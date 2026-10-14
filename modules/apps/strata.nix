@@ -10,15 +10,16 @@ _: {
     {
       home.packages = [ pkgs.selfPackages.strata ];
 
-      # This is the workstation's file manager: it owns folder handling, and the
-      # D-Bus FileManager1 name that other applications use for "Reveal in file
-      # manager" and "Open containing folder". The Exec path is the wrapper, so
-      # the D-Bus-activated instance gets the same GIO and GStreamer environment
-      # as a launched one. The file chooser portal stays a separate opt-in.
-      xdg.mimeApps = {
-        enable = true;
-        defaultApplications."inode/directory" = "io.github.lgse.Strata.desktop";
-      };
+      # The folder handler is deliberately not claimed: `xdg.mimeApps` writes
+      # ~/.config/mimeapps.list as a store symlink, so the desktop's own
+      # default-application panel could never rewrite it. Folder handling and the
+      # file chooser portal stay the user's choice.
+      #
+      # The D-Bus FileManager1 name that other applications use for "Reveal in
+      # file manager" and "Open containing folder" is a per-user service instead,
+      # because upstream installs it under $XDG_DATA_HOME. The Exec path is the
+      # wrapper, so the D-Bus-activated instance gets the same GIO and GStreamer
+      # environment as a launched one.
       xdg.dataFile."dbus-1/services/io.github.lgse.Strata.FileManager1.service".text = ''
         [D-BUS Service]
         Name=org.freedesktop.FileManager1
