@@ -11,17 +11,21 @@ the `workstation` role.
 
 ## Desktop integration
 
-The aspect makes Strata that workstation's file manager, in the same terms
-upstream's installer uses:
+The aspect claims no defaults. It installs Strata, and adds what the workstation
+needs to reach it:
 
-- `xdg.mimeApps.defaultApplications."inode/directory"`, so folders open in Strata.
-  Thunar was the previous handler and is no longer in the desktop package set.
 - A per-user `io.github.lgse.Strata.FileManager1.service`, so "Reveal in file
   manager" and "Open containing folder" reach Strata. Its `Exec` is the package's
   wrapper, so the D-Bus-activated instance has the GIO and GStreamer environment a
   launched one gets.
 - `services.gvfs.enable`, because SMB shares, SFTP servers, and phone storage are
   GVfs mounts.
+
+Folder handling stays the user's choice, and is never claimed here. An
+`xdg.mimeApps.defaultApplications."inode/directory"` entry would make Home Manager
+write `~/.config/mimeapps.list` as a store symlink, which the desktop's
+default-application panel could then never rewrite; pick the folder handler in
+**Settings** instead.
 
 The file chooser portal stays a separate opt-in (`strata --install-portal`, or
 **Settings → General**): it replaces Open and Save dialogs for every application,
