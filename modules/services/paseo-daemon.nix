@@ -32,9 +32,6 @@
         # control, and the daemon has no container runtime to order against.
         autoSubUidGidRange = true;
         linger = true;
-        # Host agents may export tailnet certificates. This grants full
-        # sing-box management access, so the consumer owns this authorization.
-        extraGroups = lib.optional config.services.sing-box.enable "sing-box";
         home = "/var/lib/paseo";
         createHome = true;
         homeMode = "0700";
@@ -121,7 +118,6 @@
           Type = "simple";
           User = "paseo";
           Group = "paseo";
-          SupplementaryGroups = lib.optional config.services.sing-box.enable "sing-box";
           EnvironmentFile = config.sops.templates.paseo-daemon-env.path;
           StateDirectory = [
             "paseo"

@@ -20,14 +20,6 @@ creation_rules:
           - *asymmetry
           - *neko-sphere
           - *parallax
-  # Every sing-box host activates the authenticated management API.
-  - path_regex: ^modules/secrets/sing-box-api\.yaml$
-    key_groups:
-      - age:
-          - *noa
-          - *asymmetry
-          - *neko-sphere
-          - *parallax
   # The tailnet belongs to the host rather than to sing-box: every host that
   # joins it reads this key, through the sing-box endpoint now and through a
   # tailscaled module on hosts that do not run sing-box later.

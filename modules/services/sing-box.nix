@@ -153,18 +153,6 @@
           timestamp = true;
         };
 
-        services = [
-          {
-            type = "api";
-            tag = "management-api";
-            listen = "127.0.0.1";
-            listen_port = 9090;
-            # Userspace tailnet forwarding can reach loopback. Every caller
-            # must authenticate; this credential controls the whole instance.
-            secret = secret "sing-box-api-key";
-          }
-        ];
-
         dns = {
           servers = [
             {
@@ -436,16 +424,11 @@
       # proxied, so its ranges leave through the NetBird interface instead.
       # Nothing here marks packets by cgroup any more.
 
-      # The root pre-start renderer reads these files into the runtime config;
-      # sing-box itself never needs direct secret-file access. API clients gain
-      # read access through a group assigned by their own consumer modules.
+      # The root pre-start renderer reads these files into the runtime config, so
+      # the service itself never needs direct secret-file access and every
+      # credential file stays root-only.
       sops.secrets = lib.genAttrs singBoxSecrets (secretFrom "sing-box.yaml") // {
         tailscale_auth_key = secretFrom "tailscale.yaml" "tailscale_auth_key";
-        sing-box-api-key = (secretFrom "sing-box-api.yaml" "api_key") // {
-          path = "/run/secrets/sing-box-api-key";
-          group = "sing-box";
-          mode = "0440";
-        };
       };
 
       services.sing-box = {

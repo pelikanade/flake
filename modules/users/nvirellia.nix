@@ -9,7 +9,6 @@ _: {
   flake.modules.nixos.nvirellia =
     {
       config,
-      lib,
       pkgs,
       ...
     }:
@@ -25,8 +24,7 @@ _: {
           "video"
           "networkmanager"
           "input"
-        ]
-        ++ lib.optional config.services.sing-box.enable "sing-box";
+        ];
         shell = pkgs.fish;
         initialHashedPassword = nvirellia.hashedPassword;
         openssh.authorizedKeys.keys = [ nvirellia.sshPubKey ];
