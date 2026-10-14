@@ -5,7 +5,7 @@ HTTPS name each: one Caddy instance terminates TLS on 80 and 443 with a wildcard
 certificate for `*.neko-sphere.nvirellia.im`, and routes by host name to the
 service's loopback port. It replaces the per-service tailnet certificate route —
 self-signed warnings, one certificate per service, and a port number in every URL
-— for clients that reach the host on the tailnet or on its LAN.
+— for every client that has joined the tailnet, a home device included.
 
 The certificate comes from the ACME DNS-01 challenge, so the wildcard needs no
 inbound port 80 and no publicly reachable address. Reachability is a separate
@@ -49,23 +49,26 @@ every name in it must resolve to this host and nothing else may serve part of it
 `services.ingress.domain` names the zone, and the machine definition sets it
 beside `networking.hostName`.
 
-Two record sets make the names reachable, and each one serves a different client:
+One wildcard record makes the names reachable, and it points into the tailnet:
 
 ```dns
-*.neko-sphere.nvirellia.im      A       10.0.0.21
-*.neko-sphere.nvirellia.im      AAAA    <the host's tailnet IPv6 address>
+*.neko-sphere.nvirellia.im      A       <the host's tailnet IPv4 address>
 ```
 
-- The A record is the LAN address, so a device on the home network reaches the
-  names without the tailnet and without a resolver override. A router that strips
-  private answers (rebind protection) sees a public record pointing at
-  `10.0.0.0/8`; if it does, override the zone on the router or resolve through DoH.
-- The AAAA record is the address the tailnet assigns this host (`100.64.0.0/10`
-  for IPv4, `fd7a:115c:a1e0::/48` for IPv6). Read it from the tailnet's admin
-  console, or from the endpoint's own management API on the host, and add the
-  record once the endpoint is enrolled. A tailnet peer that resolves the name
-  reaches the host wherever it is; a client outside the tailnet cannot route that
-  address at all, which is the point.
+The tailnet assigns that address to this node and keeps it; read it from the
+tailnet's admin console once the endpoint is enrolled, and add the record then. It
+routes only inside the tailnet, so a client that has joined resolves the zone to an
+address it can connect to, while a client that has not joined learns an address it
+cannot reach instead of a port that answers. There is no AAAA record beside it: a
+second address family would only add something for every client to race against,
+and the tailnet's IPv6 address reaches the same host.
+
+A device on the home network that is not on the tailnet reaches the names through
+the LAN instead, which needs a local answer rather than the public one: point the
+zone at `10.0.0.21` in the router's DNS or in that device's hosts file. The
+firewall admits the LAN subnet as a source for exactly that case. Without the
+override such a device resolves the public record, finds no route into
+`100.64.0.0/10`, and cannot connect.
 
 Certificates for the zone need a Cloudflare API token with DNS edit rights on the
 zone that holds it — the delegated `neko-sphere.nvirellia.im` zone if you made
@@ -103,24 +106,26 @@ host are admitted. The host carries its LAN and its public addresses on one
 interface, so admitting the LAN by interface would also admit the internet:
 `services.ingress.lanSources` lists the IPv4 sources that may reach the ingress,
 and the module renders one `ip saddr <source> tcp dport { 80, 443 } accept` rule
-for each. Nothing is admitted on the host's public addresses — the machine
-definition lists only its LAN subnet.
+for each. The machine definition lists only its LAN subnet, which is what a device
+that overrides the zone locally needs; nothing is admitted on the host's public
+addresses.
 
 Two things this does not do:
 
-- Port 443 is not open to the internet. The zone's records point at LAN and
-  tailnet addresses, so a request from outside cannot reach a listener anyway, and
-  no rule admits one. Making the ingress public is a separate decision that needs
-  records, a firewall rule and an honest look at the four upstreams' own
-  authentication.
+- Port 443 is not open to the internet. The zone's record points into the tailnet,
+  so a request from outside cannot reach a listener anyway, and no rule admits one.
+  Making the ingress public is a separate decision that needs records, a firewall
+  rule and an honest look at the four upstreams' own authentication.
 - The tailnet half is a firewall boundary only while the endpoint owns
   `tailnet0`. Today `modules/services/sing-box.nix` leaves `system_interface` at
   its default, so the Tailscale endpoint runs in sing-box's userspace network
-  stack: peer packets are forwarded to loopback by sing-box itself and never
-  traverse this host's firewall, where every `tailnet0` rule is inert. Reachability
-  is unaffected — loopback keeps working, so the ingress answers peers — but the
-  rule above is not what restricts them. A host that needs the firewall to bound
-  peer access has to turn `system_interface` on and verify the routes it changes.
+  stack: a connection to this node's tailnet address is rewritten to loopback
+  inside sing-box and dialled as a local connection, which never traverses this
+  host's firewall, where every `tailnet0` rule is inert. The ingress still answers
+  peers — loopback keeps working — but the rule above is not what restricts them,
+  and every other loopback listener is reachable the same way. A host that needs
+  the firewall to bound peer access has to turn `system_interface` on and verify
+  the routes it changes.
 
 ## Adding a service
 
@@ -139,8 +144,8 @@ already covers it.
 
 ## Verifying
 
-Deployment is separate and authorized on its own; after a switch, from a LAN
-client and from a tailnet peer:
+Deployment is separate and authorized on its own; after a switch, from a tailnet
+peer, and from a LAN client that resolves the zone through the LAN:
 
 ```sh
 curl -sI https://magpie.neko-sphere.nvirellia.im/ | head -1        # 401 or 200
