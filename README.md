@@ -6,7 +6,7 @@ The desktop retains the Rose Pine Moon theme and uses Sway-style window controls
 
 Desktop hosts run [omp](docs/omp.md) with per-host Codex and Cursor logins and a preloaded Magpie gateway provider. Fill the encrypted Magpie endpoint and API-key placeholders before deployment. Machines can also host coding agents for remote desktop and phone clients with the standalone [Paseo daemon](docs/paseo-daemon.md), which uses the same packaged provider with credentials owned by its service account.
 
-Asymmetry and Parallax have a [Tailscale pilot](docs/tailscale.md) using sing-box's native endpoint, declared with the rest of the proxy configuration in [the sing-box module](docs/sing-box.md) and kept in the encrypted document only where it is secret. NetBird's desktop UI and its local daemon remain for workplace login.
+Asymmetry and Parallax have a [Tailscale pilot](docs/tailscale.md) using sing-box's native endpoint, declared with the rest of the proxy configuration in [the sing-box module](docs/sing-box.md) and kept in the encrypted document only where it is secret. NetBird's desktop UI and its local daemon remain for workplace login, and a second, unprivileged NetBird client runs in [userspace mode](docs/netbird-user.md) beside it, so a service on a peer's network answers on a loopback port without root or kernel networking.
 
 neko-sphere's own services answer under a wildcard subdomain of the maintainer's domain with a Let's Encrypt certificate, through [the HTTPS ingress](docs/ingress.md), so a client that joins the tailnet — a home device included — uses a browser-trusted name instead of a per-service certificate and a port number.
 
@@ -58,4 +58,4 @@ Boot the target from the resulting ISO and connect it to the network with `nmtui
 
 Follow [machine preparation](.agents/skills/init-machine/SKILL.md), then the [installation procedure](.agents/skills/install-machine/SKILL.md). Preparation records hardware facts, selects the disk layout, and enrolls secret recipients when needed. Installation erases the selected disk; confirm the target and device before proceeding. The procedure also covers encrypted disks and Secure Boot.
 
-Last updated at: `aecc22771234f637947b5fc330583404413abe20`.
+Last updated at: `7891c28b06da258a3e4f9324b65a919e12e3fbdd`.
