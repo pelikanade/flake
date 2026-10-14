@@ -270,6 +270,13 @@ then add a **Direct connection** in the client with the host's tailnet name and
 port 6767. Password authentication does not encrypt traffic, so keep it on the
 tailnet rather than opening 6767 anywhere else.
 
+The daemon refuses a `Host` header it was not told about, answering `403 Invalid
+Host header` (which a client shows as a transport that closed); its defaults allow
+`localhost`, `*.localhost` and any IP literal. The module therefore passes the
+zone [the ingress](ingress.md) serves and the tailnet's MagicDNS zone through
+`PASEO_HOSTNAMES`, so both names are accepted — a bare IP always is, which is the
+workaround if a client cannot be pointed at a name.
+
 Keep the daemon on loopback instead by setting
 `systemd.services.paseo-daemon.environment.PASEO_LISTEN = "127.0.0.1:6767"` in the
 consuming aspect and use SSH or the relay. A listener on another interface needs

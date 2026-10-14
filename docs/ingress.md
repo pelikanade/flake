@@ -18,7 +18,7 @@ question, answered by the firewall below.
 | `magpie.neko-sphere.nvirellia.im` | `127.0.0.1:3430` | Magpie's browser page, guarded by `magpie_web_key` |
 | `magpie-api.neko-sphere.nvirellia.im` | `127.0.0.1:3425` | The model gateway, every route upstream serves. Caddy's forwarding header makes upstream treat the call as one from another machine, so it needs an enabled gateway key; Caddy flushes a streamed response immediately, so no buffering option is needed |
 | `portainer.neko-sphere.nvirellia.im` | `https://127.0.0.1:9443` | Portainer's own listener with its self-signed certificate, which the ingress cannot verify |
-| `paseo.neko-sphere.nvirellia.im` | `127.0.0.1:6767` | The Paseo daemon, HTTP and WebSocket |
+| `paseo.neko-sphere.nvirellia.im` | `127.0.0.1:6767` | The Paseo daemon, HTTP and WebSocket. It refuses an unknown `Host` header, so the module declares this zone to it through `PASEO_HOSTNAMES` |
 
 Any other name in the zone answers 404. The gateway gets its own name rather than
 a path prefix, because only upstream knows its full route set; the page and the

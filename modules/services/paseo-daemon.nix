@@ -108,6 +108,14 @@
           # is a manual change there, outside this repository. Leave relay
           # enablement there too: a deployment env override would prevent later
           # changes.
+        }
+        // lib.optionalAttrs ((config.services.ingress.domain or null) != null) {
+          # The daemon answers a Host header it was not told about with 403
+          # "Invalid Host header" — its defaults allow localhost and plain IPs
+          # only — and a client reports that as a transport that closed. A client
+          # that dials the ingress's name, or the MagicDNS name it had before the
+          # ingress existed, must find it here.
+          PASEO_HOSTNAMES = ".${config.services.ingress.domain},.${config.constants.tailnetDnsName}";
         };
 
         serviceConfig = {
