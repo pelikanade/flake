@@ -41,20 +41,19 @@ nix develop
 sops modules/secrets/netbird-userspace.yaml
 ```
 
-`setup_key` is the placeholder `REPLACE_WITH_NETBIRD_SETUP_KEY` until the network
-issues a real one. While it stays a placeholder, the registration unit keeps
-failing and retrying every 30 seconds, which the journal shows; nothing else is
-affected, and a first login by hand works meanwhile:
+Registration is unattended: each boot runs `netbird up` against the running daemon
+with the document's key, and the account and endpoint it stores in
+`/var/lib/netbird-userspace` are what the client reconnects with afterwards. A key
+the network refuses — expired, revoked, or one that never belonged to it — leaves
+that unit failing and retrying every 30 seconds, which the journal shows; nothing
+else is affected. A login by hand is the alternative:
 
 ```sh
 sudo netbird-userspace up
 ```
 
 It prints an activation URL for the network's SSO login and waits for the browser
-step. With a key filled in, registration is unattended instead: each boot runs
-`netbird up` against the running daemon, and the account and endpoint it stores in
-`/var/lib/netbird-userspace` are what the client reconnects with afterwards.
-`sudo netbird-userspace status --detail` lists the peers and their addresses.
+step. `sudo netbird-userspace status --detail` lists the peers and their addresses.
 
 ## Declaring a tunnel
 
@@ -115,21 +114,22 @@ client, registration and tunnel units with the expected directives; the CLI wrap
 and the registration unit carry the module's environment, the latter with the
 setup key path and an endpoint read at run time; the encrypted document holds
 exactly its two keys, names the two intended recipients, and carries no plaintext
-endpoint — checked on the ciphertext, since only neko-sphere's host key or the
-maintainer's key decrypts it, and the same payload round-tripped through a
-throwaway age key to prove the encryption command; the daemon starts without
-privileges under that environment, writes its keys, serves its socket and answers
+endpoint or key — checked on the ciphertext, since only neko-sphere's host key or
+the maintainer's key decrypts it, and every write round-tripped its payload through
+a throwaway age key first; the daemon starts without privileges under that
+environment, writes its keys, serves its socket and answers
 `netbird-userspace status` with `NeedsLogin`; `up` starts the SSO device flow and
 prints the activation URL; `NB_SETUP_KEY_FILE` is read and sent, which management
-rejected for a placeholder key; and a `socat` process with the module's own
+rejected for an invalid key; and a `socat` process with the module's own
 argument form forwarded a connection through a stand-in SOCKS5 server.
 
-What was not, and needs a real key: registration, the netstack client reaching
-peers, the SOCKS5 proxy answering with a peer behind it, the tunnel carrying
-traffic on 18083, reconnection after a restart or a reboot, and how neko-sphere's
-sing-box treats the client's own traffic. That last one is the open question worth
-watching: sing-box runs a tun whose `final` route is the proxy selector, so the
-client's endpoint, signal, relay and peer traffic — ordinary TCP and UDP to public
-addresses — leaves through that proxy rather than around it, and whether those
-nodes carry the relay and peer UDP is unverified. If the tunnel does not come up,
-excluding the client's traffic in that module is the first thing to try.
+What was not, and needs the deployed host: registration, the netstack client
+reaching peers, the SOCKS5 proxy answering with a peer behind it, the tunnel
+carrying traffic on 18083, reconnection after a restart or a reboot, and how
+neko-sphere's sing-box treats the client's own traffic. That last one is the open
+question worth watching: sing-box runs a tun whose `final` route is the proxy
+selector, so the client's endpoint, signal, relay and peer traffic — ordinary TCP
+and UDP to public addresses — leaves through that proxy rather than around it, and
+whether those nodes carry the relay and peer UDP is unverified. If the tunnel does
+not come up, excluding the client's traffic in that module is the first thing to
+try.
