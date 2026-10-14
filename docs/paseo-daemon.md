@@ -26,12 +26,12 @@ imports = with inputs.self.modules.aspects; [
 ];
 ```
 
-Importing the aspect enables the service. neko-sphere uses `paseo-docker`, which
-composes this service with Docker and the execution account's daemon access.
-Other daemon hosts can use `paseo-daemon` without Docker. A host that should join
-the tailnet without sing-box needs its own `tailscaled` module, which does not
-exist yet. Build that machine's NixOS configuration before separately authorizing
-deployment:
+Importing the aspect enables the service. A host that also imports the `docker`
+aspect grants the execution account access to the Docker socket and starts Docker
+before Paseo; other daemon hosts can use `paseo-daemon` without Docker. A host
+that should join the tailnet without sing-box needs its own `tailscaled` module,
+which does not exist yet. Build that machine's NixOS configuration before
+separately authorizing deployment:
 
 ```sh
 nix develop
@@ -132,12 +132,13 @@ the service or use its stop command to manage systemd's lifecycle.
 
 ## Docker for OpenSandbox
 
-Only neko-sphere imports `paseo-docker`. This aspect imports `docker` and
-`paseo-daemon`, adds `paseo` to the `docker` group, and gives the service an
-explicit supplementary `docker` group. It starts Docker before Paseo. Docker
-uses its local `/run/docker.sock`; no TCP daemon endpoint or firewall port is
-enabled. The separate `docker` aspect enables Docker without granting user
-access and does not change hosts that use Podman.
+Only neko-sphere imports `docker` alongside `paseo-daemon`. With the Docker
+daemon enabled, the daemon module adds `paseo` to the `docker` group, gives the
+service an explicit supplementary `docker` group, and starts Docker before Paseo;
+a daemon host without Docker gets none of that. The `docker` aspect on its own
+enables Docker without granting user access and does not change hosts that use
+Podman. Docker uses its local `/run/docker.sock`; no TCP daemon endpoint or
+firewall port is enabled.
 
 The host-side OpenSandbox server runs as `paseo` and uses that socket. Docker
 access is root-equivalent, including for other host processes running as
