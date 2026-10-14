@@ -1,6 +1,9 @@
 { inputs, ... }:
 {
-  flake.modules.aspects.paseo-daemon.imports = [ inputs.self.modules.aspects.omp ];
+  flake.modules.aspects.paseo-daemon.imports = [
+    inputs.self.modules.aspects.omp
+    inputs.self.modules.aspects.podman
+  ];
 
   flake.modules.nixos.paseo-daemon =
     {
@@ -11,20 +14,27 @@
     }:
     let
       paseoDaemon = pkgs.selfPackages.paseo-daemon;
-      dockerEnabled = config.virtualisation.docker.enable;
     in
     {
+      # The account can run containers, so the host publishes its runtime's API on
+      # a fixed socket. The socket belongs to the account itself until a client
+      # claims it with `virtualisation.podman.runtimeApis.paseo.client`.
+      virtualisation.podman.runtimeApis.paseo = { };
+
       users.groups.paseo = { };
       users.users.paseo = {
         isSystemUser = true;
         group = "paseo";
+        # Agents run as this account and may call `podman` or `docker`. A
+        # subordinate ID range and a lingering user manager — which owns
+        # `/run/user/<uid>` and the rootless Podman socket inside it — are what
+        # let them run containers without root. No group grants container
+        # control, and the daemon has no container runtime to order against.
+        autoSubUidGidRange = true;
+        linger = true;
         # Host agents may export tailnet certificates. This grants full
         # sing-box management access, so the consumer owns this authorization.
-        # Docker access is root-equivalent, and it exists only for the sandbox
-        # server the consumer runs as paseo; sandbox workloads must never
-        # inherit that socket or host bind mounts.
-        extraGroups =
-          lib.optional config.services.sing-box.enable "sing-box" ++ lib.optional dockerEnabled "docker";
+        extraGroups = lib.optional config.services.sing-box.enable "sing-box";
         home = "/var/lib/paseo";
         createHome = true;
         homeMode = "0700";
@@ -78,9 +88,8 @@
       systemd.services.paseo-daemon = {
         description = "Paseo host for coding agents and terminals";
         wantedBy = [ "multi-user.target" ];
-        # Docker owns the socket the sandbox server uses, so it starts first.
-        wants = [ "network-online.target" ] ++ lib.optional dockerEnabled "docker.service";
-        after = [ "network-online.target" ] ++ lib.optional dockerEnabled "docker.service";
+        wants = [ "network-online.target" ];
+        after = [ "network-online.target" ];
 
         # systemd's path option replaces the unit's PATH rather than extending it,
         # so point it at the system profile instead of listing packages again.
@@ -112,8 +121,7 @@
           Type = "simple";
           User = "paseo";
           Group = "paseo";
-          SupplementaryGroups =
-            lib.optional config.services.sing-box.enable "sing-box" ++ lib.optional dockerEnabled "docker";
+          SupplementaryGroups = lib.optional config.services.sing-box.enable "sing-box";
           EnvironmentFile = config.sops.templates.paseo-daemon-env.path;
           StateDirectory = [
             "paseo"

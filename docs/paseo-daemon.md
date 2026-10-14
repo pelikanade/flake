@@ -26,9 +26,9 @@ imports = with inputs.self.modules.aspects; [
 ];
 ```
 
-Importing the aspect enables the service. A host that also imports the `docker`
-aspect grants the execution account access to the Docker socket and starts Docker
-before Paseo; other daemon hosts can use `paseo-daemon` without Docker. A host
+Importing the aspect enables the service and declares its execution account,
+which can run rootless containers of its own; that is a property of the account,
+not of the daemon, which starts no container runtime and waits for none. A host
 that should join the tailnet without sing-box needs its own `tailscaled` module,
 which does not exist yet. Build that machine's NixOS configuration before
 separately authorizing deployment:
@@ -130,28 +130,51 @@ or startup-setting changes. It interrupts running work. `paseo reload` can apply
 runtime-safe configuration changes. Do not run `paseo daemon start` alongside
 the service or use its stop command to manage systemd's lifecycle.
 
-## Docker for OpenSandbox
+## Containers for agents
 
-Only neko-sphere imports `docker` alongside `paseo-daemon`. With the Docker
-daemon enabled, the daemon module adds `paseo` to the `docker` group, gives the
-service an explicit supplementary `docker` group, and starts Docker before Paseo;
-a daemon host without Docker gets none of that. The `docker` aspect on its own
-enables Docker without granting user access and does not change hosts that use
-Podman. Docker uses its local `/run/docker.sock`; no TCP daemon endpoint or
-firewall port is enabled.
+Paseo does not isolate its work in containers, and the daemon never talks to a
+container runtime. The agents and terminals it hosts run as `paseo`, and those
+processes may call `podman` or `docker` themselves. The account therefore has a
+subordinate ID range (`autoSubUidGidRange`) and a lingering user manager, which
+is what rootless Podman needs: the manager owns `/run/user/<uid>` and the socket
+Podman serves there. Nothing else is granted, and container control is not
+root-equivalent. A container started this way runs under `paseo`'s own uid and
+reaches no more than the account can already read.
 
-The host-side OpenSandbox server runs as `paseo` and uses that socket. Docker
-access is root-equivalent, including for other host processes running as
-`paseo`; `NoNewPrivileges` does not restrict requests to the Docker daemon.
-Keep generated agent workloads in containers without the Docker socket,
-project `.env`, or broad host bind mounts. Bind the OpenSandbox control API to
-`127.0.0.1:8080` and load its API key from a private runtime environment file.
-The Open SWE project owns that server's runtime configuration and sandbox image.
+The repository runs containers rootless everywhere. The `podman` aspect enables
+Podman without the rootful socket, or the `/run/docker.sock` symlink, that used
+to front one shared daemon, so every account gets its own runtime and no account
+can drive another's. Agents and other Docker API clients address that runtime
+explicitly:
 
-Activation changes Paseo's unit and restarts it to acquire its new supplementary
-group. This ends its active agents and terminals, so perform the switch from an
-independent administrator session. Existing processes cannot acquire the group
-merely because `/etc/group` changed.
+```sh
+export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
+docker info
+```
+
+The `podman` CLI needs no variable. That variable is the whole difference from
+the retired Docker setup: the `docker` group is gone, and with it the ability of
+a process holding it to control every container on the host. Keep agent workloads
+out of host secrets, `$PASEO_HOME`, and broad host bind mounts anyway, since
+`paseo` reads those itself; a rootless container sharing a host directory also
+needs the account to reach it through its user namespace.
+
+The account's runtime is also published on a fixed socket, which is what lets a
+management UI drive it without that UI's container being able to read the
+account's private runtime directory: `virtualisation.podman.runtimeApis.paseo`
+declares the entry, and the account whose containers drive runtimes names itself
+in `virtualisation.podman.runtimeApiClient`. See [the Portainer aspect](portainer.md),
+which does that. Until such an account exists, the socket belongs to `paseo` itself
+and is not reachable from another account's container.
+
+A project that starts its own workload — a sandbox server, for instance — owns
+that workload's runtime configuration. Bind its control API to loopback and keep
+its key in a private runtime file. [Portainer](portainer.md) manages these
+runtimes; on hosts that import it, the agents' runtime is one of its
+environments.
+
+Activation writes the subordinate IDs and starts the account's user manager. It
+leaves the daemon alone unless the daemon unit's own settings changed.
 
 From an administrator's normal session, inspect the Justfile and use the
 repository's deployment recipe after building and reviewing the change:
@@ -171,12 +194,12 @@ permits key-based root login on the tailnet. From a separate administrator's
 session holding that key, deploy the prepared checkout in a detached system unit:
 
 ```sh
-ssh root@neko-sphere 'systemd-run --unit=openswe-docker-deploy --collect --no-block --setenv=PATH=/run/current-system/sw/bin /run/current-system/sw/bin/nixos-rebuild --flake /var/lib/paseo/Projects/flake#neko-sphere switch -L'
+ssh root@neko-sphere 'systemd-run --unit=flake-deploy --collect --no-block --setenv=PATH=/run/current-system/sw/bin /run/current-system/sw/bin/nixos-rebuild --flake /var/lib/paseo/Projects/flake#neko-sphere switch -L'
 ```
 
 The system manager owns this command, so a Paseo restart or SSH disconnect does
 not terminate activation. Follow its result with
-`ssh root@neko-sphere 'journalctl -u openswe-docker-deploy -f'`.
+`ssh root@neko-sphere 'journalctl -u flake-deploy -f'`.
 
 Use a reachable tailnet address if the host name does not resolve. Alternatively,
 from an identical checkout on the administrator's machine, run
@@ -184,11 +207,10 @@ from an identical checkout on the administrator's machine, run
 the already-authorized private key or a forwarded SSH agent and a verified host
 key; they do not require changing sudo, polkit, or the Paseo service sandbox.
 
-After the switch, check `systemctl status docker.service paseo-daemon.service`
-and run `docker info` as `paseo` in a fresh process. Complete an OpenSandbox
-create/execute/delete cycle and inspect the resulting container mounts before
-dispatching Open SWE work. These are deployment checks, not configuration-only
-guarantees.
+After the switch, check `systemctl status paseo-daemon.service` and run
+`podman info` as `paseo` in a fresh process, then create, execute in, and delete a
+container to confirm the account's runtime works. These are deployment checks,
+not configuration-only guarantees.
 
 ## Connect after startup
 
