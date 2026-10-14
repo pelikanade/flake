@@ -9,6 +9,7 @@
       substituter-cn
       sing-box
       magpie
+      obsidian-headless
       paseo-docker
       gh
     ];

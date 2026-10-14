@@ -16,4 +16,13 @@ _: {
         };
       };
     };
+
+  # Obsidian's bundled `obsidian-cli` only drives a running desktop app, which a
+  # headless host cannot provide. `obsidian-headless` is Obsidian's own client
+  # for the same account without the app: it operates on vaults from the command
+  # line and installs the `ob` executable. nixos-26.05 does not carry it yet, so
+  # take the unstable set's copy.
+  flake.modules.nixos.obsidian-headless = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.unstable.obsidian-headless ];
+  };
 }
