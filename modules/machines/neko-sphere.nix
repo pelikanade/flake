@@ -10,7 +10,8 @@
       sing-box
       magpie
       obsidian-headless
-      docker
+      podman
+      portainer
       paseo-daemon
       gh
     ];
