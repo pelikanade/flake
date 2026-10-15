@@ -20,10 +20,11 @@
         default = null;
         description = ''
           Account whose containers drive every published runtime in
-          `runtimeApis`. Systemd owns each published socket as this account, which
-          is then the only account that can open it; a runtime can still name a
-          different client of its own. Null leaves every socket with its own
-          runtime's account.
+          `runtimeApis`. Systemd gives each published socket that account as its
+          group, which is then the only account other than the runtime's own that
+          can open it; a runtime can still name a different client of its own. The
+          null default leaves every client at its runtime's own account, so a
+          published socket admits that account alone.
         '';
       };
 
@@ -37,9 +38,15 @@
           its private runtime directory, and inside a rootless user namespace
           neither that socket's owner nor its group maps, so another account's
           container could only be authorized by the "other" permission bits —
-          which would hand the runtime to every local process. Systemd owns the
-          published socket as the client instead, so the client's container
-          matches the owner bits and every other account stays out.
+          which would hand the runtime to every local process. Systemd holds the
+          published socket for two parties instead, and `0660` is what leaves room
+          for both: its owner is the runtime's own account — the account that
+          serves the API — so that account's host processes reach it through the
+          owner bits, including a process inside another service's sandbox, which
+          has no other way to run a container; its group is the client, whose gid
+          maps into that account's own container as container gid 0, so the
+          client's container reaches it through the group bits. Every other
+          account matches neither.
 
           The runtime's own module declares the entry; the account that drives it
           names itself in `runtimeApiClient`.
@@ -54,9 +61,9 @@
                   default = if apiClient != null then apiClient else name;
                   defaultText = "the account named in `runtimeApiClient`, or the runtime's own";
                   description = ''
-                    Account that owns the published socket and connects to this
-                    runtime's API. Only a container running as that account can
-                    match the socket's owner bits.
+                    Account whose containers connect to this runtime's API. The
+                    published socket's group is this account, so the client's
+                    container matches those bits and no account outside it does.
                   '';
                 };
 
@@ -91,7 +98,8 @@
           # Containers run rootless: each user drives Podman under their own uid
           # and reaches its Docker-compatible API on that user's own socket under
           # `/run/user/<uid>/podman`. Every user gets their own runtime, and no
-          # user can drive another's.
+          # user can drive another's; the published sockets below are the
+          # deliberate exception, and each names the client it admits.
           virtualisation.podman = {
             enable = true;
             defaultNetwork.settings.dns_enabled = true;
@@ -114,7 +122,14 @@
               socketConfig = {
                 ListenStream = api.socketPath;
                 SocketMode = "0660";
-                SocketUser = api.client;
+                # The runtime's own account keeps the owner bits: it is the
+                # account that serves this API, and its own processes — one
+                # inside the daemon's sandbox, say — have no other way to run a
+                # container.
+                SocketUser = name;
+                # The client's container runs as the client account, whose gid
+                # maps into it as container gid 0, so the group bits admit the
+                # container without admitting any host account but this one.
                 SocketGroup = api.client;
               };
             }
@@ -149,8 +164,10 @@
             }
           ) runtimeApis;
 
+          # The directory follows the socket: the runtime's account owns it, the
+          # client reaches through the group, and no third account traverses it.
           systemd.tmpfiles.rules = lib.mapAttrsToList (
-            _: api: "d ${builtins.dirOf api.socketPath} 0750 ${api.client} ${api.client} -"
+            name: api: "d ${builtins.dirOf api.socketPath} 0750 ${name} ${api.client} -"
           ) runtimeApis;
         })
       ];
