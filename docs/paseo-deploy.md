@@ -78,6 +78,11 @@ request; from a checkout, `nix run .#paseo-deploy` builds it first:
 paseo-deploy
 ```
 
+It takes no arguments: the broker decides what to deploy, and asking is the whole
+request. `paseo-deploy --help` prints that usage without deploying anything, and
+an argument it does not know is refused with status 2 rather than answered with a
+deployment.
+
 A workspace script whose command does not exist yet belongs to a machine that has
 not imported the aspect: until that first privileged deployment, `paseo-deploy`
 is not on any PATH either.
