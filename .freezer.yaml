@@ -1,0 +1,14 @@
+# Freezer build list: the outputs this repository's default branch publishes.
+# Every package attribute under the prefix, one level, so a new package here is
+# cached without editing this file.
+#
+# A nixosConfigurations attribute is not a derivation, so it must be named down
+# to the system closure. A glob is only allowed in the final component, so every
+# machine in use is listed explicitly and a new one must be added here.
+# `installer` (the installation ISO machine) and `stylix-test` are deliberately
+# absent: neither is a deployed host.
+entries:
+  - packages.x86_64-linux.*
+  - nixosConfigurations.asymmetry.config.system.build.toplevel
+  - nixosConfigurations.neko-sphere.config.system.build.toplevel
+  - nixosConfigurations.parallax.config.system.build.toplevel
