@@ -137,10 +137,13 @@
 
           # nixos-26.05 carries no Caddy with the Cloudflare DNS plugin, and only
           # the DNS-01 challenge can issue the wildcard certificate. Take the
-          # unstable set's builder and add that one provider.
+          # unstable set's builder and add that one provider. `withPlugins`
+          # vendors the plugin against the whole dependency graph, so this hash
+          # belongs to the unstable Caddy version beside it: an input bump that
+          # moves Caddy makes it stale, and a build then reports the hash to use.
           package = pkgs.unstable.caddy.withPlugins {
             plugins = [ "github.com/caddy-dns/cloudflare@v0.2.4" ];
-            hash = "sha256-Oirb6ZtU/c6C/SfICWpfBAEGDTepWShPQdWW0LlhF20=";
+            hash = "sha256-xRJ5evsAJ2akg47j3Bt6YDXJOgX88B/rKNP50KSVyNY=";
           };
 
           email = config.constants.nvirellia.email;
