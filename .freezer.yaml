@@ -1,0 +1,5 @@
+# Freezer build list: the outputs this repository's default branch publishes.
+# Every package attribute under the prefix, one level, so a new package here is
+# cached without editing this file.
+entries:
+  - packages.x86_64-linux.*
