@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "deploy": {
+      "command": "paseo-deploy"
+    }
+  }
+}

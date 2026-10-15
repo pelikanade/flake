@@ -35,6 +35,41 @@ pkexec --keep-cwd /run/current-system/sw/bin/env PATH="$PATH" nixos-rebuild swit
 - Expect the polkit authentication dialog; the whole command then runs as root. The `nixos-rebuild-ng` wrapper supplies its own tools, so the rest of the reduced privileged environment is sufficient.
 - If the command reports `pkexec must be setuid root`, a sandbox is blocking setuid escalation; rerun it unsandboxed.
 
+## From a Paseo workspace
+
+A terminal that Paseo hosts cannot elevate at all: the daemon keeps
+`NoNewPrivileges=true`, so `sudo` refuses, `pkexec` never reaches its setuid step,
+and a setuid helper would be ignored the same way. Ask the host's deploy broker
+instead — a root service that fetches the flake this machine follows and switches
+to its newest revision:
+
+```sh
+paseo-deploy
+```
+
+Starting the `deploy` workspace script that `paseo.json` declares runs exactly
+that client, which is the one-click route for an agent or its user. The client is
+installed by the `paseo-deploy` aspect, so a machine that has not deployed it once
+from outside the account has no `paseo-deploy` command either.
+
+- The broker deploys the published flake, never the working tree, so a change that
+  has not landed is not what gets deployed. Land it first (see the
+  [land skill](../land/SKILL.md)) or ask the user to; never report an unpublished
+  revision as deployed.
+- Report the machine and the flake reference before running it; this is the same
+  operation as the `pkexec` switch and needs the same authorization.
+- [Prepare](#prepare) still governs what you publish: format, lint and evaluate the
+  revision before it lands, because the broker's switch only reports what the
+  published revision does when it is activated here.
+- The client exits with the deployment's status. The switch itself runs in a
+  detached `flake-deploy-<pid>` unit, so a deployment that restarts Paseo kills
+  the terminal without interrupting activation; when the terminal dies, follow the
+  result with `journalctl -u 'flake-deploy-*'` instead.
+- No socket at `/run/paseo-deploy.sock` means this machine's configuration does
+  not import the `paseo-deploy` aspect yet. It cannot install itself, since
+  installing it is what it does; report the missing privileged deployment instead
+  of finding another way in. See [the deploy broker](../../../docs/paseo-deploy.md).
+
 ## Report
 
 - Report the generation that was activated (`nixos-rebuild list-generations`) and which changes are now live.
