@@ -85,6 +85,13 @@ takes the unstable set's `caddy.withPlugins` with one plugin pinned by version a
 vendor hash; the package therefore builds a private Caddy rather than reusing the
 cached one.
 
+That vendor hash covers the vendored dependency graph of the Caddy version beside
+it, so it is only as current as the `nixpkgs-unstable` pin: an input update that
+moves Caddy makes the build fail with `hash mismatch`, naming the hash to put
+back. A hash taken from that failure cannot quietly pick a different plugin: the
+package's install check reads Caddy's own `build-info` and requires
+`github.com/caddy-dns/cloudflare` at the pinned version.
+
 The token read is `cloudflare_api_token` in
 [modules/secrets/ingress.yaml](../modules/secrets/ingress.yaml), whose recipients
 are neko-sphere's host key and the maintainer. NixOS activation renders it into
