@@ -16,6 +16,7 @@
       paseo-daemon
       gh
       ingress
+      zswap
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;
     hardware =
@@ -93,6 +94,21 @@
         address = "172.0.161.24";
         port = 8083;
       };
+
+      # zswap compresses swapped pages into a RAM pool and writes them here when
+      # that pool fills, so the file is both what zswap needs as a backing store
+      # and the capacity behind it. Without it the kernel has nothing to page out
+      # and every shortfall reaches the OOM killer.
+      swapDevices = [
+        {
+          device = "/swapfile";
+          size = 32 * 1024;
+        }
+      ];
+
+      # Hibernating to a swapfile needs a resume device and offset this machine
+      # does not have, so only suspend is available.
+      systemd.sleep.settings.Sleep.AllowHibernation = false;
     };
   };
 }

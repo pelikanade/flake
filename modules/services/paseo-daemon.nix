@@ -159,6 +159,25 @@
           ProtectSystem = "full";
           ProtectHome = true;
           PrivateTmp = true;
+
+          # Every agent, terminal and MCP server the daemon starts lives in this
+          # one cgroup, so these limits bind the whole set rather than a single
+          # process. High makes the kernel reclaim and throttle inside the
+          # cgroup before the workload reaches the host's last pages; Max stops
+          # a runaway set from taking the machine with it, which is what turns a
+          # heavy agent load into a system-wide OOM kill, or into a host too
+          # stalled to feed the hardware watchdog.
+          MemoryHigh = "20G";
+          MemoryMax = "24G";
+
+          # systemd-oomd acts only on cgroups that opt in, and no cgroup on this
+          # host did, so it never fired. A kill here is the last resort: memory
+          # pressure for 80% of oomd's sampling window is past the point where
+          # MemoryHigh reclaimed and the kernel's own in-cgroup OOM killer
+          # applies, and since this cgroup holds every agent, one kill
+          # interrupts all of them.
+          ManagedOOMMemoryPressure = "kill";
+          ManagedOOMMemoryPressureLimit = "80%";
         };
       };
     };

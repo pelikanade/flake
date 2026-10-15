@@ -120,6 +120,37 @@ or startup-setting changes. It interrupts running work. `paseo reload` can apply
 runtime-safe configuration changes. Do not run `paseo daemon start` alongside
 the service or use its stop command to manage systemd's lifecycle.
 
+## Memory limits and the OOM killer
+
+The service's cgroup holds the daemon, every agent, every terminal and the MCP
+servers those sessions start; nothing delegates them into cgroups of their own. A
+project's devenv plugin is the largest single contributor: each session in a
+devenv project starts a `devenv mcp` server that settles near 4.5 GiB, so four
+open sessions are most of a 30 GiB host's memory before any agent work happens.
+
+The unit therefore caps itself. `MemoryHigh=20G` reclaims and throttles inside the
+cgroup, and `MemoryMax=24G` leaves the rest of the host — other services, page
+cache, kernel — room to work. The pair is chosen for a host of this size: a larger
+machine raises both, and one where agents must not disturb other work lowers them.
+
+`ManagedOOMMemoryPressure=kill` is what makes `systemd-oomd` act on this host; no
+other cgroup opts in, so `oomctl` otherwise lists an empty set and a machine under
+pressure reaches the kernel's OOM killer with nothing earlier in the way. The
+limit is raised from the 60% default to 80% because this cgroup owns every agent:
+a kill is the last resort, reached only after `MemoryHigh` has reclaimed and the
+kernel's own in-cgroup OOM killer has taken the gentler case, and it interrupts
+all running work at once.
+
+Limits only help if memory is reclaimable, which a host with no swap has none of:
+the kernel cannot page out anonymous memory, so a shortfall inside the cgroup
+becomes a system-wide OOM kill, or a stall long enough for the hardware watchdog
+to reset the machine. A host that runs agents therefore declares a swapfile, and
+imports the `zswap` aspect in front of it: swapped pages compress into a RAM pool
+first and only reach the disk when that pool fills, so the common case costs no
+disk I/O and the file supplies the capacity behind it. zram would put the same
+compression in the swap device itself; zswap keeps the device a plain file that
+holds whatever does not fit in the pool.
+
 ## Containers for agents
 
 Paseo does not isolate its work in containers, and the daemon never talks to a
