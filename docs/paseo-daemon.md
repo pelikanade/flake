@@ -26,12 +26,12 @@ imports = with inputs.self.modules.aspects; [
 ];
 ```
 
-Importing the aspect enables the service and declares its execution account,
-which can run rootless containers of its own; that is a property of the account,
-not of the daemon, which starts no container runtime and waits for none. A host
-that should join the tailnet without sing-box needs its own `tailscaled` module,
-which does not exist yet. Build that machine's NixOS configuration before
-separately authorizing deployment:
+Importing the aspect enables the service and declares its execution account, which
+can run rootless containers through the API socket the module publishes; that is a
+property of the account, not of the daemon, which starts no container runtime and
+waits for none. A host that should join the tailnet without sing-box needs its own
+`tailscaled` module, which does not exist yet. Build that machine's NixOS
+configuration before separately authorizing deployment:
 
 ```sh
 nix develop
@@ -153,40 +153,55 @@ holds whatever does not fit in the pool.
 
 ## Containers for agents
 
-Paseo does not isolate its work in containers, and the daemon never talks to a
-container runtime. The agents and terminals it hosts run as `paseo`, and those
-processes may call `podman` or `docker` themselves. The account therefore has a
-subordinate ID range (`autoSubUidGidRange`) and a lingering user manager, which
-is what rootless Podman needs: the manager owns `/run/user/<uid>` and the socket
-Podman serves there. Nothing else is granted, and container control is not
-root-equivalent. A container started this way runs under `paseo`'s own uid and
-reaches no more than the account can already read.
+Paseo does not isolate its work in containers, and the daemon starts no container
+runtime of its own. The agents and terminals it hosts run as `paseo` and drive
+`podman` or `docker`, which the unit points at the account's published API socket:
+`CONTAINER_HOST` and `DOCKER_HOST` both name
+`virtualisation.podman.runtimeApis.paseo.socketPath`, so no agent exports anything.
+`podman compose` needs no further setup either: the wrapper execs the
+`docker-compose` provider the `podman` aspect installs and hands it that same
+`DOCKER_HOST`, so a compose file lands in the same runtime.
+
+In-process rootless Podman cannot work here, and the service's own hardening is
+why. A rootless runtime maps a subordinate ID range into every container, and
+writing that multi-line map is the setuid `newuidmap`/`newgidmap` wrappers' job;
+`NoNewPrivileges=true` makes the kernel refuse exactly that elevation — the same
+flag that refuses `sudo` and `pkexec` from an agent terminal. `ProtectHome=true`
+closes the second door, the socket the account's own user manager serves under
+`/run/user`, which the service cannot see at all. The runtime therefore runs
+outside the sandbox: `podman-api-paseo.service` starts on the first connection to
+the published socket, under PID 1, as `paseo`.
+
+That API service is why the account needs a subordinate ID range
+(`autoSubUidGidRange`) and a lingering user manager: the manager owns
+`/run/user/<uid>`, where the runtime keeps its cgroups. Container control is still
+not root-equivalent — a container an agent starts runs under `paseo`'s own user
+namespace and sees no more of the host than the account can already read — but it
+is not bounded by the daemon's sandbox either, and that is deliberate. The API
+service creates the container, so an agent can bind any path `paseo` reads,
+`$PASEO_HOME` and project `.env` files included, and the container's processes
+live in that service's cgroup: restarting `paseo-daemon.service` leaves agent
+containers running. Mount paths also resolve in that service's namespace rather
+than the agent's, so a path the agent sees only through its private `/tmp` is not
+the one bound, while a path the sandbox hides but the account can read —
+`/run/user/<uid>` — is. Treat what the agents build as trusted the way you treat
+the agents themselves.
 
 The repository runs containers rootless everywhere. The `podman` aspect enables
 Podman without the rootful socket, or the `/run/docker.sock` symlink, that used
-to front one shared daemon, so every account gets its own runtime and no account
-can drive another's. Agents and other Docker API clients address that runtime
-explicitly:
+to front one shared daemon, so every account gets its own runtime. The `docker`
+group is gone, and with it the ability of a process holding it to control every
+container on the host.
 
-```sh
-export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
-docker info
-```
-
-The `podman` CLI needs no variable. That variable is the whole difference from
-the retired Docker setup: the `docker` group is gone, and with it the ability of
-a process holding it to control every container on the host. Keep agent workloads
-out of host secrets, `$PASEO_HOME`, and broad host bind mounts anyway, since
-`paseo` reads those itself; a rootless container sharing a host directory also
-needs the account to reach it through its user namespace.
-
-The account's runtime is also published on a fixed socket, which is what lets a
-management UI drive it without that UI's container being able to read the
-account's private runtime directory: `virtualisation.podman.runtimeApis.paseo`
-declares the entry, and the account whose containers drive runtimes names itself
-in `virtualisation.podman.runtimeApiClient`. See [the Portainer aspect](portainer.md),
-which does that. Until such an account exists, the socket belongs to `paseo` itself
-and is not reachable from another account's container.
+The account's runtime is published for two parties.
+`virtualisation.podman.runtimeApis.paseo` declares the fixed socket; its owner is
+the runtime's own account — `paseo`, the account that serves the API — so agent
+processes inside the daemon's sandbox open it through the owner bits; and its
+group is the account whose containers drive the runtime, named once in
+`virtualisation.podman.runtimeApiClient`, so that client's container opens the
+same socket through the group bits. [Portainer](portainer.md) is that client, and
+mounts the socket without being able to read `paseo`'s private runtime directory.
+No other account matches either class.
 
 A project that starts its own workload — a sandbox server, for instance — owns
 that workload's runtime configuration. Bind its control API to loopback and keep
@@ -228,10 +243,14 @@ from an identical checkout on the administrator's machine, run
 the already-authorized private key or a forwarded SSH agent and a verified host
 key; they do not require changing sudo, polkit, or the Paseo service sandbox.
 
-After the switch, check `systemctl status paseo-daemon.service` and run
-`podman info` as `paseo` in a fresh process, then create, execute in, and delete a
-container to confirm the account's runtime works. These are deployment checks,
-not configuration-only guarantees.
+After the switch, check `systemctl status paseo-daemon.service podman-api-paseo.service`
+and that `/run/podman-api-paseo/podman.sock` is owned by `paseo` with `portainer` as
+its group. Then, from an agent terminal — the environment under test — run
+`podman info` and `docker info` and put the runtime through a create, execute, and
+delete cycle. Running `podman` as `paseo` outside the service proves nothing about
+the agents: that process is not in the sandbox whose two restrictions the API
+socket exists to route around. These are deployment checks, not
+configuration-only guarantees.
 
 ## Connect after startup
 

@@ -42,26 +42,29 @@ The `podman` aspect owns `virtualisation.podman.runtimeApis` for exactly this
 case. A runtime's own module declares an entry for it, and the account whose
 containers drive runtimes names itself once in
 `virtualisation.podman.runtimeApiClient`. Systemd then holds each published socket
-with `SocketMode=0660` and that account as both `SocketUser` and `SocketGroup`, so
-the client's container matches the owner bits and no other account can open it.
-Each entry also publishes its path in `socketPath`, outside the runtime account's
-private runtime directory, so a container can mount it; an entry may still name a
-different `client` of its own.
+with `SocketMode=0660`, the runtime's own account as `SocketUser` and that client
+as `SocketGroup`. The client's container matches the group bits, because the
+client account's gid maps into that container as container gid 0; the runtime's
+own account matches the owner bits, which is what lets its own processes — the
+ones inside the Paseo daemon's sandbox included — drive the runtime it serves. No
+other account matches either class. Each entry also publishes its path in
+`socketPath`, outside the runtime account's private runtime directory, so a
+container can mount it; an entry may still name a different `client` of its own.
 
 This aspect names itself as that client and declares its own runtime, so no module
 names another:
 
-| Declared by | Runtime | Socket | Client |
-| --- | --- | --- | --- |
-| `paseo-daemon` | the `paseo` account's, where agents work | `/run/podman-api-paseo/podman.sock` | `portainer` |
-| this aspect | the `portainer` account's own | `/run/podman-api-portainer/podman.sock` | `portainer` |
+| Declared by | Runtime | Socket | Owner | Group |
+| --- | --- | --- | --- | --- |
+| `paseo-daemon` | the `paseo` account's, where agents work | `/run/podman-api-paseo/podman.sock` | `paseo` | `portainer` |
+| this aspect | the `portainer` account's own | `/run/podman-api-portainer/podman.sock` | `portainer` | `portainer` |
 
 Each runtime keeps its own API server, named for it, running as that runtime's
-account and started by its socket only when Portainer connects. Podman answers on
-the descriptor systemd hands it, so the socket's ownership never has to be the
-runtime owner's problem. Both accounts have a subordinate ID range and a lingering
-user manager, which is what rootless Podman needs; agents and the UI are the only
-users of the runtimes.
+account and started by its socket only when a client connects. Podman answers on
+the descriptor systemd hands it, which is why a published socket never has to be
+the path the account's own runtime uses. Both accounts have a subordinate ID range
+and a lingering user manager, which is what rootless Podman needs; agents and the
+UI are the only users of the runtimes.
 
 ## The container
 
@@ -132,9 +135,13 @@ systemctl status podman-api-portainer.socket podman-api-paseo.socket podman-port
 curl --insecure --fail https://127.0.0.1:9443/api/status
 sudo -u portainer podman info
 sudo -u paseo podman info
+ls -l /run/podman-api-paseo/podman.sock
 ```
 
-`/api/status` answers without authentication and names the version. Then confirm
+`/api/status` answers without authentication and names the version. The two
+`podman info` runs exercise each runtime as its own account on the host; the Paseo
+daemon's agents reach the `paseo` runtime through the published socket instead,
+whose owner and group the `ls` line checks. Then confirm
 in the UI that the local environment lists containers and that the second
 environment, once added, lists the containers agents create. Both runtimes need
 `/etc/subuid` entries, which only activation writes, so a configuration that

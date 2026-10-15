@@ -17,19 +17,23 @@
     in
     {
       # The account can run containers, so the host publishes its runtime's API on
-      # a fixed socket. The socket belongs to the account itself until a client
-      # claims it with `virtualisation.podman.runtimeApis.paseo.client`.
+      # a fixed socket. The socket stays this account's, and a client that claims
+      # it with `virtualisation.podman.runtimeApis.paseo.client` reaches it as the
+      # socket's group instead of taking the owner bits: agents need that socket,
+      # and Portainer's container mounts the same one.
       virtualisation.podman.runtimeApis.paseo = { };
 
       users.groups.paseo = { };
       users.users.paseo = {
         isSystemUser = true;
         group = "paseo";
-        # Agents run as this account and may call `podman` or `docker`. A
-        # subordinate ID range and a lingering user manager — which owns
-        # `/run/user/<uid>` and the rootless Podman socket inside it — are what
-        # let them run containers without root. No group grants container
-        # control, and the daemon has no container runtime to order against.
+        # Agents run as this account and drive `podman` or `docker`, which address
+        # the API socket published below rather than a runtime of their own: the
+        # daemon's sandbox refuses the setuid helper that an in-process rootless
+        # Podman needs. A subordinate ID range and a lingering user manager —
+        # which owns `/run/user/<uid>`, where that runtime keeps its cgroups —
+        # are what the API service needs. No group grants container control, and
+        # the daemon has no container runtime to order against.
         autoSubUidGidRange = true;
         linger = true;
         home = "/var/lib/paseo";
@@ -123,6 +127,15 @@
           PASEO_LISTEN = lib.mkDefault "0.0.0.0:6767";
           PASEO_NODE_ENV = "production";
           SHELL = lib.getExe pkgs.bashInteractive;
+          # Rootless Podman cannot run inside this service's own sandbox: the
+          # multi-line uid/gid map it needs comes from the setuid
+          # `newuidmap`/`newgidmap`, which `NoNewPrivileges` refuses, and
+          # `ProtectHome` hides the user manager's socket under `/run/user`. Both
+          # clients therefore address the published API, whose service runs as
+          # this account outside the sandbox, so every agent, terminal and MCP
+          # server the daemon starts inherits the endpoint.
+          CONTAINER_HOST = "unix://${config.virtualisation.podman.runtimeApis.paseo.socketPath}";
+          DOCKER_HOST = "unix://${config.virtualisation.podman.runtimeApis.paseo.socketPath}";
           # Paseo ships its built-in omp provider disabled, and it rewrites this
           # daemon's config.json for pairing and relay state. Enabling the provider
           # is a manual change there, outside this repository. Leave relay
