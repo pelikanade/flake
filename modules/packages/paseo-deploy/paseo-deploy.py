@@ -28,6 +28,15 @@ AFTER_DISCONNECT = (
     'journalctl -f -u "flake-deploy-*"'
 )
 
+USAGE = """Ask this machine's deploy broker for a deployment.
+
+    paseo-deploy
+
+It takes no options: the broker already knows which flake to fetch and deploy,
+and asking is the whole request. Set PASEO_DEPLOY_SOCKET to point a test at a
+different socket. See docs/paseo-deploy.md.
+"""
+
 
 def has_broker() -> bool:
     """Whether something is listening where the broker belongs."""
@@ -55,7 +64,21 @@ def request() -> int | None:
     return None
 
 
-def main() -> int:
+def main(argv: list[str]) -> int:
+    if argv:
+        # Asking is the whole request, so anything else on the command line is
+        # a mistake this must not answer by deploying the machine. `--help`
+        # is the one argument that explains itself without doing anything.
+        if argv in (["-h"], ["--help"]):
+            print(USAGE, end="")
+            return 0
+        print(USAGE, end="", file=sys.stderr)
+        print(
+            f"paseo-deploy takes no arguments, got: {' '.join(argv)}",
+            file=sys.stderr,
+        )
+        return 2
+
     if not has_broker():
         print(NO_BROKER, file=sys.stderr)
         return 1
@@ -88,4 +111,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
