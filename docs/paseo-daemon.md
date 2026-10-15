@@ -158,6 +158,9 @@ runtime of its own. The agents and terminals it hosts run as `paseo` and drive
 `podman` or `docker`, which the unit points at the account's published API socket:
 `CONTAINER_HOST` and `DOCKER_HOST` both name
 `virtualisation.podman.runtimeApis.paseo.socketPath`, so no agent exports anything.
+`podman compose` needs no further setup either: the wrapper execs the
+`docker-compose` provider the `podman` aspect installs and hands it that same
+`DOCKER_HOST`, so a compose file lands in the same runtime.
 
 In-process rootless Podman cannot work here, and the service's own hardening is
 why. A rootless runtime maps a subordinate ID range into every container, and

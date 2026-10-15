@@ -110,7 +110,18 @@
           systemd.sockets.podman.enable = false;
 
           # Docker CLI for the API clients that call it; it needs no socket here.
-          environment.systemPackages = [ pkgs.docker-client ];
+          #
+          # `podman compose` is a wrapper that execs a provider, so a provider has
+          # to be on PATH: `docker-compose` wins the wrapper's lookup over
+          # `podman-compose`, and it drives these runtimes over the same
+          # Docker-compatible API the CLI above uses. The wrapper passes an
+          # existing `DOCKER_HOST` through unchanged, which is what the Paseo
+          # daemon sets for its agents; without one it would hand the provider the
+          # account's own socket path instead.
+          environment.systemPackages = [
+            pkgs.docker-client
+            pkgs.docker-compose
+          ];
         }
 
         (lib.mkIf (runtimeApis != { }) {
