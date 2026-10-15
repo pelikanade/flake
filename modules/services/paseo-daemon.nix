@@ -36,6 +36,26 @@
         createHome = true;
         homeMode = "0700";
         shell = pkgs.bashInteractive;
+
+        # The Grok Bot box pulls omp session logs from `.omp` once a night, and
+        # this key is its only way in. sshd runs a forced command through the
+        # account's login shell — `execve($shell, "-c", $command)` — so the
+        # account keeps `pkgs.bashInteractive` rather than a nologin shell,
+        # which would refuse the pull. Nothing interactive follows from that:
+        # the password is locked, password and keyboard-interactive
+        # authentication are off, and this is the account's only key.
+        #
+        # `restrict` denies port, agent and X11 forwarding, PTY allocation and
+        # the user rc file, and the forced command replaces whatever the client
+        # asks for, so no shell and no sftp session is reachable either way.
+        # `rrsync -ro` accepts `--sender` requests only, so the peer cannot
+        # write, and the path bounds it to this one directory. `rrsync` is its
+        # own package: `pkgs.rsync` installs `rsync` and `rsync-ssl` alone. That
+        # directory also holds `.omp/agent/magpie.yaml`, the Magpie credential,
+        # which the puller therefore reads as well.
+        openssh.authorizedKeys.keys = [
+          ''restrict,command="${pkgs.rrsync}/bin/rrsync -ro ${config.users.users.paseo.home}/.omp" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEHBB0wxvOIXXPPIrrCCp1D/WsIZshxOLnlw1N+JY+e5 grokbot-box omp-ro pull''
+        ];
       };
 
       # The unit takes the whole system profile as its PATH, so the agents it

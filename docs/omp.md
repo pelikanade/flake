@@ -108,6 +108,19 @@ After switching, start a new login session so desktop applications inherit
 `PI_CONFIG_FILES`. No credential-path environment variable is required. The
 explicit extension command above also works from an existing terminal.
 
+## Session log access
+
+The Grok Bot box pulls omp session logs from neko-sphere nightly, so the `paseo`
+account there carries one authorized key whose forced command is
+`rrsync -ro /var/lib/paseo/.omp`. `restrict` denies port, agent and X11
+forwarding, PTY allocation and the user rc file, and the forced command replaces
+any request the client makes, so the key reaches neither a shell nor an sftp
+session; `-ro` refuses writes. The account keeps `pkgs.bashInteractive` as its
+login shell because sshd runs a forced command through it — a nologin shell
+would refuse the pull — and its password is locked with password and
+keyboard-interactive authentication disabled. Everything under
+`/var/lib/paseo/.omp` is readable by the puller, `agent/magpie.yaml` included.
+
 ## Verification
 
 From a desktop host:
