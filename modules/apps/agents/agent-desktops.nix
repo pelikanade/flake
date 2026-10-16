@@ -14,6 +14,11 @@
         pkgs.selfPackages.deepseek-harness-desktop
         pkgs.selfPackages.magpie
         pkgs.selfPackages.agent-orchestrator
+        # Upstream ships desktop installers for macOS and Windows only; this is
+        # that Electron application, assembled for Linux. The daemon package
+        # (`pkgs.selfPackages.open-design`) serves the same workspace in a
+        # browser, for a session that wants no window.
+        pkgs.selfPackages.open-design-desktop
       ];
     };
 }
