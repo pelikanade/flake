@@ -101,6 +101,14 @@ Four details are load-bearing, three of them found by running the thing:
   the nearest line its build accepts. The shell uses only stable Electron APIs
   (`app`, `BrowserWindow`, `protocol`, `dialog`, `shell`), and does not run the
   sidecars on Electron at all.
+- **Wayland follows nixpkgs' `NIXOS_OZONE_WL` convention.** When that and
+  `WAYLAND_DISPLAY` are both set, the wrapper appends `--ozone-platform=wayland`
+  with the decoration, IME and text-input features. It is the explicit platform
+  switch rather than the `--ozone-platform-hint=auto` nixpkgs hands other Chromium
+  applications: this Electron does not carry that switch, and passing it leaves the
+  application on X11 — seen by running it against a headless Weston, where only the
+  explicit form comes up with `DISPLAY` unset. Chromium reads its switches out of
+  argv, which the packaged launcher ignores: it parses only its own flags.
 
 electron-builder is not run. For a directory target its Linux configuration
 (`asar: false`, those two rebuild flags off, `tools/pack/src/linux.ts`) leaves
@@ -197,8 +205,12 @@ Verified on the built packages, not by the build:
   its own port. Launched windowed on the same display, it draws upstream's welcome
   screen — "Welcome to OpenDesign" with Sign in, Local AI and API Key — which is
   the packaged shell loading `od://app/` through the web sidecar.
+- The Wayland path, on a headless Weston rather than an X server: with
+  `NIXOS_OZONE_WL=1`, `WAYLAND_DISPLAY` set and no `DISPLAY`, the wrapped binary
+  starts on the Wayland platform — every sidecar comes up and nothing logs the X11
+  failure that appears when the platform cannot initialize. The same run without
+  `WAYLAND_DISPLAY` keeps working on X11, which is the point of the convention.
 - A real agent run — choosing a runtime, sending a prompt, and watching files land
   in the project — needs a coding-agent CLI on the machine and is the one path the
-  packages cannot exercise by themselves. The desktop application's window was
-  checked on a virtual display: its native folder picker, tray behaviour and
-  Wayland session handling still want a real desktop session.
+  packages cannot exercise by themselves. The desktop application's native folder
+  picker and tray behaviour still want a real desktop session.

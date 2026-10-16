@@ -629,6 +629,15 @@
         # especially — the daemon refuses one that is not under the app's own
         # resources, which is precisely what the daemon package's standalone
         # wrapper sets.
+        #
+        # Wayland follows nixpkgs' NIXOS_OZONE_WL convention: the flags appear only
+        # when that and WAYLAND_DISPLAY are both set. They are the explicit
+        # `--ozone-platform=wayland` form, not the `--ozone-platform-hint=auto`
+        # the distribution uses for other Chromium applications — this Electron
+        # does not carry that switch at all, and passing it leaves the app on X11
+        # (verified against a headless Wayland compositor). Chromium reads its
+        # switches out of argv, which the packaged launcher here ignores: it parses
+        # only its own flags.
         postFixup = ''
           unpacked="$out/lib/${pname}/linux-unpacked"
 
@@ -649,7 +658,8 @@
               ]
             } \
             --set CHROME_DEVEL_SANDBOX "$unpacked/chrome-sandbox" \
-            --unset APPIMAGE
+            --unset APPIMAGE \
+            --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform=wayland --enable-features=WaylandWindowDecorations --enable-wayland-ime=true --wayland-text-input-version=3}}"
         '';
 
         desktopItems = [
