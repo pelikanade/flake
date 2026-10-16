@@ -16,10 +16,6 @@
 
       stylix = {
         enable = true;
-        image = pkgs.fetchurl {
-          url = "https://r2.requiem.garden/yanhao-fang-s20ggpkor58-unsplash.jpg";
-          hash = "sha256-8AcfgbsdVHbEQ6s+UJgZrCPvAYQD6y84L25jZQ+9AeM=";
-        };
         base16Scheme = "${pkgs.base16-schemes}/share/themes/nord.yaml";
         polarity = "dark";
         cursor = {
