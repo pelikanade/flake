@@ -14,6 +14,9 @@
         pkgs.selfPackages.deepseek-harness-desktop
         pkgs.selfPackages.magpie
         pkgs.selfPackages.agent-orchestrator
+        # Upstream ships desktop installers for macOS and Windows only; the Linux
+        # form is the `od` daemon, which opens the workspace in the browser.
+        pkgs.selfPackages.open-design
       ];
     };
 }
