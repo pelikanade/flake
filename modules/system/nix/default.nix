@@ -13,9 +13,13 @@
         ];
         extra-substituters = [
           "https://nix-community.cachix.org"
+          # Freezer's build service publishes this repository's outputs here,
+          # signed with the one server-wide key.
+          "https://cache.nvirellia.im"
         ];
         trusted-public-keys = [
           "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+          "freezer-cache-1:frU02BGsL4XIHxMWogpWoZWNDzLcgwH4Iu8XoPs6WyI="
         ];
         trusted-users = [ "@wheel" ];
       };
