@@ -7,9 +7,10 @@
         description = ''
           The tailnet's MagicDNS name.
 
-          MagicDNS answers fully qualified names, and the system resolver does not
-          expand a bare peer name for them, so consumers address a peer as
-          `<peer>.<tailnetDnsName>`.
+          MagicDNS answers fully qualified names, so a consumer addresses a peer
+          as `<peer>.<tailnetDnsName>`: that name resolves through the tailnet's
+          routing domain, which the node publishes to the system resolver,
+          without depending on any search list.
         '';
       };
 

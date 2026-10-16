@@ -8,6 +8,7 @@
       i18n
       substituter-cn
       sing-box
+      tailscale
       magpie
       netbird-userspace
       obsidian-headless

@@ -95,8 +95,9 @@ exist upstream if you prefer a moving reference.
 
 Only `9443` is published. Rootless Podman forwards that port with a userspace
 process running as the account, so it is an ordinary host socket, and nothing in
-the firewall admits it: a tailnet peer's connection is delivered to loopback by
-sing-box, so Portainer's own login is what bounds it. The image's HTTP listener
+the firewall admits it by port: a tailnet peer's connection arrives on
+`tailscale0`, which is a trusted interface, so Portainer's own login is what bounds
+it. The image's HTTP listener
 and edge tunnel stay unpublished and unreachable. Portainer serves HTTPS with a
 self-signed certificate it generates into `/data`, so browsers warn until you
 accept it. Reach it through [the ingress](ingress.md), which terminates the

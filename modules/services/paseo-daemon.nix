@@ -120,10 +120,10 @@
               extensions = [ "${pkgs.selfPackages.omp-magpie}/share/omp/extensions/magpie" ];
             }
           );
-          # Tailnet peers reach the daemon on this host's tailnet address, which
-          # sing-box's userspace endpoint delivers to loopback, so it binds every
-          # interface and the password from the sops environment file below is
-          # what bounds it.
+          # Tailnet peers reach the daemon on this host's tailnet address, and the
+          # firewall admits them by interface: a peer's connection arrives on
+          # `tailscale0`. It binds every interface, and the password from the sops
+          # environment file below is what bounds it.
           PASEO_LISTEN = lib.mkDefault "0.0.0.0:6767";
           PASEO_NODE_ENV = "production";
           SHELL = lib.getExe pkgs.bashInteractive;

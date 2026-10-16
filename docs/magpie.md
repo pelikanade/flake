@@ -19,14 +19,14 @@ Sessions or Library surface.
 Tailnet peers reach the OpenAI, OpenAI-Responses and Anthropic routes on
 `neko-sphere.leaffish-halfmoon.ts.net:3425`. Who may call it depends on how the
 request arrives, and the gateway decides that from the request itself: a direct
-loopback caller — this host's own agents, and the endpoint's userspace delivery of
-a peer's connection — needs no key, while a request that carries a forwarding
-header such as `X-Forwarded-For` is answered as one from another machine and needs
-an enabled gateway key (`Authorization: Bearer <key>` or `x-api-key`; the key in
-[the encrypted document](../modules/secrets/magpie.yaml) is one). Settings → Share
-on local network is what lets another machine in at all.
+caller — this host's own agents, and a peer dialling the gateway on this host's
+tailnet address, which arrives on `tailscale0` — needs no key, while a request that
+carries a forwarding header such as `X-Forwarded-For` is answered as one from
+another machine and needs an enabled gateway key (`Authorization: Bearer <key>` or
+`x-api-key`; the key in [the encrypted document](../modules/secrets/magpie.yaml) is
+one). Settings → Share on local network is what lets another machine in at all.
 [The ingress](ingress.md) fronts the gateway and Caddy sends `X-Forwarded-For`, so
-every call that arrives through it carries that key. The endpoint's MagicDNS name
+every call that arrives through it carries that key. The tailnet's MagicDNS name
 is handed to the gateway in `MAGPIE_PUBLIC_URL`.
 
 [The ingress](ingress.md) republishes both listeners under the host's own zone,

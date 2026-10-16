@@ -36,6 +36,8 @@
     splayer-next
     starship
     strata
+    tailscale
+    tailscale-desktop
     udiskie
     unix-tools
     xpipe

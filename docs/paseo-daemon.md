@@ -29,9 +29,9 @@ imports = with inputs.self.modules.aspects; [
 Importing the aspect enables the service and declares its execution account, which
 can run rootless containers through the API socket the module publishes; that is a
 property of the account, not of the daemon, which starts no container runtime and
-waits for none. A host that should join the tailnet without sing-box needs its own
-`tailscaled` module, which does not exist yet. Build that machine's NixOS
-configuration before separately authorizing deployment:
+waits for none. A host that should join the tailnet imports [the tailnet
+module](tailscale.md), which is independent of the proxy. Build that machine's
+NixOS configuration before separately authorizing deployment:
 
 ```sh
 nix develop
@@ -271,9 +271,9 @@ configuration-only guarantees.
 ## Connect after startup
 
 The service binds `0.0.0.0:6767`: loopback for local clients, and for tailnet peers
-through the endpoint's userspace delivery, which no firewall rule bounds. The
-password comes from `modules/secrets/paseo.yaml` through sops; restrict 6767 with
-tailnet grants as well. Set
+on this host's tailnet address, which the firewall admits by interface on
+`tailscale0`. The password comes from `modules/secrets/paseo.yaml` through sops;
+restrict 6767 with tailnet grants as well. Set
 `systemd.services.paseo-daemon.environment.PASEO_LISTEN` back to
 `127.0.0.1:6767` to keep it local. New Paseo homes start with relay disabled. The
 runtime `config.json` stays writable and is preserved across restarts; the module

@@ -1,135 +1,177 @@
-# Native sing-box Tailscale pilot
+# Tailnet
 
-Every host that needs the tailnet ends up importing `sing-box`: the `workstation`
-role carries it for Asymmetry and Parallax, and neko-sphere imports it alongside
-`server`.
-A host that should join the tailnet *without* sing-box needs its own `tailscaled`
-module, which does not exist yet. The endpoint, the MagicDNS server and the routing
-rules are declared in [modules/services/sing-box.nix](../modules/services/sing-box.nix)
-with the rest of the sing-box configuration. `tailscaled` is not installed or
-enabled, and no separate Tailscale service or runtime configuration merge is used.
+Every host that joins the tailnet runs `tailscaled` on its own, beside the proxy
+rather than inside it:
 
-`modules/secrets/tailscale.yaml` holds only the tailnet auth key, so the same
-document serves the endpoint here and a `tailscaled` module later.
-`modules/secrets/sing-box.yaml` holds the proxy credentials and endpoints.
-Asymmetry, Parallax and neko-sphere all read both and all run the endpoint, so filling the
-auth key enrolls every host that runs sing-box, not just the two workstations. Use a
-reusable auth key, because the same key is read by more than one host.
+| Module | Owns |
+| --- | --- |
+| [modules/services/tailscale.nix](../modules/services/tailscale.nix) | The daemon: the auth key, the peer port, the trusted interface, and the rule that keeps the node's own transport out of the tun. |
+| [modules/apps/tailscale-desktop.nix](../modules/apps/tailscale-desktop.nix) | The desktop side: the account that may drive the daemon, certificate access, and Trayscale. |
 
-NetBird's workstation UI and its local daemon remain for workplace login. The
-workstation machines declare a NetBird client, but no account is provisioned, so
-joining a NetBird network is a manual step through the desktop UI. Personal peer
-access uses Tailscale.
+`workstation` imports both for Asymmetry and Parallax; neko-sphere imports the
+daemon alone. [sing-box](sing-box.md) is the proxy and nothing else: it declares
+no tailnet endpoint, no tailnet DNS server, no tailnet route and no tailnet key.
 
-## Configure the auth key
+The daemon owns a real `tailscale0` interface with the node's tailnet address, its
+own routes and its own resolver entries. That is what the endpoint inside sing-box
+could not offer: `tailscale status`, `tailscale serve`, `tailscale cert` and the
+rest of the client work, because there is an interface and a daemon to drive.
 
-The endpoint's `auth_key` is the placeholder
-`REPLACE_WITH_TAILSCALE_AUTH_KEY`, stored in its own document as
-`tailscale_auth_key`. Edit it with SOPS, without creating a plaintext secret file:
+## The auth key
+
+`modules/secrets/tailscale.yaml` holds one value, `tailscale_auth_key`, and the
+daemon is its only consumer. It is provisioned root-only at
+`/run/secrets/tailscale_auth_key` and read by `tailscaled-autoconnect.service`,
+which runs `tailscale up` while the daemon reports that it needs a login.
 
 ```sh
 nix develop
 sops modules/secrets/tailscale.yaml
 ```
 
-Choose the key's reuse, approval and expiry settings in the tailnet. Build the
-affected configurations, then separately authorize deployment.
-
-While the placeholder is unchanged, sing-box still starts: the endpoint logs a
-failed login and every other inbound, outbound, DNS server and route keeps
-working. Replacing the value restarts `sing-box.service` wherever activation
-rereads the document.
+The key must be reusable: every host that imports the daemon registers with the
+same document. Choose its reuse, approval and expiry settings in the tailnet, build
+the affected machines, then authorize deployment separately. Replacing the value
+restarts `tailscaled-autoconnect.service`, which retries the login without a
+restart of the daemon.
 
 ## Runtime policy
 
-### Endpoint
+The daemon listens for peer traffic on UDP `41641`, which the module opens on every
+interface: peers reach that port on the host's own addresses, not through the
+tunnel. It accepts subnet routes advertised by other nodes, matching the policy the
+sing-box endpoint had; it advertises no exit node and neither uses one nor enables
+Tailscale SSH. It omits `hostname`, so each host registers under its system
+hostname, and its state lives under `/var/lib/tailscale`.
 
-The `tailnet` endpoint uses persistent `/var/lib/sing-box/tailscale` state under
-the service's existing `StateDirectory`, `ephemeral=false`, sing-box's userspace
-network stack, and the WireGuard peer port `41641`. It omits `hostname`, so each
-host registers under its own system hostname. It accepts subnet routes advertised
-by other nodes, does not use or advertise an exit node, and enables neither
-Tailscale SSH nor Taildrop.
+A peer's connection arrives on `tailscale0`, which the module adds to
+`networking.firewall.trustedInterfaces`. That is the whole firewall story on this
+side: the tailnet is a WireGuard-authenticated network, what arrives on the
+interface comes from a peer the control plane placed in the tailnet, and the
+tailnet's ACLs and each service's own authentication are what bound it. Peer
+traffic enters the input chain, which it did not when the endpoint forwarded
+connections into loopback from its own userspace stack.
 
-### DNS
+Because the node has a real interface, `tailscale serve` can also front a service
+that listens only on loopback — which is how a service that should not be reachable
+on the LAN stays reachable on the tailnet.
 
-The `tailnet-dns` server points at the `tailnet` endpoint with
-`accept_default_resolvers=false` and `accept_search_domain=true`. A prepended DNS
-rule with `preferred_by` gates MagicDNS names and DNS route suffixes to it. The
-existing resolvers and the `cfdns` final rule stay in place, so ordinary name
-resolution is unchanged. Enable MagicDNS in the tailnet to use peer names.
+## Why the tun and the tailnet do not fight
 
-MagicDNS answers fully qualified names only, and a search domain does not help
-here: the `resolve` NSS module answers "not found" for a bare label before `dns`,
-the only module that applies a search list, ever runs. A consumer therefore
-addresses a peer fully qualified; `constants.getTailnetFqdn` in
-[modules/constants/tailnet.nix](../modules/constants/tailnet.nix) expands a peer
-name for a module that needs the address.
+Two mechanisms keep the two apart, and both are needed.
 
-### Routes
+**The carrier-grade NAT range belongs to the tailnet.** `100.64.0.0/10` and
+`fd7a:115c:a1e0::/48` are in the tun's `route_exclude_address`, which keeps them
+out of the tun's routes *and* out of the redirect that carries local traffic into
+it. A connection to a peer therefore keeps the route the kernel gave it — through
+`tailscale0`, which the daemon owns — and the tailnet's resolver at
+`100.100.100.100` answers for the node instead of being hijacked into sing-box. The
+same exclusion covers NetBird's ranges, which are inside the same CGNAT block, so
+NetBird's peers and its routes leave through `wt0` as the kernel routes them.
 
-The endpoint runs in sing-box's userspace network stack, so peer packets reach
-its Netstack rather than a real interface. A peer that dials this host's tailnet
-address lands there, and sing-box rewrites the destination to loopback before the
-routing engine sees it: it then dials `127.0.0.1:<port>` and the service answers a
-local connection. Nothing of the kind traverses the host firewall, and no
-`tailnet0` exists for a rule to name.
+**The node's own transport belongs on the physical interface.** Its control
+connection, its DERP relays and its WireGuard handshakes go to public addresses,
+which the tun *would* capture and proxy. The module therefore runs a unit beside
+the daemon — `tailscale-tun-bypass.service`, upheld by `tailscaled.service`, so it
+re-runs whenever the daemon (re)starts — that installs an nftables rule in the
+output hook, at a priority below the tun's own chains, matching
+`socket cgroupv2 level 2 "system.slice/tailscaled.service"` and setting
+`services.sing-box.tunBypassMark`: the mark the tun treats as its own, and the mark
+it puts on every connection it dials itself. sing-box skips a packet that carries
+it, so the whole transport keeps the route the kernel gave it.
 
-Locally generated traffic to a peer takes the other direction. `auto_redirect`
-sends new connections into the tun before the kernel's route is used, and the rule
-for `100.64.0.0/10` and `fd7a:115c:a1e0::/48` routes them to the `tailnet`
-endpoint, which dials the peer over the tunnel. Without that rule such a connection
-would match no rule, fall through to the `final` proxy and never reach the peer:
-`ip_is_private` does not cover Tailscale's CGNAT range.
+The rule is installed at run time rather than declared in
+`networking.nftables.tables` because the boot ruleset is checked and loaded before
+the daemon's cgroup exists: a rule whose cgroup path cannot be resolved fails the
+whole ruleset, and the firewall is loaded long before `tailscaled`. A separate unit
+also fails visibly (in `systemctl --failed`) instead of hiding in a start hook, and
+its failure costs only the tailnet's direct paths.
 
-Because delivery is to loopback, a service that peers should reach only has to
-listen there; every service on this host binds every interface, which covers it.
-The DNS section above is unaffected: sing-box resolves names itself, so the
-`tailnet-dns` rule still applies.
+Neither of the daemon's own defences substitutes for this rule. Its interface
+enumeration decides which local endpoints it advertises and how it hole-punches, not
+whether its packets enter the tun: `auto_redirect` captures them in the output hook
+before any of that matters. The mark it sets on its own sockets (`SO_MARK 0x80000`
+on Linux, with the `fwmark 0x80000/0xff0000` routing rules it installs) is not this
+mark — sing-box skips only `services.sing-box.tunBypassMark` — and measured against
+this configuration, a socket carrying `0x80000` is captured exactly like an unmarked
+one, over TCP and UDP alike. The one thing sing-box does skip is a socket bound with
+`SO_BINDTODEVICE`, when `strict_route` is off as it is here, and that is the
+daemon's fallback only when `SO_MARK` is unavailable or
+`TS_FORCE_LINUX_BIND_TO_DEVICE` is set.
 
-`system_interface: true` would replace all of that with a real `tailnet0` whose
-routes the kernel owns. Peer traffic would then enter the host's firewall, where
-the input chain's policy drops what it is not told to admit, and a host that turns
-it on has to name every port peers should reach.
+Without that rule the tailnet would be exposed to the proxy, which is worse than it
+sounds: the node's observed endpoint, the address peers are told to dial, would be
+whatever addresses the proxy exits from, so peers could never establish a direct
+path to it. The tailnet would fall back to relaying every connection through a
+public DERP server, through the proxy on this side.
 
-### Firewall
+## DNS
 
-`modules/services/sing-box.nix` opens UDP 41641 for the endpoint's peer transport,
-because peers reach that port on the host's own addresses rather than through the
-tunnel. Nothing else is opened for the tailnet, and no service needs
-`openFirewall`: with the endpoint in its userspace stack, a peer's connection
-arrives as a local dial and never reaches the input chain, so a `tailnet0` rule
-would match nothing.
+The tailnet's own resolver is `100.100.100.100`, which `tailscaled` reaches through
+its interface and publishes to the system resolver with the tailnet's routing and
+search domains, once MagicDNS is enabled in the tailnet. Because that address is
+inside the excluded range, the tun's DNS hijack never sees those queries.
 
-One port is nonetheless admitted everywhere: `services.openssh.openFirewall`
-defaults to true in nixos-26.05, and its `allowedTCPPorts` entry puts 22 on every
-interface, this host's public address included. Nothing else on this host is
-reachable without a key or a password, and that rule is the only thing that admits
-SSH on a LAN address; `openFirewall = false` in
-[modules/services/ssh.nix](../modules/services/ssh.nix) would close it.
+Ordinary name resolution is unchanged: the tun still routes everything else to its
+own resolver on `172.19.0.2`, sing-box answers from the servers and rules declared
+in [the sing-box module](sing-box.md), and a query that reaches a public resolver
+address directly is captured by the tun rather than leaving the host. A consumer
+that must not depend on the resolver's search list addresses a peer as
+`<peer>.<tailnetDnsName>` through `constants.getTailnetFqdn`; that name needs only
+the routing domain.
 
-The tailnet's ACLs and each service's own authentication are therefore the whole
-boundary for peer traffic. Every service binds every interface, so the endpoint
-forwards anything a peer asks for, loopback listeners included — the Paseo daemon
-takes `0.0.0.0:6767` and keeps its password, and SSH keeps its keys. Restrict 6767
-with tailnet grants before relying on direct access.
+The tailnet's own DNS settings matter here: if the tailnet is configured to
+override local DNS with a global nameserver, `tailscaled` publishes that nameserver
+for every name and the arrangement above no longer holds. Keep global nameservers
+off and use split DNS, or accept that the tailnet's server answers everything.
 
-The [HTTPS ingress](ingress.md) is the one thing the firewall still names, and it
-matches this host's LAN subnet as a packet source rather than an interface: the
-host's LAN and public addresses share one interface, so the LAN is what a local
-override resolves to and the public address must stay closed.
+## Verification
 
-## Pilot verification
+Checked here, on 2026-10-17, without a tailnet:
 
-Configuration checks and `sing-box check` do not enroll a host. After the real key
-is filled in and deployment is authorized, verify peer-name DNS, SSH in both
-directions, direct versus DERP connectivity, and ordinary internet proxy
-behavior on each enrolled host. Confirm workplace NetBird login still works
-through the desktop UI, and exercise omp's model selection, streaming, search and
-a tool-calling conversation. Check reboot persistence and how a sing-box restart
-interrupts peer connections before expanding the pilot. Verify that a peer really
-reaches the Paseo daemon on 6767, instead of trusting evaluation alone. See the
-upstream
-[endpoint](https://sing-box.sagernet.org/configuration/endpoint/tailscale/),
-[DNS server](https://sing-box.sagernet.org/configuration/dns/server/tailscale/)
-and [routing rules](https://sing-box.sagernet.org/configuration/route/rule/).
+- All three machine configurations evaluate and build, and the rendered sing-box
+  configuration passes `sing-box check` with no tailnet endpoint, DNS server,
+  outbound or route left in it.
+- A disposable network namespace ran the repository's tun options verbatim (tun
+  address, `auto_route`, `auto_redirect`, `route_exclude_address`) with the
+  nixos-fw ruleset this configuration generates, a veth pair named `tailscale0`
+  with a peer behind it, a second pair standing in for the physical interface, and
+  a sing-box route set whose catch-all refuses what the tun captured. Then:
+  - a peer's `100.64.0.5` answered TCP and UDP from the host — the tun neither
+    captured nor routed those connections;
+  - the tailnet resolver at `100.100.100.100` answered for itself, so the query was
+    not hijacked into sing-box, while a query to the tun's own resolver address was
+    answered by sing-box and a query to a public resolver address was captured;
+  - traffic carrying `services.sing-box.tunBypassMark` reached a public destination
+    that an unmarked connection could not — both TCP and UDP;
+  - a peer reached a service bound to the host's tailnet address through the
+    generated firewall ruleset, which is the path `tailscale serve` uses;
+  - the chains sing-box installed carry counters on the two rules that matter:
+    `ip daddr { 10.0.0.0/8, 100.64.0.0/10 } return` and `meta mark 0x2024 return`
+    both took packets, and the tun's table held no route for either range.
+- The real `tailscaled` ran beside the same tun in a namespace: it created its
+  `tailscale0`, its own routing rules and its own `ip filter`/`ip nat` tables
+  without disturbing the tun's `inet sing-box` table, `tailscale status` answered
+  `Logged out.` through the daemon's socket, and the tun still captured a public
+  destination afterwards. `tailscale serve` in that state reports `Logged out.`,
+  which is as far as it can be exercised without a control plane.
+
+Not checked here, because they need the real tailnet and a deployment. Once the
+auth key is in place and deployment is separately authorized, on each enrolled
+host:
+
+```sh
+tailscale status                                   # the node is Running, peers listed
+tailscale ping <a peer>                            # direct, not only "via DERP"
+ip route get 100.100.100.100                       # dev tailscale0, not tun0
+resolvectl query <peer>                            # a bare peer name, then its FQDN
+curl --fail --silent http://<a peer>:<port>/       # a peer reaches this host
+systemctl status tailscaled tailscale-tun-bypass   # both active; the second installs the bypass rule
+```
+
+Then exercise `tailscale serve`: publish a loopback-only service (`tailscale serve
+--bg 8080`, or the GUI) and reach it from another tailnet device by the node's
+MagicDNS name, including after a reboot, and confirm with
+`tailscale serve status` that the node reports the right name. Serving HTTPS also
+needs the tailnet to grant the node the `https` capability — a tailnet-side setting,
+not a repository one.
