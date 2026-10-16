@@ -60,10 +60,20 @@ design-system importers clone into.
   trimmed copy that holds `packages/*` and `apps/daemon` but not the web app, the
   Electron shells, `tools/` or the test suite; pnpm installs the projects a
   workspace contains, which is also how upstream's container build keeps the
-  Electron toolchain out. The exported web UI is copied in separately. (946 MB
-  installed, against 2.8 GB for the whole workspace — the web app's runtime
-  dependencies, Playwright, TypeScript and the packaging tooling are the
-  difference.)
+  Electron toolchain out. The exported web UI is copied in separately, and only
+  the paths the daemon's own `files` field declares travel — its sources and tests
+  stay behind. (616 MB installed, against 2.8 GB for the whole workspace; the web
+  app's runtime dependencies, Playwright, TypeScript and the packaging tooling are
+  the difference.)
+- **The rest of the tree is pruned the way upstream prunes it.** Type
+  declarations, source maps, docs, test folders and build-only sources go from the
+  installed modules and workspace packages, exactly as upstream's container image
+  deletes them from its own installed tree — never from the resource root, whose
+  `docs` and `examples` directories are product content. Three vendor trees get the
+  same treatment: `node-pty`'s `prebuilds` (paseo deletes them so the addon it
+  compiled is the one that loads; here they only hold darwin and win32 binaries),
+  its `deps`/`third_party` build sources, and `onnxruntime-node`'s other-platform
+  binaries, which its loader never selects.
 - **`better-sqlite3` and `node-pty` are compiled here.** `iplConfigHook` installs
   with `--ignore-scripts`, and neither package ships a linux prebuild in its
   tarball, so `node-gyp` builds them against nixpkgs' Node. The install phase
