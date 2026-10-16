@@ -1,12 +1,8 @@
 # OpenDesign (`od`) — local-first design-agent workspace, built from the
-# upstream release tag.
-#
-# Upstream publishes desktop installers for macOS and Windows only; on Linux
-# the supported deployment is the daemon, which serves the statically exported
-# web workspace itself. This builds that daemon + web pair from source, and
-# installs the same runtime layout upstream's container image uses: the daemon
-# with its production dependency closure, the exported web UI, and the content
-# trees the daemon reads from its workspace root.
+# upstream release tag. Two packages come out of one source: the daemon, which
+# serves the statically exported web workspace and is the supported Linux
+# deployment, and the packaged Electron application, which is what upstream
+# ships to macOS and Windows.
 { inputs, ... }:
 {
   # The package resolves pnpm-lock.yaml integrity hashes through
@@ -20,7 +16,12 @@
   };
 
   perSystem =
-    { pkgs, pkgsUnstable, ... }:
+    {
+      pkgs,
+      pkgsUnstable,
+      self',
+      ...
+    }:
     let
       # pnpm-lock.yaml integrity hashes come from the importPnpmLock overlay.
       pnpmPkgs = pkgsUnstable.extend inputs.importPnpmLock.overlays.default;
@@ -28,10 +29,13 @@
       inherit (pkgsUnstable)
         autoPatchelfHook
         bashInteractive
+        copyDesktopItems
+        electron_42
         fetchFromGitHub
         fetchurl
         git
         lib
+        makeDesktopItem
         makeWrapper
         node-gyp
         nodejs_24
@@ -39,6 +43,7 @@
         poppler-utils
         python3
         stdenv
+        wrapGAppsHook3
         xdg-utils
         ;
 
@@ -362,6 +367,353 @@
             fromSource
           ];
           mainProgram = "od";
+          maintainers = [ lib.maintainers.asterismono ];
+          platforms = [ "x86_64-linux" ];
+        };
+      });
+
+      # The packaged Electron application: the thin shell upstream ships to macOS
+      # and Windows, assembled here the way `tools-pack linux build --to dir`
+      # assembles it — the shell from apps/desktop and apps/packaged, a daemon
+      # sidecar and a Next.js server web sidecar, and the content trees under an
+      # unpacked Electron runtime.
+      #
+      # electron-builder is not run: upstream's Linux config for a directory
+      # target (asar:false, npmRebuild:false, nodeGypRebuild:false in
+      # tools/pack/src/linux.ts) leaves exactly the pieces this install phase
+      # places, and copying them needs neither electron-builder's Electron
+      # download nor a cache the sandbox cannot fill.
+      packages.open-design-desktop = stdenv.mkDerivation (finalAttrs: {
+        pname = "open-design-desktop";
+        inherit
+          version
+          src
+          mitmCache
+          ;
+
+        nativeBuildInputs = [
+          nodejs_24
+          pnpm'
+          iplConfigHook
+          makeWrapper
+          autoPatchelfHook
+          copyDesktopItems
+          node-gyp
+          patchelf
+          python3
+          wrapGAppsHook3
+        ];
+
+        buildInputs = [
+          stdenv.cc.cc.lib
+        ];
+
+        # The unpacked Electron runtime is nixpkgs' own build: its binaries carry
+        # the RPATH that reaches every library it needs, and the dist even has the
+        # bundled Vulkan loader replaced already. The hook would rewrite that
+        # RPATH from this derivation's inputs and fail on the libraries it cannot
+        # see, so it is disabled here and applied to the app tree instead (see
+        # postFixup), which is what needs the patch: the two modules compiled by
+        # hand-local-linkage node-gyp.
+        dontAutoPatchelf = true;
+        # wrapGAppsHook3 only supplies `gappsWrapperArgs` here, so the wrapper
+        # below can hand Electron the GSettings schemas path its GTK surfaces read.
+        dontWrapGApps = true;
+
+        env = {
+          CI = "true";
+          NEXT_TELEMETRY_DISABLED = "1";
+          # node-gyp compiles better-sqlite3 and node-pty against nixpkgs' Node,
+          # which is the runtime the packaged sidecars use.
+          npm_config_nodedir = "${nodejs_24}";
+          npm_config_build_from_source = "true";
+        };
+
+        # Same patch as the daemon package: the design-system importers clone into
+        # the workspace root, which a store path cannot host.
+        postPatch = ''
+          substituteInPlace apps/daemon/src/routes/static-resource.ts \
+            --replace-fail "path.join(PROJECT_ROOT, '.tmp')" "path.join(RUNTIME_DATA_DIR, 'tmp')"
+        '';
+
+        # Upstream's packaged workspace build, stage for stage
+        # (tools/pack/src/workspace-build.ts WORKSPACE_BUILD_COMMANDS). The
+        # packaged web sidecar is a Next.js server, not the static export the
+        # daemon serves, and Next type-checks the app in-process, so the heap
+        # ceiling upstream sets applies here too.
+        buildPhase = ''
+          runHook preBuild
+
+          pnpm --filter '@open-design/dsh-runtime...' \
+            --workspace-concurrency=1 --if-present run build
+
+          NODE_OPTIONS=--max-old-space-size=4096 OD_WEB_OUTPUT_MODE=server \
+            pnpm --filter '@open-design/packaged^...' \
+            --workspace-concurrency=1 --if-present run build
+
+          pnpm --filter @open-design/web run build:sidecar
+          pnpm --filter @open-design/packaged run build
+
+          runHook postBuild
+        '';
+
+        installPhase = ''
+          runHook preInstall
+
+          root="$out/lib/${pname}"
+          executableName="Open Design"
+          unpacked="$root/linux-unpacked"
+          app=/build/app-tree
+          resources=/build/resources
+
+          # The production closure of the four projects the packaged runtime
+          # loads, installed in a trimmed workspace copy: pnpm installs the
+          # projects a workspace contains, so the tools, the test suite and the
+          # build-only dependencies stay out (the same trick the daemon package
+          # and upstream's container image use).
+          mkdir -p "$app/apps"
+          cp pnpm-lock.yaml pnpm-workspace.yaml package.json "$app/"
+          cp -r packages "$app/packages"
+          for name in daemon web desktop packaged; do
+            cp -r "apps/$name" "$app/apps/$name"
+            rm -rf "$app/apps/$name/node_modules"
+          done
+          ( cd "$app" && pnpm install --prod --frozen-lockfile --config.ignore-scripts=true )
+
+          # The bundle root is where the app resolves its own packages from:
+          # main.cjs imports @open-design/packaged, and the runtime resolves the
+          # `@open-design/{daemon,web}/sidecar` entries through node_modules
+          # (apps/packaged/src/sidecars.ts). tools-pack reaches the same state by
+          # installing packed tarballs into the assembled app; the workspace's own
+          # layout carries it here.
+          mkdir -p "$app/node_modules/@open-design"
+          for pkg in release components contracts registry-protocol sidecar-proto \
+            launcher-proto platform sidecar download host agui-adapter \
+            plugin-runtime diagnostics; do
+            ln -s "../../packages/$pkg" "$app/node_modules/@open-design/$pkg"
+          done
+          for name in daemon web desktop packaged; do
+            ln -s "../../apps/$name" "$app/node_modules/@open-design/$name"
+          done
+
+          # Entry points, exactly what tools-pack writes: the packaged package as
+          # an import, the preload the shell expects beside it, and the app
+          # manifest Electron reads for `main`.
+          cat > "$app/main.cjs" <<'ENTRY'
+          import("@open-design/packaged").catch((error) => {
+            console.error("packaged entry failed", error);
+            process.exit(1);
+          });
+          ENTRY
+          cp apps/desktop/dist/main/preload.cjs "$app/preload.cjs"
+          cat > "$app/package.json" <<JSON
+          {
+            "name": "open-design-packaged",
+            "productName": "Open Design",
+            "version": "${version}",
+            "private": true,
+            "main": "main.cjs",
+            "description": "Local-first design product: detects your installed code-agent CLI, runs design skills + design systems, streams artifacts into a sandboxed preview.",
+            "author": "Open Design Team",
+            "repository": {
+              "type": "git",
+              "url": "https://github.com/nexu-io/open-design.git"
+            }
+          }
+          JSON
+
+          # The daemon sidecar needs the two native modules, compiled for the Node
+          # this package ships rather than for Electron (see the wrapper).
+          for module in better-sqlite3 node-pty; do
+            moduleDir="$(readlink -f "$app/apps/daemon/node_modules/$module")"
+            ( cd "$moduleDir" && node-gyp rebuild )
+          done
+          test -f "$(readlink -f "$app/apps/daemon/node_modules/better-sqlite3")/build/Release/better_sqlite3.node"
+          test -f "$(readlink -f "$app/apps/daemon/node_modules/node-pty")/build/Release/pty.node"
+
+          # sharp's prebuilt libvips-cpp cannot run here (it statically embeds its
+          # own glib), so expose the dynamically linked one under the name the
+          # addon asks for and put it on LD_LIBRARY_PATH; the daemon package
+          # documents the failure this avoids.
+          addon="$(find "$app/node_modules/.pnpm" -type f -name 'sharp-linux-x64-*.node')"
+          if [ "$(printf '%s\n' "$addon" | wc -l)" -ne 1 ]; then
+            echo "open-design-desktop: expected one sharp addon in the closure, got:" >&2
+            printf '%s\n' "$addon" >&2
+            exit 1
+          fi
+          soname="$(patchelf --print-needed "$addon" | grep -E '^libvips-cpp[.]so[.]' || true)"
+          if [ "$soname" != "libvips-cpp.so.${vips.version}" ]; then
+            echo "open-design-desktop: sharp's addon requires '$soname', but this package pins vips ${vips.version} (${vips})" >&2
+            exit 1
+          fi
+          vipsLib="$(find ${vips}/lib -maxdepth 1 -type f -name 'libvips-cpp.so.*')"
+          mkdir -p "$app/sharp-libvips/lib"
+          ln -s "$vipsLib" "$app/sharp-libvips/lib/$soname"
+
+          # Prune what the daemon package prunes, plus the sources the three
+          # non-web apps do not ship (`files` names their built output only).
+          find "$app/node_modules" "$app/packages" -type d \
+            \( -name test -o -name tests -o -name __tests__ -o -name docs \
+            -o -name doc -o -name example -o -name examples -o -name .github \) \
+            -prune -exec rm -rf '{}' +
+          find "$app/node_modules" "$app/packages" -type f \
+            \( -name '*.md' -o -name '*.markdown' -o -name '*.d.ts' -o -name '*.d.cts' \
+            -o -name '*.d.mts' -o -name '*.map' -o -name '*.tsbuildinfo' \
+            -o -name 'binding.gyp' \) -delete
+          rm -rf "$app"/apps/daemon/src "$app"/apps/daemon/tests \
+            "$app"/apps/desktop/src "$app"/apps/desktop/tests \
+            "$app"/apps/packaged/src "$app"/apps/packaged/tests
+          rm -rf "$app"/node_modules/.pnpm/node-pty@*/node_modules/node-pty/prebuilds \
+            "$app"/node_modules/.pnpm/node-pty@*/node_modules/node-pty/deps \
+            "$app"/node_modules/.pnpm/node-pty@*/node_modules/node-pty/third_party
+          onnxRuntime="$(ls -d "$app"/node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/bin/napi-v3)"
+          find "$onnxRuntime" -mindepth 1 -maxdepth 1 -type d \
+            ! -name '${stdenv.hostPlatform.node.platform}' -exec rm -rf '{}' +
+
+          # The content trees the daemon reads, in the resource root the packaged
+          # config points at, plus the Node the sidecars run on. The trees come
+          # from the daemon package, which builds exactly the layout upstream's
+          # packaging step copies.
+          mkdir -p "$resources/open-design/bin"
+          cp -r ${self'.packages.open-design}/lib/${pname}/resources/. "$resources/open-design/"
+          # A real copy, not a symlink: Node reports process.execPath from
+          # /proc/self/exe, and the daemon accepts OD_RESOURCE_ROOT only when that
+          # path sits under a `resources/open-design/bin/` marker — a symlink
+          # would make it the store path instead (apps/daemon/src/daemon-paths.ts).
+          cp ${lib.getExe nodejs_24} "$resources/open-design/bin/node"
+          chmod u+w "$resources/open-design/bin/node"
+
+          # Read from resourcesPath/open-design-config.json (apps/packaged/src/
+          # config.ts). Portable, so no build-machine root is baked — the same
+          # reason upstream's release builds pass --portable.
+          cat > "$resources/open-design-config.json" <<JSON
+          {
+            "appVersion": "${version}",
+            "namespace": "default",
+            "nodeCommandRelative": "open-design/bin/node",
+            "webOutputMode": "server"
+          }
+          JSON
+
+          # The unpacked Electron runtime. The binary must not keep the name
+          # `electron`: Electron treats an executable by that name as its default
+          # app and reports app.isPackaged === false, which sends the shell down
+          # its development branch (deepseek-harness-desktop documents this).
+          mkdir -p "$unpacked/resources"
+          cp -a ${electron_42.dist}/. "$unpacked/"
+          chmod -R u+w "$unpacked"
+          mv "$unpacked/electron" "$unpacked/$executableName"
+          # Electron's placeholder app is replaced by the bundle below.
+          rm -f "$unpacked/resources/default_app.asar"
+
+          cp -a "$app" "$unpacked/resources/app"
+          cp -a "$resources/open-design" "$unpacked/resources/open-design"
+          cp "$resources/open-design-config.json" "$unpacked/resources/open-design-config.json"
+          # Editable-PPTX export reads this from process.resourcesPath.
+          cp apps/desktop/vendor/dom-to-pptx/dom-to-pptx.bundle.js.gz \
+            "$unpacked/resources/dom-to-pptx.bundle.js.gz"
+
+          find "$unpacked" -xtype l -delete
+
+          # The icon the desktop entry names, from the same file upstream's
+          # AppImage step uses.
+          install -Dm644 tools/pack/resources/linux/icon.png \
+            "$out/share/icons/hicolor/512x512/apps/open-design.png"
+
+          runHook postInstall
+        '';
+
+        # The wrapper deliberately sets no OD_RESOURCE_ROOT, OD_DATA_DIR or
+        # OD_NODE_BIN: the packaged runtime owns all three for the sidecars it
+        # starts, and a value from here would override it. OD_RESOURCE_ROOT
+        # especially — the daemon refuses one that is not under the app's own
+        # resources, which is precisely what the daemon package's standalone
+        # wrapper sets.
+        postFixup = ''
+          unpacked="$out/lib/${pname}/linux-unpacked"
+
+          # The one thing in the bundle that needs patching: the native modules
+          # compiled by node-gyp, plus the prebuilt binaries shipped in the store
+          # that already carry their own RPATHs.
+          autoPatchelf "$unpacked/resources/app"
+
+          makeShellWrapper "$unpacked/Open Design" "$out/bin/open-design-desktop" \
+            "''${gappsWrapperArgs[@]}" \
+            --prefix LD_LIBRARY_PATH : "$unpacked/resources/app/sharp-libvips/lib" \
+            --prefix PATH : ${
+              lib.makeBinPath [
+                bashInteractive
+                git
+                poppler-utils
+                xdg-utils
+              ]
+            } \
+            --set CHROME_DEVEL_SANDBOX "$unpacked/chrome-sandbox" \
+            --unset APPIMAGE
+        '';
+
+        desktopItems = [
+          (makeDesktopItem {
+            name = "open-design";
+            desktopName = "Open Design";
+            genericName = "Design workspace";
+            comment = "Local-first design-agent workspace";
+            exec = "open-design-desktop %U";
+            icon = "open-design";
+            categories = [
+              "Development"
+              "Utility"
+            ];
+            startupWMClass = "Open Design";
+            mimeTypes = [ "x-scheme-handler/od" ];
+          })
+        ];
+
+        doInstallCheck = true;
+        installCheckPhase = ''
+          runHook preInstallCheck
+
+          app="$out/lib/${pname}/linux-unpacked/resources/app"
+
+          # The bundle must resolve its own entry points, which is what the
+          # packaged runtime asks Node for at startup.
+          ( cd "$app" && node --input-type=module -e '
+              for (const entry of ["@open-design/packaged", "@open-design/desktop/main"]) {
+                await import.meta.resolve(entry);
+              }
+              for (const entry of ["@open-design/daemon/sidecar", "@open-design/web/sidecar"]) {
+                await import.meta.resolve(entry);
+              }
+              console.log("packaged entries resolve");
+            ' )
+
+          test -x "$out/lib/${pname}/linux-unpacked/Open Design"
+          test -x "$out/bin/open-design-desktop"
+          test -f "$out/lib/${pname}/linux-unpacked/resources/open-design/bin/node"
+          test -f "$out/lib/${pname}/linux-unpacked/resources/open-design-config.json"
+
+          runHook postInstallCheck
+        '';
+
+        meta = {
+          description = "Local-first design-agent workspace as a packaged desktop application";
+          longDescription = ''
+            The Electron application upstream ships to macOS and Windows,
+            assembled for Linux: the shell starts a daemon sidecar and a Next.js
+            web sidecar and loads the workspace itself. It is one of two ways to
+            run OpenDesign here — the `od` daemon package serves the same
+            workspace in a browser, and is the one upstream supports on Linux.
+          '';
+          homepage = "https://open-design.ai/";
+          changelog = "https://github.com/nexu-io/open-design/releases/tag/open-design-v${version}";
+          license = lib.licenses.asl20;
+          sourceProvenance = with lib.sourceTypes; [
+            # node-pty builds from source; sharp, onnxruntime-node, and
+            # @ffmpeg-installer/ffmpeg ship prebuilt platform binaries.
+            binaryBytecode
+            fromSource
+          ];
+          mainProgram = "open-design-desktop";
           maintainers = [ lib.maintainers.asterismono ];
           platforms = [ "x86_64-linux" ];
         };
