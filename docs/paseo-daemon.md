@@ -98,10 +98,10 @@ curl --fail http://127.0.0.1:6767/api/health
 
 Use `journalctl -u paseo-daemon.service` for startup failures. The daemon also
 writes `$PASEO_HOME/daemon.log`; redact credentials, pairing offers, and user code
-before sharing either log. The pinned Paseo v0.11.2 exposes no Cursor provider in
+before sharing either log. The pinned Paseo v0.11.4 exposes no Cursor provider in
 its built-in manifest, and the built-in plugin providers it adds — Antigravity
-(the `agy` CLI) and Muse Code (the `muse` CLI) — need their own signed-in
-executables, which this host does not install.
+(the `agy` CLI), Muse Code (the `muse` CLI) and Hoplite (the `hoplite` CLI) —
+need their own signed-in executables, which this host does not install.
 
 The plugin reads `/var/lib/paseo/.omp/agent/magpie.yaml`. NixOS activation renders
 only the endpoint and API key from `modules/secrets/magpie.yaml` and exposes the
