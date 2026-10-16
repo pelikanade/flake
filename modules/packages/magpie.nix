@@ -28,16 +28,16 @@ let
     }:
     (buildGoModule.override { inherit go; }) (finalAttrs: {
       pname = "magpie";
-      version = "0.1.1231";
+      version = "0.1.1275";
 
       src = fetchFromGitHub {
         owner = "yetone";
         repo = "magpie";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-TmF+1WxDsvC8HQvCYb2SxGys0EpwTaJCreZVlMYxFxY=";
+        hash = "sha256-KbzRWxEWQD2cycXzflCyBPbwAWoLyaoY5uNPNgsO6ko=";
       };
 
-      vendorHash = "sha256-RevP93sHMwgwQxSh4WzKkNIupNQhU/sP3b/g/lpMS+E=";
+      vendorHash = "sha256-pBk3sQZ9/1sVdz2ZteBGgQrI49fDfgsQ8ur7pzM477A=";
 
       subPackages = [ "." ];
       tags = [
@@ -133,18 +133,32 @@ let
         # The fish stand-in prints its answer through a PATH of its own.
         substituteInPlace internal/proc/path_other_test.go \
           --replace-fail "#!/bin/sh\ncat '" "#!/bin/sh\n${coreutils}/bin/cat '"
-        substituteInPlace internal/library/rtk_test.go \
-          --replace-fail '/bin/mkdir' '${coreutils}/bin/mkdir'
+        # The rtk and keychain stand-ins are shell scripts reaching for
+        # absolute paths the sandbox has no /bin for.
+        substituteInPlace internal/library/rtk_test.go internal/library/rtk_agy_test.go \
+          --replace-fail '/bin/mkdir' '${coreutils}/bin/mkdir' \
+          --replace-fail '/bin/cat' '${coreutils}/bin/cat'
+        substituteInPlace internal/provider/codex_keychain_ask_unix_test.go \
+          --replace-fail '/bin/sleep' '${coreutils}/bin/sleep'
         substituteInPlace internal/gui/providers_fetching_unix_test.go \
           --replace-fail '"/usr/bin"+string(os.PathListSeparator)+"/bin"' \
           '"${lib.makeBinPath [ coreutils ]}"' \
           --replace-fail $'\t"os"\n' '''
         substituteInPlace internal/agent/zed_credential_secret_test.go \
           --replace-fail '"--session"' '"--config-file=${dbus}/share/dbus-1/session.conf"'
-        # This source-policy test applies only to Magpie, not vendored libraries.
-        substituteInPlace internal/proc/proc_test.go \
+        # These source-policy tests apply only to Magpie, not vendored libraries.
+        substituteInPlace internal/proc/proc_test.go internal/sqlitedb/sqlitedb_test.go \
           --replace-fail 'd.Name() == "node_modules"' \
           'd.Name() == "node_modules" || d.Name() == "vendor"'
+        # The fake Claude Code logs the request line through the sandbox's
+        # shell, whose echo leaves a JSON string's escapes alone. printf writes
+        # the line as it arrived, so the assertion reads the sent form.
+        substituteInPlace internal/gateway/claude_resume_test.go \
+          --replace-fail 'echo "told $line" >> $log' \
+          'printf "told %s\n" "$line" >> $log'
+        substituteInPlace internal/gateway/claude_client_cache_test.go \
+          --replace-fail '\\u003cexternal_system_instructions\\u003e\nshared\n\\u003c/external_system_instructions\\u003e\n\n' \
+          '\\u003cexternal_system_instructions\\u003e\\nshared\\n\\u003c/external_system_instructions\\u003e\\n\\n'
       '';
       checkPhase = ''
         runHook preCheck

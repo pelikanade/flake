@@ -57,7 +57,7 @@ write it to stderr. Warnings omit the endpoint and API key, and discovery still 
 normally rather than treating the failure as an empty catalog. Inference errors
 remain handled by omp. Magpie's loopback access policy may accept any key, so local
 discovery does not validate a remote key.
-See the [upstream gateway reference](https://github.com/yetone/magpie/blob/v0.1.1231/docs/reference.md#providers-and-the-gateway).
+See the [upstream gateway reference](https://github.com/yetone/magpie/blob/v0.1.1275/docs/reference.md#providers-and-the-gateway).
 
 To load the extension directly from this checkout after credentials have been
 provisioned at `~/.omp/agent/magpie.yaml`, use:
