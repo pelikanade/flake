@@ -64,7 +64,9 @@ account and started by its socket only when a client connects. Podman answers on
 the descriptor systemd hands it, which is why a published socket never has to be
 the path the account's own runtime uses. Both accounts have a subordinate ID range
 and a lingering user manager, which is what rootless Podman needs; agents and the
-UI are the only users of the runtimes.
+UI are the only users of the runtimes. Containers the UI creates outlive a reboot
+only if the creation form gave them a restart policy, which is the boot path the
+[daemon documentation](paseo-daemon.md#containers-for-agents) describes.
 
 ## The container
 

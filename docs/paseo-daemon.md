@@ -209,6 +209,20 @@ its key in a private runtime file. [Portainer](portainer.md) manages these
 runtimes; on hosts that import it, the agents' runtime is one of its
 environments.
 
+Services agents leave running come back after a reboot the way their own restart
+policy asks. A rootless runtime has no boot path of its own: the policy tells
+conmon to respawn a container whose process dies while the account's manager
+runs, and nothing in a user manager starts one at boot. The `podman` aspect
+therefore enables upstream's `podman-restart.service` in every user manager,
+which starts each container whose policy is `always`, or `unless-stopped` and not
+stopped by hand, once the host's `network-online.target` is reached. A container
+created without a policy — what `podman run` and `docker run` default to — stays
+exited until something starts it; a compose file's `restart:` or the policy
+chosen in Portainer is what brings one back. The want is recorded in
+`/etc/systemd/user/default.target.wants`, so a manager that is already past
+`default.target` reaches it at its next start; `systemctl --user start
+podman-restart.service` as that account starts its containers before then.
+
 Activation writes the subordinate IDs and starts the account's user manager. It
 leaves the daemon alone unless the daemon unit's own settings changed.
 

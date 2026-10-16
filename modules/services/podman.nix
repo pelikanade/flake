@@ -109,6 +109,28 @@
           # host publishes none.
           systemd.sockets.podman.enable = false;
 
+          # A rootless runtime has no boot path of its own. A restart policy
+          # tells conmon to respawn a container whose process dies while its
+          # manager runs, and nothing in a user manager starts one at boot, so a
+          # container an account started by hand, from a compose file, or through
+          # a published API socket stays exited until something starts it again.
+          # Upstream's `podman-restart.service` is that boot path — it starts
+          # every container whose policy asks for it — and Podman's package
+          # publishes it into `/etc/systemd/user`, which nixpkgs links without
+          # enabling: only `podman.socket` gets a want of its own. The
+          # `default.target` want below is what enables it, and every account's
+          # manager reaches `default.target` when it comes up.
+          #
+          # A user manager cannot see the system's `network-online.target`, so
+          # the gate is the wait unit upstream's own Quadlet path uses: it polls
+          # the system's target and holds the restart until the network a
+          # container may publish on, or pull an image over, is up.
+          systemd.user.services.podman-restart = {
+            wantedBy = [ "default.target" ];
+            wants = [ "podman-user-wait-network-online.service" ];
+            after = [ "podman-user-wait-network-online.service" ];
+          };
+
           # Docker CLI for the API clients that call it; it needs no socket here.
           #
           # `podman compose` is a wrapper that execs a provider, so a provider has
