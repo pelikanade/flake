@@ -45,6 +45,7 @@ upstream's shape instead of flattening it:
 | `apps/daemon/{bin,dist}` | The `od` CLI entry and the daemon |
 | `apps/web/out` | The static export served at `/` (`STATIC_DIR`, `apps/daemon/src/server.ts`) |
 | `resources/` | `OD_RESOURCE_ROOT`: skills, design systems, design templates, craft rules, prompt templates, bundled plugins (`_official`, `registry`), frames, community pets, the plugin-preview manifest, and the DeepSeek Harness connection tarball |
+| `resources/bin/vela`, `resources/bin/libexec/opencode/opencode` | The Vela CLI and the OpenCode companion its release pins, spawned for Cloud sign-in, team projects, billing and every other AMR-backed call |
 | `node_modules/.pnpm`, `packages/` | The daemon's production dependency closure, plus the workspace packages its `@open-design/*` links point at |
 | `sharp-libvips/lib` | The `LD_LIBRARY_PATH` entry sharp needs (below) |
 
@@ -68,7 +69,7 @@ Inside `$out/lib/open-design-desktop/linux-unpacked`:
 | --- | --- |
 | `Open Design` | nixpkgs' Electron dist, renamed — Electron treats an executable named `electron` as its default app and reports `app.isPackaged === false` |
 | `resources/app` | The bundle: upstream's one-line `main.cjs` entry, the preload, the packaged manifest, and a production-only workspace tree whose `node_modules/@open-design/*` links let the shell resolve `@open-design/packaged` and both `…/sidecar` entries |
-| `resources/open-design` | The resource root the packaged config points at: the content trees, plus the Node the sidecars run on (`bin/node`) |
+| `resources/open-design` | The resource root the packaged config points at: the content trees, plus the Node the sidecars run on (`bin/node`) and the Vela CLI with its OpenCode companion (`bin/vela`, `bin/libexec/opencode/opencode`) |
 | `resources/open-design-config.json` | Read from `resourcesPath/open-design-config.json` (`apps/packaged/src/config.ts`); portable, so no build-machine path is baked |
 | `resources/dom-to-pptx.bundle.js.gz` | The editable-PPTX export bundle, read from `resourcesPath` |
 
@@ -171,6 +172,21 @@ rebuilding the package, so the packaged config carries no `updateMetadataUrl`.
   `@open-design/dsh-runtime` tarball plus an integrity manifest — exactly as
   `tools/pack` bakes it for the packaged builds. Without it the daemon's fallback
   tries to `pnpm pack` out of a read-only workspace.
+- **The Vela CLI is bundled, not looked up.** Cloud sign-in and every AMR-backed
+  call spawn `vela` (`apps/daemon/src/integrations/vela.ts` wraps
+  `vela collab …`), and the daemon accepts a packaged installation only as the
+  pair upstream ships: `packagedBuiltInExecutable`
+  (`apps/daemon/src/runtimes/executables.ts`) takes `$OD_RESOURCE_ROOT/bin/vela`
+  when the OpenCode companion sits in `bin/libexec/opencode/` beside it, and
+  falls back to PATH otherwise — where the wrapper puts no `vela`. Upstream's
+  packaging step copies both into the resource root, so this package copies them
+  too, from the `@powerformer/vela-cli-linux-x64` tarball at the version
+  `tools/pack/package.json` pins. Without them `/api/integrations/vela/login`
+  answers "vela binary not found; install vela or configure VELA_BIN",
+  `/api/integrations/vela/status` answers 503 `amr-runtime-unavailable`, the AMR
+  runtime is reported unavailable, and every cloud-transport call the collab
+  layer classifies as infrastructure reaches the web client as 502 — the state
+  the packaged desktop application cannot sign in from.
 
 ## Updating
 
@@ -184,11 +200,12 @@ whatever `electron_42` nixpkgs carries.
 
 ## Checks
 
-`doInstallCheck` runs the wrapped `od --help` and the sharp probe in the daemon
-package, and in the desktop package resolves the four entry points the packaged
-runtime asks Node for (`@open-design/packaged`, `@open-design/desktop/main`,
-`@open-design/daemon/sidecar`, `@open-design/web/sidecar`) and asserts the bundled
-Node, config and executable are where the runtime looks for them.
+`doInstallCheck` runs the wrapped `od --help`, the sharp probe and the bundled
+Vela CLI's `--version` in the daemon package, and in the desktop package resolves
+the four entry points the packaged runtime asks Node for
+(`@open-design/packaged`, `@open-design/desktop/main`, `@open-design/daemon/sidecar`,
+`@open-design/web/sidecar`) and asserts the bundled Node, Vela CLI, companion,
+config and executable are where the runtime looks for them.
 
 Verified on the built packages, not by the build:
 
@@ -210,7 +227,15 @@ Verified on the built packages, not by the build:
   starts on the Wayland platform — every sidecar comes up and nothing logs the X11
   failure that appears when the platform cannot initialize. The same run without
   `WAYLAND_DISPLAY` keeps working on X11, which is the point of the convention.
+- The bundled Vela CLI: the daemon reports the AMR runtime available, answers
+  `GET /api/integrations/vela/status` with the signed-out profile, and
+  `POST /api/integrations/vela/login` with 202 whose stages read
+  `spawn_result: success` and `device_auth_create_result: success` — the bundled
+  binary reaches the cloud and starts device authorization. The same daemon built
+  without `resources/bin/vela` answers "vela binary not found; install vela or
+  configure VELA_BIN" there, and 503 `amr-runtime-unavailable` on status.
 - A real agent run — choosing a runtime, sending a prompt, and watching files land
   in the project — needs a coding-agent CLI on the machine and is the one path the
   packages cannot exercise by themselves. The desktop application's native folder
   picker and tray behaviour still want a real desktop session.
+

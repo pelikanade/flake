@@ -105,6 +105,43 @@
         inherit pname version;
         lockFile = "${src}/pnpm-lock.yaml";
       };
+
+      # The Vela CLI and the OpenCode companion its release pins. The daemon
+      # spawns them for Cloud sign-in and every other AMR-backed call
+      # (`apps/daemon/src/integrations/vela.ts` wraps `vela collab …`), and it
+      # accepts a packaged installation only as that pair: `packagedBuiltInExecutable`
+      # takes `$OD_RESOURCE_ROOT/bin/vela` when `bin/libexec/opencode/opencode`
+      # sits beside it, and falls back to PATH otherwise. Upstream's packaging
+      # step copies exactly these two into the resource root; the version tracks
+      # the `@powerformer/vela-cli` optional dependency in
+      # `tools/pack/package.json`, which upstream's `--require-vela-cli`
+      # packaging validates the bundled binary against.
+      velaVersion = "0.1.6";
+      vela = stdenv.mkDerivation {
+        pname = "vela-cli";
+        version = velaVersion;
+
+        src = fetchurl {
+          url = "https://registry.npmjs.org/@powerformer/vela-cli-linux-x64/-/vela-cli-linux-x64-${velaVersion}.tgz";
+          hash = "sha256-nfom7kK37dC8XoMzoeJT/4fN5twWbmPp739/8LaR6BE=";
+        };
+
+        # Both binaries are glibc-linked linux-x64 builds from the npm tarball;
+        # stdenv's single-directory check picks the tarball's `package/` as the
+        # source root.
+        nativeBuildInputs = [ autoPatchelfHook ];
+        buildInputs = [ stdenv.cc.cc.lib ];
+
+        dontConfigure = true;
+        dontBuild = true;
+
+        installPhase = ''
+          runHook preInstall
+          install -Dm755 bin/vela "$out/bin/vela"
+          cp -r bin/libexec "$out/bin/libexec"
+          runHook postInstall
+        '';
+      };
     in
     {
       packages.open-design = stdenv.mkDerivation (finalAttrs: {
@@ -184,6 +221,15 @@
           cp -r data/plugin-previews "$resources/data/plugin-previews"
           cp -r assets/frames "$resources/frames"
           cp -r assets/community-pets "$resources/community-pets"
+
+          # The Vela CLI and its OpenCode companion, which the daemon looks for
+          # at `$OD_RESOURCE_ROOT/bin` for Cloud sign-in and AMR-backed calls.
+          # Without them `/api/integrations/vela/login` answers "vela binary not
+          # found; install vela or configure VELA_BIN" and the cloud transport
+          # surfaces as 502.
+          mkdir -p "$resources/bin"
+          install -Dm755 ${vela}/bin/vela "$resources/bin/vela"
+          cp -r ${vela}/bin/libexec "$resources/bin/libexec"
 
           # The DeepSeek Harness connection component, integrity-addressed the
           # same way tools-pack bakes it: `od agent setup deepseek-harness`
@@ -324,6 +370,14 @@
           runHook preInstallCheck
 
           "$out/bin/od" --help | grep -qF 'od [--port <n>] [--host <addr>] [--no-open]'
+
+          # The Vela CLI and its companion are what Cloud sign-in spawns; the
+          # `--version` read also proves the ELF patching in the vela derivation
+          # held, since an unpatched binary cannot start here.
+          vela="$out/lib/${pname}/resources/bin/vela"
+          test -x "$vela"
+          test "$("$vela" --version)" = "${velaVersion}"
+          test -x "$out/lib/${pname}/resources/bin/libexec/opencode/opencode"
 
           # The substituted libvips has to actually load and rasterize; the
           # prebuilt one this package drops exits 139 on the same call.
@@ -700,6 +754,8 @@
           test -x "$out/lib/${pname}/linux-unpacked/Open Design"
           test -x "$out/bin/open-design-desktop"
           test -f "$out/lib/${pname}/linux-unpacked/resources/open-design/bin/node"
+          test -x "$out/lib/${pname}/linux-unpacked/resources/open-design/bin/vela"
+          test -x "$out/lib/${pname}/linux-unpacked/resources/open-design/bin/libexec/opencode/opencode"
           test -f "$out/lib/${pname}/linux-unpacked/resources/open-design-config.json"
 
           runHook postInstallCheck
