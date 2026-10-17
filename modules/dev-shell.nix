@@ -44,7 +44,7 @@
         ];
         inherit (config.checks.pre-commit-check) shellHook;
         buildInputs = config.checks.pre-commit-check.enabledPackages;
-        EDITOR = "zeditor --wait";
+        EDITOR = "nvim";
       };
     };
 }
