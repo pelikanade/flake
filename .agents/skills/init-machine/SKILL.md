@@ -51,7 +51,9 @@ ssh root@<ip> ls -l /dev/disk/by-id/
 
 Point the layout at it with `hardware.disko.devices.disk.main.device`. A layout
 that already carries its own device path, such as the `ext4-server-efi`
-placeholder, must be reconciled with the target disk before installing.
+placeholder, must be reconciled with the target disk before installing. When a
+disk is replaced, update the by-id path and commit it; never keep an old model
+or serial in the machine file.
 
 Stage a new machine file with `git add` so Nix can see it, then confirm it
 evaluates:
@@ -116,6 +118,10 @@ Otherwise:
 
 Never decrypt, print, or edit a secret payload for the steps above; recreating a
 document from its plaintext is a separate, explicitly authorized operation.
+Re-check the recipient immediately before the install step: a target reboot or a
+replaced disk destroys the host identity the enrollment was based on. If the old
+keys are gone, re-keying the affected documents needs explicit authorization;
+see the install skill.
 
 ## 5. Fold in the hardware facts
 
