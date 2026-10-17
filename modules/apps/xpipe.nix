@@ -17,7 +17,7 @@ _: {
         uiScale = null;
         saveWindowLocation = true;
         preferTerminalTabs = false;
-        terminalType = "app.kitty";
+        terminalType = "app.ghostty";
         rdpClientType.type = "freeRdp";
         windowOpacity = 1.0;
         customTerminalCommand = null;

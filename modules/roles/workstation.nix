@@ -21,10 +21,10 @@
     fish
     flatpak
     gdm
+    ghostty
     git
     herdr
     keyring
-    kitty
     neovim
     netbird-desktop
     hyprland

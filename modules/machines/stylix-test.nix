@@ -10,7 +10,7 @@
 
       firefox
       fish
-      kitty
+      ghostty
       ly
       neovim
       hyprland
@@ -47,7 +47,7 @@
         "hyprland.start"
         (lib.generators.mkLuaInline ''
           function()
-            hl.exec_cmd("uwsm app -- kitty --title 'Stylix · Neovim' nvim")
+            hl.exec_cmd("uwsm app -- ghostty --title='Stylix · Neovim' -e nvim")
             hl.exec_cmd("uwsm app -- firefox")
           end
         '')
