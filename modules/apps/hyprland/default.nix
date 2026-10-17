@@ -131,6 +131,12 @@ _: {
               # Fullscreen and content-type video/game windows can use VRR.
               vrr = 3;
             };
+            xwayland = {
+              # XWayland windows are not scaled with the monitor; keep their
+              # pixels crisp instead of filtering them.
+              force_zero_scaling = true;
+              use_nearest_neighbor = true;
+            };
           };
 
           curve = [
