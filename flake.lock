@@ -522,11 +522,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1792142882,
-        "narHash": "sha256-NOz3p5Rn1sAXH3M8Js/76E4ulmH8ZMPn6lf0OP3SR0U=",
+        "lastModified": 1792226690,
+        "narHash": "sha256-IFe04Zpq0aJ/sLYPBABcW7EZlqky4Bb46wubC8A50cs=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "61052f754017487ae7c31a09157c8f0b1008e03c",
+        "rev": "c250766160603f5ef582adecb4f453b009f63365",
         "type": "github"
       },
       "original": {
@@ -745,11 +745,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1792121044,
-        "narHash": "sha256-A87o6kPbifbwqKwn2dITitaMHJwpUUwC5zzYL3MG+P0=",
+        "lastModified": 1792197987,
+        "narHash": "sha256-vE3IE1zxis5dX0BXUotrC6neRSzHeM+YQQRU8cyI5B4=",
         "owner": "can1357",
         "repo": "oh-my-pi",
-        "rev": "a536558dc21634462c1b2647676953204569779c",
+        "rev": "eb74cf84d8e16ac9b8c4fa5d7c43037023d016ac",
         "type": "github"
       },
       "original": {
