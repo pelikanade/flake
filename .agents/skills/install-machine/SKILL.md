@@ -24,7 +24,7 @@ The `init-machine` skill prepares a new target: SSH access to the running ISO, t
 - `nixos-anywhere` skips its kexec phase against a target whose `/etc/os-release` reports `VARIANT_ID=installer`, which this ISO does. Then the target's `/run` survives and a passphrase written there before the run is still readable when disko formats. Against any other target kexec replaces the live environment and `/run` with it, so the passphrase must arrive through `--disk-encryption-keys <remote-path> <local-source>`, which is uploaded after kexec and before disko.
 - With `--disko-mode disko`, disko formats `disko.devices.disk.main.device` from the machine's `hardware` block, so that path must already point at the target disk.
 - The flake is evaluated on the workstation, so new machine and layout files must be staged with `git add` before Nix can see them.
-- The installed machine has no repository checkout and is not expected to grow one. Later changes are pushed from a workstation with `just rdeploy <machine> <target>`, or `just install` for another full installation.
+- The installed machine has no repository checkout and is not expected to grow one. Servers import the `ssh` aspect and take later changes with `just rdeploy <machine> <target>` from a workstation; workstations do not run `sshd`, so they are updated locally from a checkout, or with another full installation. Do not plan a remote deploy against a layout that does not import `ssh`.
 
 ## Workflow
 
@@ -78,7 +78,7 @@ The `init-machine` skill prepares a new target: SSH access to the running ISO, t
    - Copy the bundle into the shape `--extra-files` expects, so the local directory mirrors the installation root: `mkdir -p <local-dir>/var/lib && ssh root@<ip> tar -C /var/lib -cf - sbctl | tar -C <local-dir>/var/lib -xf -`.
    - Install with a nixos-anywhere invocation that carries it: `--extra-files <local-dir>`. `just install` cannot forward that option.
 5. Install the machine. For a server layout: `just install <machine> root@<ip>`. For a LUKS layout: `just install <machine> root@<ip> <passphrase-file>`, where the file came from step 2; the recipe uploads it to `/run/luks-password` in the installer environment before disko runs. Never put the passphrase itself in the command line. Redirect the run's output to a log file, and watch it in a Herdr pane when the session is Herdr-managed.
-6. Verify from the installed machine, which has no checkout: it boots, and with a LUKS root it prompts for the passphrase. A `xfs-workstation` machine also reports the 32G partition in `swapon --show` and carries `resume=/dev/disk/by-partlabel/disk-main-swap` in `/proc/cmdline`; a plain ext4 server layout has neither.
+6. Verify from the installed machine, which has no checkout: it boots, and with a LUKS root it stops at the initrd passphrase prompt, so someone must be at the console to enter it. A `xfs-workstation` machine also reports the 32G partition in `swapon --show` and carries `resume=/dev/disk/by-partlabel/disk-main-swap` in `/proc/cmdline`; a plain ext4 server layout has neither. A workstation does not import the `ssh` aspect, so the reboot can succeed with no remote shell at all; check the console rather than treating an SSH timeout as a failed install.
 
 ## Report progress and watch the network
 
