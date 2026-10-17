@@ -2,7 +2,7 @@ keys:
   - &noa age155rf8ggpnmdmcpwkd4gj3qy8j05wdtz7cwf96k50um6xly40h3wqc8pthy
   - &neko-sphere age1fca2dlmqukt48zg89lrd0k2s5q8w52f9z3tyrfzcr2r2sj8gegxssldpzp
   - &asymmetry age1r6yhequnuznq8chh6l6zq4mwdmf3htcffsxndg4r542qffuj4chsdzlgws
-  - &parallax age1umq8y8qy5af02krxupz4lfa3tg6x2mcdhzsdatlmmttgpdyz7fqs3w69rx
+  - &parallax age12najdl7c469qu0txpft0gvqv9ng59t2u99m5mkmgy79k3hdg3pjsy4748z
 creation_rules:
   # A host appears only in the rule for a document its activation reads, because
   # a recipient decrypts the whole document. Every consumer, Home Manager
