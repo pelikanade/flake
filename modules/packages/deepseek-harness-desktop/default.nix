@@ -121,16 +121,21 @@
 #     under ELECTRON_RUN_AS_NODE=1 any sharp raster operation has to exit 0,
 #     where the prebuilt libvips exits 139.
 #
-#     vips comes from the stable input rather than pkgsUnstable because 26.05
-#     carries exactly the version the addon's DT_NEEDED names. sharpLibvips reads
-#     that name from the addon with patchelf and fails the build when nixpkgs'
-#     vips disagrees, so a vips bump breaks the build in a place that names both
-#     versions instead of segfaulting the app. The cost is vips' own runtime
-#     closure (measured at 295 MB of nar, none of whose 109 paths is otherwise in
-#     this package's unstable-based closure); it buys an exact C++ ABI match for
-#     the prebuilt addon, which is worth more here than the closure. The prebuilt
-#     libvips stays in the tree, unreferenced, because it is part of the shared
-#     source package.
+#     The addon's DT_NEEDED fixes the name this package has to provide, nothing
+#     about the library behind it, so the substitute is the vips this package
+#     already links, from the stable input. That is safe because libvips keeps ABI
+#     within a stable series and says so in its soname: the ABI name is
+#     libvips-cpp.so.42 and the upstream patch version is the last field of the
+#     versioned file (42.20.3 for 8.18.3, against 42.20.7 for the 8.18.7 that the
+#     sharp 0.35.5 addon names), i.e. a libtool revision change, which by
+#     definition carries no interface change -- abidiff on those two builds
+#     reports none. sharpLibvips therefore reads that name from the addon with
+#     patchelf and refuses any other major.minor series, so a sharp or vips bump
+#     to a new series breaks the build in a place that names both versions
+#     instead of segfaulting the app, while a patch bump inside the series costs
+#     nothing and does not move this package to a second, unstable-based vips
+#     closure. The prebuilt libvips stays in the tree, unreferenced, because it is
+#     part of the shared source package.
 #
 #     Two alternatives were tried and rejected. Localizing the prebuilt libvips'
 #     glib symbols removes the interposition but not the crash: the addon's own
@@ -191,10 +196,11 @@
         ;
 
       # The libvips that replaces sharp's prebuilt one (note 5). Taken from the
-      # stable input rather than pkgsUnstable because 26.05 carries exactly the
-      # 8.18.3 the addon's DT_NEEDED names; sharpLibvips below fails the build if
-      # the two ever disagree. pkgs.vips' own default output is bin, so read the
-      # out output, which is where libvips-cpp lives.
+      # stable input: the addon's DT_NEEDED pins a soname, not a version, and
+      # sharpLibvips below accepts any release of that soname's own major.minor
+      # series, so this stays the one vips this package links. pkgs.vips' own
+      # default output is bin, so read the out output, which is where
+      # libvips-cpp lives.
       vips = lib.getLib pkgs.vips;
 
       # Reuse the sibling source package defined by deepseek-harness-git's module.
@@ -292,23 +298,26 @@
         "@deepseek-ai/node-addon-system"
       ];
 
-      # Host direct dependencies, resolved by bare name at startup. Linked rather
-      # than copied: pnpm's layout is a web of relative symlinks, so copying only
-      # this subtree would leave them dangling.
+      # Host direct dependencies, resolved by bare name at startup, named as
+      # upstream's own manifest names them: the workspace packages under the
+      # @deepseek-ai scope, plus libreoffice-kit and koffi, which come from the
+      # registry. Linked rather than copied: pnpm's layout is a web of relative
+      # symlinks, so copying only this subtree would leave them dangling.
       hostDependencies = [
-        "cordis"
-        "dsh-agent"
-        "dsh-app-boot"
-        "dsh-client-connection"
-        "dsh-deepseek-account"
-        "dsh-home-paths"
-        "dsh-host-webserver"
-        "dsh-jobs"
-        "dsh-schedule"
-        "dsh-skill-office"
-        "dsh-tool-workspace-dependencies"
-        "dsh-workspace"
-        "libreoffice-kit"
+        "@deepseek-ai/cordis"
+        "@deepseek-ai/dsh-agent"
+        "@deepseek-ai/dsh-app-boot"
+        "@deepseek-ai/dsh-client-connection"
+        "@deepseek-ai/dsh-deepseek-account"
+        "@deepseek-ai/dsh-home-paths"
+        "@deepseek-ai/dsh-host-webserver"
+        "@deepseek-ai/dsh-jobs"
+        "@deepseek-ai/dsh-schedule"
+        "@deepseek-ai/dsh-skill-office"
+        "@deepseek-ai/dsh-tool-workspace-dependencies"
+        "@deepseek-ai/dsh-workspace"
+        "@deepseek-ai/libreoffice-kit"
+        "koffi"
       ];
 
       # resources/app/dsh: the bundled runtime. Links point at the shared store tree;
@@ -328,8 +337,8 @@
           ln -s ${outPath}/apps/web          "$out/node_modules/@deepseek-ai/dsh-web-frontend"
           ln -s ${outPath}/apps/desktop-host "$out/node_modules/@deepseek-ai/dsh-desktop-host"
           for name in ${lib.concatStringsSep " " hostDependencies}; do
-            ln -s "${outPath}/apps/desktop-host/node_modules/@deepseek-ai/$name" \
-              "$out/node_modules/@deepseek-ai/$name"
+            mkdir -p "$out/node_modules/$(dirname "$name")"
+            ln -s "${outPath}/apps/desktop-host/node_modules/$name" "$out/node_modules/$name"
           done
           cat > "$out/package.json" <<'JSON'
           {
@@ -386,9 +395,16 @@
             echo "desktop: expected one libvips-cpp DT_NEEDED entry in $addon, got: $soname" >&2
             exit 1
           fi
-          if [ "$soname" != "libvips-cpp.so.${vips.version}" ]; then
-            echo "desktop: sharp's addon requires $soname, but this package pins vips ${vips.version} (${vips})" >&2
-            echo "desktop: the substitute must be the same upstream version as the libvips that prebuilt addon was linked against; pin vips accordingly in default.nix, then re-run this build and its sharp probe (note 5)" >&2
+          # The name is the addon's own, so it is honoured as written below; only
+          # its major.minor series has to match nixpkgs' vips (note 5): libvips
+          # keeps ABI within a stable series, and the patch field is a libtool
+          # revision, which carries no interface change.
+          addon_series="''${soname#libvips-cpp.so.}"
+          addon_series="''${addon_series%.*}"
+          vips_series="${lib.versions.majorMinor vips.version}"
+          if [ "$addon_series" != "$vips_series" ]; then
+            echo "desktop: sharp's addon requires $soname (series $addon_series), but this package links vips ${vips.version} (series $vips_series)" >&2
+            echo "desktop: the substitute must be from the same upstream stable series as the libvips that prebuilt addon was linked against; move vips to the addon's series in default.nix, then re-run this build and its sharp probe (note 5)" >&2
             exit 1
           fi
           # The real file, not the unversioned symlink, so the loader reports the

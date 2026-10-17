@@ -82,12 +82,11 @@ function checkApplication(root) {
 
 function checkHostDependencies(runtimeRoot, manifestPath) {
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
-  const scope = join(runtimeRoot, "node_modules", "@deepseek-ai")
+  const modules = join(runtimeRoot, "node_modules")
   const dependencies = Object.keys(manifest.dependencies ?? {})
   const offenders = []
   for (const name of dependencies) {
-    const local = name.startsWith("@deepseek-ai/") ? name.slice("@deepseek-ai/".length) : name
-    if (!existsSync(join(scope, local))) offenders.push(name)
+    if (!existsSync(join(modules, name))) offenders.push(name)
   }
   return { offenders, scanned: dependencies.length }
 }
