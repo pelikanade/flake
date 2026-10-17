@@ -1032,10 +1032,30 @@ index 219c197..6854204 100644
    // Optical: the chevron's ink sits about 4px inside its box whether it points right or down; this
    // puts the ink on the card's trailing rail, where the switch and the reports' refresh buttons end.
 diff --git a/packages/app/src/components/sidebar-workspace-list.tsx b/packages/app/src/components/sidebar-workspace-list.tsx
-index 4275099..f52bc48 100644
+index 4275099..b8e354f 100644
 --- a/packages/app/src/components/sidebar-workspace-list.tsx
 +++ b/packages/app/src/components/sidebar-workspace-list.tsx
-@@ -2539,10 +2539,10 @@ const styles = StyleSheet.create((theme) => ({
+@@ -647,7 +647,6 @@ function WorkspaceRowRightGroup({
+   const {
+     trailingPresentation,
+     showKebab: showKebabInSlot,
+-    showScrim,
+     renderSlot,
+     reserveSlotWidth,
+   } = resolveTrailingActionVisibility({
+@@ -670,10 +669,7 @@ function WorkspaceRowRightGroup({
+           <SidebarWorkspaceTrailingActionBase presentation={trailingPresentation}>
+             <SidebarWorkspaceTrailingContent workspace={workspace} trailing={trailing} />
+           </SidebarWorkspaceTrailingActionBase>
+-          <SidebarWorkspaceTrailingActionOverlay
+-            visible={kebab.showKebab}
+-            scrimBackdrop={showScrim ? backdrop : undefined}
+-          >
++          <SidebarWorkspaceTrailingActionOverlay visible={kebab.showKebab}>
+             {onArchive ? (
+               <SidebarWorkspaceMenu
+                 {...kebab.menuProps}
+@@ -2539,10 +2535,10 @@ const styles = StyleSheet.create((theme) => ({
      userSelect: "none",
    },
    newWorkspaceGhostRowHovered: {
@@ -1048,7 +1068,7 @@ index 4275099..f52bc48 100644
    },
    // The width of a workspace row's status slot, so the label lands on the same rail as the
    // titles above it.
-@@ -2579,10 +2579,10 @@ const styles = StyleSheet.create((theme) => ({
+@@ -2579,10 +2575,10 @@ const styles = StyleSheet.create((theme) => ({
      userSelect: "none",
    },
    projectRowHovered: {
@@ -1061,7 +1081,7 @@ index 4275099..f52bc48 100644
    },
    projectRowDragging: {
      backgroundColor: theme.colors.surface2,
-@@ -2623,7 +2623,7 @@ const styles = StyleSheet.create((theme) => ({
+@@ -2623,7 +2619,7 @@ const styles = StyleSheet.create((theme) => ({
      flexShrink: 0,
    },
    projectActionButtonHovered: {
@@ -1070,7 +1090,7 @@ index 4275099..f52bc48 100644
    },
    projectActionButtonText: {
      color: theme.colors.foregroundMuted,
-@@ -2638,7 +2638,7 @@ const styles = StyleSheet.create((theme) => ({
+@@ -2638,7 +2634,7 @@ const styles = StyleSheet.create((theme) => ({
      flexShrink: 0,
    },
    projectIconActionButtonHovered: {
@@ -1079,7 +1099,7 @@ index 4275099..f52bc48 100644
    },
    projectIconActionButtonHidden: {
      opacity: 0,
-@@ -2722,10 +2722,10 @@ const styles = StyleSheet.create((theme) => ({
+@@ -2722,10 +2718,10 @@ const styles = StyleSheet.create((theme) => ({
      flexShrink: 0,
    },
    workspaceRowHovered: {
@@ -1092,7 +1112,7 @@ index 4275099..f52bc48 100644
    },
    workspaceRowDragging: {
      backgroundColor: theme.colors.surface2,
-@@ -2736,7 +2736,7 @@ const styles = StyleSheet.create((theme) => ({
+@@ -2736,7 +2732,7 @@ const styles = StyleSheet.create((theme) => ({
      ...theme.shadow.md,
    },
    sidebarRowSelected: {
@@ -1153,10 +1173,54 @@ index 30310d8..3721298 100644
    },
  }));
 diff --git a/packages/app/src/components/sidebar/sidebar-status-list.tsx b/packages/app/src/components/sidebar/sidebar-status-list.tsx
-index c299d07..9362021 100644
+index c299d07..07e1c53 100644
 --- a/packages/app/src/components/sidebar/sidebar-status-list.tsx
 +++ b/packages/app/src/components/sidebar/sidebar-status-list.tsx
-@@ -1070,10 +1070,10 @@ const styles = StyleSheet.create((theme) => ({
+@@ -832,7 +832,6 @@ function StatusWorkspaceRowInnerContent({
+         const {
+           trailingPresentation,
+           showKebab: showKebabInSlot,
+-          showScrim,
+           renderSlot,
+           reserveSlotWidth,
+         } = resolveTrailingActionVisibility({
+@@ -911,7 +910,6 @@ function StatusWorkspaceRowInnerContent({
+                     trailing={trailing}
+                     trailingPresentation={trailingPresentation}
+                     showKebab={showKebabInSlot}
+-                    showScrim={showScrim}
+                     reserveSlotWidth={reserveSlotWidth}
+                     isPinned={isPinned}
+                     onTogglePin={onTogglePin}
+@@ -942,7 +940,6 @@ function StatusWorkspaceActionSlot({
+   trailing,
+   trailingPresentation,
+   showKebab,
+-  showScrim,
+   reserveSlotWidth,
+   isPinned,
+   onTogglePin,
+@@ -962,7 +959,6 @@ function StatusWorkspaceActionSlot({
+   trailing: SidebarWorkspaceTrailing;
+   trailingPresentation: SidebarWorkspaceTrailingPresentation;
+   showKebab: boolean;
+-  showScrim: boolean;
+   reserveSlotWidth: boolean;
+   isPinned?: boolean;
+   onTogglePin?: () => void;
+@@ -983,10 +979,7 @@ function StatusWorkspaceActionSlot({
+       <SidebarWorkspaceTrailingActionBase presentation={trailingPresentation}>
+         <SidebarWorkspaceTrailingContent workspace={workspace} trailing={trailing} />
+       </SidebarWorkspaceTrailingActionBase>
+-      <SidebarWorkspaceTrailingActionOverlay
+-        visible={kebab.showKebab}
+-        scrimBackdrop={showScrim ? backdrop : undefined}
+-      >
++      <SidebarWorkspaceTrailingActionOverlay visible={kebab.showKebab}>
+         {kebab.showKebab && onArchive ? (
+           <SidebarWorkspaceMenu
+             {...kebab.menuProps}
+@@ -1070,10 +1063,10 @@ const styles = StyleSheet.create((theme) => ({
      userSelect: "none",
    },
    statusGroupRowHovered: {
@@ -1169,7 +1233,7 @@ index c299d07..9362021 100644
    },
    statusGroupRowLeft: {
      flexDirection: "row",
-@@ -1121,10 +1121,10 @@ const styles = StyleSheet.create((theme) => ({
+@@ -1121,10 +1114,10 @@ const styles = StyleSheet.create((theme) => ({
      userSelect: "none",
    },
    workspaceRowHovered: {
@@ -1182,7 +1246,7 @@ index c299d07..9362021 100644
    },
    workspaceRowDragging: {
      backgroundColor: theme.colors.surface2,
-@@ -1135,6 +1135,6 @@ const styles = StyleSheet.create((theme) => ({
+@@ -1135,6 +1128,6 @@ const styles = StyleSheet.create((theme) => ({
      ...theme.shadow.md,
    },
    sidebarRowSelected: {
@@ -1202,11 +1266,94 @@ index e1543fa..0764c60 100644
 +    backgroundColor: theme.colors.interactionHighlight,
    },
  }));
+diff --git a/packages/app/src/components/sidebar/sidebar-workspace-row-content.tsx b/packages/app/src/components/sidebar/sidebar-workspace-row-content.tsx
+index 7b48f0d..5d7fdf3 100644
+--- a/packages/app/src/components/sidebar/sidebar-workspace-row-content.tsx
++++ b/packages/app/src/components/sidebar/sidebar-workspace-row-content.tsx
+@@ -27,7 +27,6 @@ import {
+ import { shouldRenderSyncedStatusLoader } from "@/utils/status-loader";
+ import { StatusRing } from "@/components/status-ring";
+ import { resolveSidebarWorkspacePrimaryLabel } from "@/components/sidebar/sidebar-workspace-title";
+-import { TrailingActionScrim } from "@/components/ui/trailing-action-scrim";
+ import { useWorkspaceLabelDefinitions } from "@/workspace-labels";
+ 
+ const foregroundMutedColorMapping = (theme: Theme) => ({ color: theme.colors.foregroundMuted });
+@@ -372,7 +371,6 @@ export function resolveTrailingActionVisibility({
+ }): {
+   trailingPresentation: SidebarWorkspaceTrailingPresentation;
+   showKebab: boolean;
+-  showScrim: boolean;
+   renderSlot: boolean;
+   reserveSlotWidth: boolean;
+ } {
+@@ -386,15 +384,10 @@ export function resolveTrailingActionVisibility({
+   return {
+     trailingPresentation,
+     showKebab,
+-    // The scrim paints the row's own hover background, so it can only be drawn on a hovered
+-    // row — over an unhovered one the gradient fades to the wrong color. That is also why
+-    // touch, which shows the kebab without ever hovering, never gets one.
+-    showScrim: showKebab && isHovered,
+     renderSlot: hasArchiveAction || hasTrailing,
+     // The slot only holds width for something that permanently sits in it. Trailing content
+-    // does; the kebab only does on touch, where there is no hover for it to appear on and so
+-    // no scrim to let it overlay the title. Everywhere else the width goes back to the title
+-    // and the kebab fades in over its tail.
++    // does; the kebab only does on touch, where there is no hover for it to appear on.
++    // Everywhere else the width goes back to the title and the kebab overlays its tail.
+     reserveSlotWidth: hasContent || (hasArchiveAction && isTouchPlatform),
+   };
+ }
+@@ -436,23 +429,13 @@ export function SidebarWorkspaceTrailingActionBase({
+ 
+ export function SidebarWorkspaceTrailingActionOverlay({
+   visible,
+-  scrimBackdrop,
+   children,
+ }: {
+   visible: boolean;
+-  /** Fade the row into the kebab when something (the diff stat) is still rendered behind it. */
+-  scrimBackdrop?: SidebarSurfaceBackdrop;
+   children: ReactNode;
+ }) {
+   if (!visible || !children) return null;
+-  return (
+-    <>
+-      {scrimBackdrop ? (
+-        <TrailingActionScrim backdrop={scrimBackdrop} testID="sidebar-workspace-trailing-scrim" />
+-      ) : null}
+-      <View style={sidebarWorkspaceRowStyles.trailingActionOverlay}>{children}</View>
+-    </>
+-  );
++  return <View style={sidebarWorkspaceRowStyles.trailingActionOverlay}>{children}</View>;
+ }
+ 
+ const styles = StyleSheet.create((theme) => ({
 diff --git a/packages/app/src/components/sidebar/sidebar-workspace-row.tsx b/packages/app/src/components/sidebar/sidebar-workspace-row.tsx
-index f8dcdeb..bd61e79 100644
+index f8dcdeb..ec92e37 100644
 --- a/packages/app/src/components/sidebar/sidebar-workspace-row.tsx
 +++ b/packages/app/src/components/sidebar/sidebar-workspace-row.tsx
-@@ -498,10 +498,10 @@ const styles = StyleSheet.create((theme) => ({
+@@ -405,7 +405,6 @@ function WorkspaceRowTrailingActions({
+   const {
+     trailingPresentation,
+     showKebab: showKebabInSlot,
+-    showScrim,
+     renderSlot,
+     reserveSlotWidth,
+   } = resolveTrailingActionVisibility({
+@@ -428,10 +427,7 @@ function WorkspaceRowTrailingActions({
+           <SidebarWorkspaceTrailingActionBase presentation={trailingPresentation}>
+             <SidebarWorkspaceTrailingContent workspace={workspace} trailing={trailing} />
+           </SidebarWorkspaceTrailingActionBase>
+-          <SidebarWorkspaceTrailingActionOverlay
+-            visible={kebab.showKebab}
+-            scrimBackdrop={showScrim ? backdrop : undefined}
+-          >
++          <SidebarWorkspaceTrailingActionOverlay visible={kebab.showKebab}>
+             {onArchive ? (
+               <SidebarWorkspaceMenu
+                 {...kebab.menuProps}
+@@ -498,10 +494,10 @@ const styles = StyleSheet.create((theme) => ({
      userSelect: "none",
    },
    workspaceRowHovered: {
@@ -1219,7 +1366,7 @@ index f8dcdeb..bd61e79 100644
    },
    workspaceRowDragging: {
      backgroundColor: theme.colors.surface2,
-@@ -512,7 +512,7 @@ const styles = StyleSheet.create((theme) => ({
+@@ -512,7 +508,7 @@ const styles = StyleSheet.create((theme) => ({
      ...theme.shadow.md,
    },
    sidebarRowSelected: {
@@ -1720,62 +1867,78 @@ index a1228cb..ae26d44 100644
      triggerSm: {
        ...geometry.fieldControlSm,
 diff --git a/packages/app/src/components/ui/trailing-action-scrim.tsx b/packages/app/src/components/ui/trailing-action-scrim.tsx
-index e106bf3..f14972c 100644
+deleted file mode 100644
+index e106bf3..0000000
 --- a/packages/app/src/components/ui/trailing-action-scrim.tsx
-+++ b/packages/app/src/components/ui/trailing-action-scrim.tsx
-@@ -1,5 +1,5 @@
- import { useId } from "react";
++++ /dev/null
+@@ -1,67 +0,0 @@
+-import { useId } from "react";
 -import { View } from "react-native";
-+import { Platform, View } from "react-native";
- import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from "react-native-svg";
- import { StyleSheet, withUnistyles } from "react-native-unistyles";
- import type { SurfaceBackdrop } from "@/styles/surface-backdrop";
-@@ -31,17 +31,24 @@ const backdropColorMappings: Record<SurfaceBackdrop, (theme: Theme) => { color:
-   surface0: (theme) => ({ color: theme.colors.surface0 }),
-   surface1: (theme) => ({ color: theme.colors.surface1 }),
-   surface2: (theme) => ({ color: theme.colors.surface2 }),
+-import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from "react-native-svg";
+-import { StyleSheet, withUnistyles } from "react-native-unistyles";
+-import type { SurfaceBackdrop } from "@/styles/surface-backdrop";
+-import type { Theme } from "@/styles/theme";
+-
+-export const SCRIM_WIDTH = 48;
+-const SCRIM_SOLID_OFFSET = "55%";
+-
+-function TrailingActionScrimSvg({ gradientId, color }: { gradientId: string; color: string }) {
+-  return (
+-    <Svg width="100%" height="100%" preserveAspectRatio="none">
+-      <Defs>
+-        <SvgLinearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+-          {/* Vary opacity rather than interpolating toward `transparent`, which crosses black in
+-              some engines and leaves a grey fringe. */}
+-          <Stop offset="0%" stopColor={color} stopOpacity={0} />
+-          <Stop offset={SCRIM_SOLID_OFFSET} stopColor={color} stopOpacity={1} />
+-          <Stop offset="100%" stopColor={color} stopOpacity={1} />
+-        </SvgLinearGradient>
+-      </Defs>
+-      <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradientId})`} />
+-    </Svg>
+-  );
+-}
+-
+-const ThemedTrailingActionScrimSvg = withUnistyles(TrailingActionScrimSvg);
+-
+-const backdropColorMappings: Record<SurfaceBackdrop, (theme: Theme) => { color: string }> = {
+-  surface0: (theme) => ({ color: theme.colors.surface0 }),
+-  surface1: (theme) => ({ color: theme.colors.surface1 }),
+-  surface2: (theme) => ({ color: theme.colors.surface2 }),
 -  surfaceSidebar: (theme) => ({ color: theme.colors.surfaceSidebar }),
 -  surfaceSidebarHover: (theme) => ({ color: theme.colors.surfaceSidebarHover }),
 -  surfaceSidebarSelected: (theme) => ({ color: theme.colors.surfaceSidebarSelected }),
-+  // Sidebar rows are glass now. Paint the same low-alpha overlay and blur the
-+  // trailing content behind it instead of covering the row with an opaque plate.
-+  surfaceSidebar: (theme) => ({ color: theme.colors.surfaceCard }),
-+  surfaceSidebarHover: (theme) => ({ color: theme.colors.surfaceRowHover }),
-+  surfaceSidebarSelected: (theme) => ({ color: theme.colors.surfaceRowSelected }),
- };
- 
-+const rowGlassMapping = (theme: Theme) => ({ color: theme.colors.surfaceRowHover });
-+
- /** Fades trailing content into the surface beneath an absolutely overlaid action. */
- export function TrailingActionScrim({
-   backdrop,
-+  useRowGlass = false,
-   testID,
- }: {
-   backdrop: SurfaceBackdrop;
-+  /** Tabs and other glass rows: use their row overlay instead of an opaque surface. */
-+  useRowGlass?: boolean;
-   testID?: string;
- }) {
-   // React-generated ids contain characters that are invalid inside SVG fragment references.
-@@ -50,7 +57,7 @@ export function TrailingActionScrim({
-     <View style={styles.scrim} pointerEvents="none" testID={testID}>
-       <ThemedTrailingActionScrimSvg
-         gradientId={gradientId}
+-};
+-
+-/** Fades trailing content into the surface beneath an absolutely overlaid action. */
+-export function TrailingActionScrim({
+-  backdrop,
+-  testID,
+-}: {
+-  backdrop: SurfaceBackdrop;
+-  testID?: string;
+-}) {
+-  // React-generated ids contain characters that are invalid inside SVG fragment references.
+-  const gradientId = `trailing-action-scrim-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+-  return (
+-    <View style={styles.scrim} pointerEvents="none" testID={testID}>
+-      <ThemedTrailingActionScrimSvg
+-        gradientId={gradientId}
 -        uniProps={backdropColorMappings[backdrop]}
-+        uniProps={useRowGlass ? rowGlassMapping : backdropColorMappings[backdrop]}
-       />
-     </View>
-   );
-@@ -63,5 +70,8 @@ const styles = StyleSheet.create({
-     bottom: 0,
-     right: 0,
-     width: SCRIM_WIDTH,
-+    ...(Platform.OS === "web"
-+      ? { backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" }
-+      : null),
-   },
- });
+-      />
+-    </View>
+-  );
+-}
+-
+-const styles = StyleSheet.create({
+-  scrim: {
+-    position: "absolute",
+-    top: 0,
+-    bottom: 0,
+-    right: 0,
+-    width: SCRIM_WIDTH,
+-  },
+-});
 diff --git a/packages/app/src/components/welcome-screen.tsx b/packages/app/src/components/welcome-screen.tsx
 index 1b3cdbe..a81ecea 100644
 --- a/packages/app/src/components/welcome-screen.tsx
@@ -2716,19 +2879,26 @@ index 175be36..8d41ea1 100644
    content: {
      flex: 1,
 diff --git a/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx b/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
-index f1806ed..fb4e4e4 100644
+index f1806ed..82c31d6 100644
 --- a/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
 +++ b/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
-@@ -903,7 +903,7 @@ function TabChip({
+@@ -68,7 +68,6 @@ import type { WorkspaceTabLaunchPurpose } from "@/workspace-tabs/launcher";
+ import type { SurfaceBackdrop } from "@/styles/surface-backdrop";
+ import type { Theme } from "@/styles/theme";
+ import { RenderProfile } from "@/utils/render-profiler";
+-import { TrailingActionScrim } from "@/components/ui/trailing-action-scrim";
+ import { useKeyboardActionHandler } from "@/hooks/use-keyboard-action-handler";
+ import { useCompactTimeAgo } from "@/hooks/use-time-ago";
+ import { formatCompactTimeAgoAsProse } from "@/utils/time";
+@@ -903,7 +902,6 @@ function TabChip({
                showCloseControl ? styles.tabTrailingOverlayShown : styles.tabTrailingOverlayHidden,
              ]}
            >
 -            <TrailingActionScrim backdrop={chipBackdrop} />
-+            <TrailingActionScrim backdrop={chipBackdrop} useRowGlass />
              <Pressable
                {...(closeButtonDragBlockers as object | undefined)}
                testID={closeButtonTestId}
-@@ -1566,8 +1566,8 @@ const styles = StyleSheet.create((theme) => ({
+@@ -1566,8 +1564,8 @@ const styles = StyleSheet.create((theme) => ({
      minWidth: 0,
      height: WORKSPACE_SECONDARY_HEADER_HEIGHT,
      borderBottomWidth: 1,
@@ -2739,7 +2909,7 @@ index f1806ed..fb4e4e4 100644
      flexDirection: "row",
      alignItems: "center",
      overflow: "visible",
-@@ -1597,7 +1597,7 @@ const styles = StyleSheet.create((theme) => ({
+@@ -1597,7 +1595,7 @@ const styles = StyleSheet.create((theme) => ({
      alignItems: "center",
      paddingHorizontal: theme.spacing[0.5],
      borderRightWidth: 1,
@@ -2748,7 +2918,7 @@ index f1806ed..fb4e4e4 100644
    },
    inlineAddButton: {
      flexDirection: "row",
-@@ -1622,13 +1622,13 @@ const styles = StyleSheet.create((theme) => ({
+@@ -1622,13 +1620,13 @@ const styles = StyleSheet.create((theme) => ({
      userSelect: "none",
    },
    tabHovered: {

@@ -81,12 +81,11 @@ The patch is organised by intent, not by file count:
 - **Structural surfaces**: workspace, tabs, headers, sidebar, splits, screen
   roots, splash and error screens, setup/plugin screens, `page-layout`.
 - **Rows and selection**: agent list, sidebar workspace/status renderers,
-  explorer tree, settings sidebar, collapsible rows, segmented controls. The
-  sidebar trailing-action scrim uses the row's translucent fill plus a web
-  backdrop blur; an opaque scrim turns the kebab area into a plate again.
-  Tab chips use the hover overlay for both hover and active; the label colour
-  carries the active state, so the chip never becomes a solid plate. The tab
-  close-button scrim passes `useRowGlass` for the same reason.
+  explorer tree, settings sidebar, collapsible rows, segmented controls. Tab
+  chips use the hover overlay for both hover and active; the label colour
+  carries the active state, so the chip never becomes a solid plate. Trailing
+  action scrims were removed entirely: the kebab and tab close button overlay
+  their content without a gradient plate behind them.
 - **Cards and pills**: composer input, composer pills, `DiffStat` pill, thinking
   / tool-call expansion, settings cards, open-project tiles.
 - **Popovers**: shared menu surface and menu items, combobox, autocomplete,
@@ -202,6 +201,10 @@ table above rather than making `surface0` translucent.
   `process.platform === "linux"` guards if the source is reused elsewhere.
 - **Hyprland must blur.** `decoration.blur.enabled` is already set in this
   repository. Without compositor blur the glass shows the raw wallpaper.
+- **Do not reintroduce trailing-action scrims.** A gradient painted over a
+  glass row reads as a solid plate, even when its colour is translucent. The
+  kebab and tab close button overlay their content directly; reserve layout
+  space if overlap becomes a problem.
 - **Do not use `sed` or hand-edited line numbers.** The patch is the contract;
   a failed hunk should stop the build, not silently ship a half-transparent
   app.
