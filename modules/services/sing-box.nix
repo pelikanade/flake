@@ -8,31 +8,19 @@
     }:
     let
       # NetBird reaches its management, relays and peers with its own WireGuard,
-      # STUN and relay traffic, which does not survive being proxied. Route its
-      # own ranges through an outbound bound to its interface instead of marking
-      # the client's packets by cgroup.
+      # STUN and relay traffic, which does not survive being proxied. Its peers
+      # and its accepted routes are in the carrier-grade NAT range, which the tun
+      # excludes below, so that traffic keeps the routes NetBird installed on its
+      # own interface; the client's packets are not captured and no rule has to
+      # name them.
       netbirdInterface = config.services.netbird.clients.default.interface or null;
-      netbirdOutbound = {
-        type = "direct";
-        tag = "netbird";
-        bind_interface = netbirdInterface;
-      };
-      netbirdRule = {
-        ip_cidr = [
-          "100.69.0.0/16"
-          "100.79.0.0/16"
-          "fd2b:a214:7af1:40d2::/64"
-          "fdd3:c8c7:a7e5:d757::/64"
-        ];
-        action = "route";
-        outbound = "netbird";
-      };
 
       # The configuration is declared here and assembled at activation: the
       # nixpkgs module replaces every `_secret` below with the contents of the
-      # named file. Proxy credentials and endpoints stay in sing-box.yaml, and the
-      # tailnet auth key in tailscale.yaml, so no secret reaches Nix evaluation,
-      # the store or git.
+      # named file. Proxy credentials and endpoints stay in sing-box.yaml, so no
+      # secret reaches Nix evaluation, the store or git. The tailnet is not part
+      # of this feature: it has its own module and its own key, and the tun keeps
+      # out of its addresses.
       # The proxy nodes this host dials. One table drives the encrypted secret
       # names, the selector's tag list and the outbounds, so the three cannot
       # drift apart.
@@ -156,13 +144,6 @@
         dns = {
           servers = [
             {
-              type = "tailscale";
-              tag = "tailnet-dns";
-              endpoint = "tailnet";
-              accept_default_resolvers = false;
-              accept_search_domain = true;
-            }
-            {
               type = "udp";
               tag = "home-dns";
               server = "10.0.0.3";
@@ -184,13 +165,6 @@
           ];
 
           rules = [
-            # MagicDNS names and tailnet DNS suffixes resolve through the
-            # endpoint; every other name keeps the resolvers below.
-            {
-              preferred_by = "tailnet-dns";
-              action = "route";
-              server = "tailnet-dns";
-            }
             # x.ai resolves AAAA and HTTPS records to addresses that break its
             # client, so answer those queries with an empty result.
             {
@@ -256,9 +230,23 @@
             ];
             auto_route = true;
             auto_redirect = true;
+            # Declared rather than defaulted: the mark is the tun's contract with
+            # whatever must stay outside it, and `services.sing-box.tunBypassMark`
+            # is where that value is written down.
+            auto_redirect_output_mark = config.services.sing-box.tunBypassMark;
+            # The carrier-grade NAT range belongs to interfaces the kernel owns:
+            # the tailnet's `tailscale0` and NetBird's tunnel both carry their own
+            # addresses and routes, and a connection to one of their peers is not
+            # the proxy's business. Excluding the range keeps it out of the tun's
+            # routes and out of the redirect that carries local traffic into it, so
+            # those connections keep the route the kernel gave them — and DNS sent
+            # to the tailnet's resolver at 100.100.100.100 is not hijacked into
+            # sing-box either.
             route_exclude_address = [
               "10.0.0.0/8"
+              "100.64.0.0/10"
               "fe80::/10"
+              "fd7a:115c:a1e0::/48"
             ];
             # NetBird's interface: what arrives on it is already inside the
             # NetBird tunnel and must not enter the tun.
@@ -286,11 +274,10 @@
             default = "snemeow-vless-laxp";
             interrupt_exist_connections = true;
           }
-        ]
-        ++ lib.optional (netbirdInterface != null) netbirdOutbound;
+        ];
 
         route = {
-          rules = lib.optional (netbirdInterface != null) netbirdRule ++ [
+          rules = [
             {
               action = "sniff";
             }
@@ -300,13 +287,6 @@
                 "fe80::/10"
               ];
               outbound = "direct";
-            }
-            {
-              ip_cidr = [
-                "100.64.0.0/10"
-                "fd7a:115c:a1e0::/48"
-              ];
-              outbound = "tailnet";
             }
             {
               ip_is_private = true;
@@ -365,76 +345,83 @@
             access_control_allow_private_network = true;
           };
         };
-
-        endpoints = [
-          {
-            type = "tailscale";
-            tag = "tailnet";
-            auth_key = secret "tailscale_auth_key";
-            ephemeral = false;
-            accept_routes = true;
-            advertise_exit_node = false;
-            ssh_server = false;
-            listen_port = 41641;
-          }
-        ];
       };
     in
     {
       # Machine and workstation policy compose this same feature.
       key = "sing-box";
 
-      networking.nftables.enable = true;
-      networking.firewall = {
-        backend = "nftables";
-        allowedUDPPorts = [ 41641 ];
-        trustedInterfaces = [ "tun0" ];
-        extraReversePathFilterRules = ''iifname "tun0" accept'';
+      # The mark this tun treats as its own, read-only because it is a contract
+      # rather than a knob: the tun sets `auto_redirect_output_mark` from it, and a
+      # feature whose own transport must not be proxied marks its sockets with it —
+      # the tailnet's daemon does, and reads this value to do so. Changing it here
+      # would be changing both sides of that contract.
+      options.services.sing-box.tunBypassMark = lib.mkOption {
+        type = lib.types.str;
+        readOnly = true;
+        default = "0x2024";
+        description = ''
+          The nftables mark this tun treats as its own.
+
+          `auto_redirect` skips a packet that carries it: the redirect that
+          carries local TCP into the tun returns, the mark that carries local UDP
+          and ICMP into it is not set, and the routing rule that sends that mark
+          to the tun's table is skipped. sing-box puts it on every connection it
+          dials itself.
+        '';
       };
 
-      services.resolved = {
-        enable = true;
-        settings.Resolve.ResolveUnicastSingleLabel = true;
-      };
+      config = {
+        networking.nftables.enable = true;
+        networking.firewall = {
+          backend = "nftables";
+          trustedInterfaces = [ "tun0" ];
+          extraReversePathFilterRules = ''iifname "tun0" accept'';
+        };
 
-      # resolved only accepts those SetLinkDNS/SetDomains/SetDefaultRoute calls
-      # from the sing-box user when polkit applies the rule shipped in the
-      # sing-box package. Without it they fail with "Access denied" and sing-tun
-      # discards the error, leaving the tun without a resolver.
-      security.polkit.enable = true;
+        services.resolved = {
+          enable = true;
+          settings.Resolve.ResolveUnicastSingleLabel = true;
+        };
 
-      # sing-tun also calls resolve1.revert when the tun goes away, which the
-      # packaged rule does not cover; grant it so that call is not denied too.
-      security.polkit.extraConfig = ''
-        // systemd-resolved access for the sing-box tun
-        polkit.addRule(function(action, subject) {
-          var actions = [
-            "org.freedesktop.resolve1.revert",
-            "org.freedesktop.resolve1.set-default-route",
-            "org.freedesktop.resolve1.set-dns-servers",
-            "org.freedesktop.resolve1.set-domains",
-          ];
-          if (actions.indexOf(action.id) >= 0 && subject.user == "sing-box") {
-            return polkit.Result.YES;
-          }
-        });
-      '';
+        # resolved only accepts those SetLinkDNS/SetDomains/SetDefaultRoute calls
+        # from the sing-box user when polkit applies the rule shipped in the
+        # sing-box package. Without it they fail with "Access denied" and sing-tun
+        # discards the error, leaving the tun without a resolver.
+        security.polkit.enable = true;
 
-      # NetBird's own WireGuard, STUN and relay traffic does not survive being
-      # proxied, so its ranges leave through the NetBird interface instead.
-      # Nothing here marks packets by cgroup any more.
+        # sing-tun also calls resolve1.revert when the tun goes away, which the
+        # packaged rule does not cover; grant it so that call is not denied too.
+        security.polkit.extraConfig = ''
+          // systemd-resolved access for the sing-box tun
+          polkit.addRule(function(action, subject) {
+            var actions = [
+              "org.freedesktop.resolve1.revert",
+              "org.freedesktop.resolve1.set-default-route",
+              "org.freedesktop.resolve1.set-dns-servers",
+              "org.freedesktop.resolve1.set-domains",
+            ];
+            if (actions.indexOf(action.id) >= 0 && subject.user == "sing-box") {
+              return polkit.Result.YES;
+            }
+          });
+        '';
 
-      # The root pre-start renderer reads these files into the runtime config, so
-      # the service itself never needs direct secret-file access and every
-      # credential file stays root-only.
-      sops.secrets = lib.genAttrs singBoxSecrets (secretFrom "sing-box.yaml") // {
-        tailscale_auth_key = secretFrom "tailscale.yaml" "tailscale_auth_key";
-      };
+        # NetBird's own WireGuard, STUN and relay traffic does not survive being
+        # proxied. Its interface is excluded above with the rest of the
+        # carrier-grade NAT range, so its peers and its routes leave through `wt0`
+        # as the kernel routes them, without an outbound bound to that interface.
 
-      services.sing-box = {
-        enable = true;
-        package = pkgs.unstable.sing-box;
-        settings = singBoxSettings;
+        # The root pre-start renderer reads these files into the runtime config, so
+        # the service itself never needs direct secret-file access and every
+        # credential file stays root-only.
+        sops.secrets = lib.genAttrs singBoxSecrets (secretFrom "sing-box.yaml");
+
+        services.sing-box = {
+          enable = true;
+          package = pkgs.unstable.sing-box;
+          settings = singBoxSettings;
+        };
       };
     };
 }

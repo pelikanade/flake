@@ -110,11 +110,12 @@ limits.
 
 ## Reachability
 
-The tailnet needs no firewall rule: a peer reaches this host's tailnet address and
-sing-box's userspace endpoint delivers the connection to loopback, which never
-enters the input chain. The firewall's only job here is the LAN, and the host
-carries its LAN and its public addresses on one interface, so admitting the LAN by
-interface would also admit the internet: `services.ingress.lanSources` lists the
+The tailnet needs no firewall rule of its own: a peer reaches this host's tailnet
+address on `tailscale0`, which [the tailnet module](tailscale.md) adds to the
+firewall's trusted interfaces, and the connection enters the input chain there
+rather than through the ingress. The firewall's only job here is the LAN, and the
+host carries its LAN and its public addresses on one interface, so admitting the LAN
+by interface would also admit the internet: `services.ingress.lanSources` lists the
 IPv4 sources that may reach the ingress, and the module renders one
 `ip saddr <source> tcp dport { 80, 443 } accept` rule for each. The machine
 definition lists only its LAN subnet, which is what a device that overrides the
@@ -127,12 +128,11 @@ Two things this does not do:
   Making the ingress public is a separate decision that needs records, a firewall
   rule and an honest look at the four upstreams' own authentication.
 - Nothing bounds a peer beyond the tailnet's ACLs and the upstreams' own
-  authentication: the endpoint runs in sing-box's userspace stack, so a peer's
-  connection to this host's tailnet address becomes a local dial, and every
-  listener on the host accepts what the endpoint forwards, not only the ingress.
-  A host that wants the firewall to bound peer access has to turn
-  `system_interface` on — which puts peer traffic on a real interface — and then
-  name every port peers should reach, because the input chain drops the rest.
+  authentication: the trusted interface admits a peer's connection to any port this
+  host listens on, not only the ingress, exactly as the endpoint's loopback
+  delivery did while it forwarded. A host that wants the firewall to bound peer
+  access would have to drop the interface from `trustedInterfaces` and name every
+  port peers should reach, because the input chain drops the rest.
 
 ## Adding a service
 

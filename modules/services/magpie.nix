@@ -52,10 +52,10 @@
           XDG_CONFIG_HOME = "/var/lib/magpie/.config";
           XDG_CACHE_HOME = "/var/lib/magpie/.cache";
           # The gateway binds every interface so tailnet peers reach it on this
-          # host's tailnet address, which sing-box's userspace endpoint delivers
-          # to loopback. Upstream requires a key only when sharing is enabled, so
-          # the gateway accepts whatever reaches the port; the sign-in key guards
-          # the page beside it.
+          # host's tailnet address. A peer's connection arrives on `tailscale0`,
+          # which the firewall trusts; upstream requires a key only when sharing
+          # is enabled, so the gateway accepts whatever reaches the port, and the
+          # sign-in key guards the page beside it.
           MAGPIE_ADDR = "0.0.0.0:3425";
           # The banner and the CLIs advertise the gateway by its MagicDNS name;
           # the resolver does not expand a bare peer name.

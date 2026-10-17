@@ -79,6 +79,6 @@
       };
 
       # Nothing is opened for the tailnet: a peer reaches this host's tailnet
-      # address, which sing-box's userspace endpoint delivers to loopback.
+      # address on `tailscale0`, which the firewall trusts as a whole interface.
     };
 }
