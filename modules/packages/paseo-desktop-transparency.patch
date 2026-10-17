@@ -447,7 +447,7 @@ index 8473760..ecb627e 100644
    triggerDisabled: {
      opacity: 0.5,
 diff --git a/packages/app/src/components/compact-explorer-sidebar.tsx b/packages/app/src/components/compact-explorer-sidebar.tsx
-index d52a9ea..a8b5279 100644
+index d52a9ea..95d7783 100644
 --- a/packages/app/src/components/compact-explorer-sidebar.tsx
 +++ b/packages/app/src/components/compact-explorer-sidebar.tsx
 @@ -549,7 +549,7 @@ const styles = StyleSheet.create((theme) => ({
@@ -455,7 +455,7 @@ index d52a9ea..a8b5279 100644
    }),
    tabActive: {
 -    backgroundColor: theme.colors.surfaceSidebarHover,
-+    backgroundColor: theme.colors.surfaceRowSelected,
++    backgroundColor: theme.colors.surfaceRowHover,
    },
    tabText: {
      fontSize: theme.fontSize.base,
@@ -2542,7 +2542,7 @@ index 1f12d90..5830e70 100644
      borderColor: theme.colors.border,
      overflow: "hidden",
 diff --git a/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx b/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
-index f1806ed..dc143cd 100644
+index f1806ed..ab22159 100644
 --- a/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
 +++ b/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
 @@ -1567,7 +1567,7 @@ const styles = StyleSheet.create((theme) => ({
@@ -2563,16 +2563,16 @@ index f1806ed..dc143cd 100644
    },
    tabActive: {
 -    backgroundColor: theme.colors.surface2,
-+    backgroundColor: theme.colors.surfaceRowSelected,
++    backgroundColor: theme.colors.surfaceRowHover,
    },
    tabActiveUnfocused: {
 -    backgroundColor: theme.colors.surface1,
-+    backgroundColor: theme.colors.surfaceRowSelected,
++    backgroundColor: theme.colors.surfaceRowHover,
    },
    tabHoverFrame: {
      position: "relative",
 diff --git a/packages/app/src/screens/workspace/workspace-screen.tsx b/packages/app/src/screens/workspace/workspace-screen.tsx
-index d94b7e5..3c401b0 100644
+index d94b7e5..0c9e810 100644
 --- a/packages/app/src/screens/workspace/workspace-screen.tsx
 +++ b/packages/app/src/screens/workspace/workspace-screen.tsx
 @@ -1337,7 +1337,7 @@ function renderWorkspaceScreenGateShell(input: {
@@ -2631,7 +2631,7 @@ index d94b7e5..3c401b0 100644
    },
    tabActive: {
 -    backgroundColor: theme.colors.surface2,
-+    backgroundColor: theme.colors.surfaceRowSelected,
++    backgroundColor: theme.colors.surfaceRowHover,
    },
    tabHovered: {
 -    backgroundColor: theme.colors.surface2,

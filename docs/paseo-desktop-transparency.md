@@ -81,6 +81,8 @@ The patch is organised by intent, not by file count:
   explorer tree, settings sidebar, collapsible rows, segmented controls. The
   sidebar trailing-action scrim uses the row's translucent fill plus a web
   backdrop blur; an opaque scrim turns the kebab area into a plate again.
+  Tab chips use the hover overlay for both hover and active; the label colour
+  carries the active state, so the chip never becomes a solid plate.
 - **Cards and pills**: composer input, composer pills, `DiffStat` pill, thinking
   / tool-call expansion, settings cards, open-project tiles.
 - **Popovers**: shared menu surface and menu items, combobox, autocomplete,
