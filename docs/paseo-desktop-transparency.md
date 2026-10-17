@@ -55,6 +55,7 @@ Defined in `packages/app/src/styles/theme.ts`:
 | `surfaceRowHover` | `rgba(255, 255, 255, 0.04)` | `rgba(0, 0, 0, 0.035)` | opaque `surface1` |
 | `surfaceRowSelected` | `rgba(255, 255, 255, 0.07)` | `rgba(0, 0, 0, 0.06)` | opaque `surface2` |
 | `surfaceRowPressed` | `rgba(255, 255, 255, 0.09)` | `rgba(0, 0, 0, 0.09)` | opaque `surface2` |
+| `surfaceCode` | `rgba(255, 255, 255, 0.07)` | `rgba(0, 0, 0, 0.045)` | opaque `surface2` |
 | `surfaceMenu` | `rgba(surface1, 0.55)` | `rgba(255, 255, 255, 0.9)` | opaque `surface1` |
 
 `glassBackdropFilter` is the web-only blur object used by menus, dropdowns and
@@ -85,6 +86,13 @@ The patch is organised by intent, not by file count:
   shared `MenuSurface`, so they are covered by the same change.
 - **Diff views**: file header, diff header/context lines, tool-call diff and
   scroll areas, diff-pane callouts.
+- **Markdown and code**: inline code, fenced code, tables, blockquotes, details
+  summaries, code surfaces, front matter cells, startup logs.
+- **Floating UI**: toasts, download progress, pane find, command center,
+  workspace/plugin hover cards, zoom controls, dialogs and sheets.
+- **Workspace gate**: the loading/unavailable/recovery shell uses
+  `containerWorkspaceBackground`, not the opaque `container`, so a freshly
+  created or temporarily unavailable workspace stays glass.
 
 ## Updating the patch for a new Paseo release
 
@@ -118,16 +126,33 @@ When a new card, tab, or popover still reads as a flat plate, do not change
 `surface0` or `surface1`. Choose the token by role:
 
 - a card or panel -> `surfaceCard`
+- a code block, inline code, log, or diff context -> `surfaceCode`
 - a hovered row, tab, or button -> `surfaceRowHover`
 - a selected row or active tab -> `surfaceRowSelected`
 - a pressed row -> `surfaceRowPressed`
-- a popover, dropdown, or context menu -> `surfaceMenu` plus
-  `glassBackdropFilter`
+- a popover, dropdown, context menu, or plugin popover -> `surfaceMenu`
+  plus `glassBackdropFilter`
 
 If the surface is a structural container that spans a whole region, make it
 transparent instead and let the single root glass layer show through. If it is
 a popover, it needs `surfaceMenu` and the web backdrop blur, because the
 compositor cannot blur the app content behind it.
+
+## Surfaces intentionally left opaque
+
+Not every `surface*` background is a plate. These stay opaque on purpose:
+
+- Terminal emulator body, browser webview, and file editor body: long-form
+  reading and terminal contrast win over wallpaper bleed.
+- Skeleton placeholders (`sidebar-agent-list-skeleton`, PR/commit skeletons).
+- Status-ring and sidebar status backdrops used to knock holes out of icons;
+  they must match an opaque paint to cut the icon cleanly.
+- Small badges, shortcut chips, usage meters, and diff add/remove tints: their
+  colour is the signal, and they are already translucent where appropriate.
+- Modal scrims and image/video previews, where dimming is the point.
+
+If one of these reads as a plate in the live UI, convert it with the role
+table above rather than making `surface0` translucent.
 
 ## Verification
 

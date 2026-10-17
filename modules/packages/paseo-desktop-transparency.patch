@@ -51,8 +51,34 @@ index 9cc000e..c1bbc8f 100644
 +    WebkitBackdropFilter?: string;
 +  }
  }
+diff --git a/packages/app/src/agent-stream/chat-find/index.web.tsx b/packages/app/src/agent-stream/chat-find/index.web.tsx
+index c817b55..bf21f24 100644
+--- a/packages/app/src/agent-stream/chat-find/index.web.tsx
++++ b/packages/app/src/agent-stream/chat-find/index.web.tsx
+@@ -169,7 +169,7 @@ const styles = StyleSheet.create((theme) => ({
+     flexDirection: "row",
+     alignItems: "center",
+     padding: theme.spacing[2],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   errorText: { color: theme.colors.foreground, fontSize: theme.fontSize.sm, flex: 1 },
+   highlight: { backgroundColor: theme.colors.statusWarning, color: theme.colors.surface0 },
+diff --git a/packages/app/src/agent-stream/chat-outline/rail.web.tsx b/packages/app/src/agent-stream/chat-outline/rail.web.tsx
+index 3cb79f1..3913def 100644
+--- a/packages/app/src/agent-stream/chat-outline/rail.web.tsx
++++ b/packages/app/src/agent-stream/chat-outline/rail.web.tsx
+@@ -245,7 +245,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.lg,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+     ...theme.shadow.md,
+   },
+   previewText: {
 diff --git a/packages/app/src/agent-stream/view.tsx b/packages/app/src/agent-stream/view.tsx
-index 12f628d..04614e9 100644
+index 12f628d..12ef61e 100644
 --- a/packages/app/src/agent-stream/view.tsx
 +++ b/packages/app/src/agent-stream/view.tsx
 @@ -1621,7 +1621,7 @@ function PermissionRequestCard({
@@ -64,6 +90,38 @@ index 12f628d..04614e9 100644
    },
    contentWrapper: {
      width: "100%",
+@@ -1692,7 +1692,7 @@ const stylesheet = StyleSheet.create((theme) => ({
+     width: 48,
+     height: 48,
+     borderRadius: 24,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+     alignItems: "center",
+     justifyContent: "center",
+     ...theme.shadow.sm,
+@@ -1709,7 +1709,7 @@ const permissionStyles = StyleSheet.create((theme) => ({
+     borderRadius: theme.spacing[2],
+     borderWidth: 1,
+     gap: theme.spacing[2],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderColor: theme.colors.border,
+   },
+   title: {
+@@ -1750,11 +1750,11 @@ const permissionStyles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.md,
+     alignItems: "center",
+     borderWidth: theme.borderWidth[1],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderColor: theme.colors.borderAccent,
+   },
+   optionButtonHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   optionButtonPressed: {
+     opacity: 0.9,
 diff --git a/packages/app/src/app/_layout.tsx b/packages/app/src/app/_layout.tsx
 index 6e9b506..b0c7644 100644
 --- a/packages/app/src/app/_layout.tsx
@@ -130,8 +188,161 @@ index 6e9b506..b0c7644 100644
    },
    windowSidebarToggle: {
      position: "absolute",
+diff --git a/packages/app/src/command-center/command-center.tsx b/packages/app/src/command-center/command-center.tsx
+index 607f24c..8c2fe32 100644
+--- a/packages/app/src/command-center/command-center.tsx
++++ b/packages/app/src/command-center/command-center.tsx
+@@ -857,7 +857,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderColor: theme.colors.border,
+     borderRadius: theme.borderRadius.lg,
+     overflow: "hidden",
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceMenu,
+     ...theme.shadow.lg,
+   },
+   header: {
+@@ -893,7 +893,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.md,
+     borderWidth: 1,
+     borderColor: theme.colors.borderAccent,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   scopeChipLabel: {
+     color: theme.colors.foreground,
+@@ -915,7 +915,7 @@ const styles = StyleSheet.create((theme) => ({
+   },
+   row: { height: 36, paddingHorizontal: theme.spacing[4], paddingVertical: theme.spacing[2] },
+   tallRow: { height: 56 },
+-  activeRow: { backgroundColor: theme.colors.surface1 },
++  activeRow: { backgroundColor: theme.colors.interactionHighlight },
+   rowContent: {
+     flexDirection: "row",
+     alignItems: "center",
+@@ -976,7 +976,7 @@ const styles = StyleSheet.create((theme) => ({
+     color: theme.colors.statusDanger,
+     fontSize: theme.fontSize.base,
+   },
+-  sheetBackground: { backgroundColor: theme.colors.surface0 },
++  sheetBackground: { backgroundColor: theme.colors.surfaceMenu },
+   sheetHandle: { backgroundColor: theme.colors.palette.zinc[600] },
+   titledSection: { height: 32, justifyContent: "flex-end" },
+   dividedSection: { height: 49, justifyContent: "flex-end" },
+diff --git a/packages/app/src/components/adaptive-modal-sheet.tsx b/packages/app/src/components/adaptive-modal-sheet.tsx
+index 4ceb43d..04e6cc3 100644
+--- a/packages/app/src/components/adaptive-modal-sheet.tsx
++++ b/packages/app/src/components/adaptive-modal-sheet.tsx
+@@ -97,10 +97,10 @@ const styles = StyleSheet.create((theme) => ({
+     maxHeight: "85%",
+     flexShrink: 1,
+     minHeight: 0,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderRadius: theme.borderRadius.xl,
+     borderWidth: 1,
+-    borderColor: theme.colors.surface2,
++    borderColor: theme.colors.borderAccent,
+   },
+   headerContainer: {
+     borderBottomWidth: 1,
+@@ -239,12 +239,12 @@ function SheetBackground({ style }: BottomSheetBackgroundProps) {
+     () => [
+       style,
+       {
+-        backgroundColor: theme.colors.surface0,
++        backgroundColor: theme.colors.surfaceMenu,
+         borderTopLeftRadius: theme.borderRadius["2xl"],
+         borderTopRightRadius: theme.borderRadius["2xl"],
+       },
+     ],
+-    [style, theme.colors.surface0, theme.borderRadius],
++    [style, theme.colors.surfaceMenu, theme.borderRadius],
+   );
+   return <Animated.View pointerEvents="none" style={combinedStyle} />;
+ }
+diff --git a/packages/app/src/components/add-host-method-modal.tsx b/packages/app/src/components/add-host-method-modal.tsx
+index b97c529..047e769 100644
+--- a/packages/app/src/components/add-host-method-modal.tsx
++++ b/packages/app/src/components/add-host-method-modal.tsx
+@@ -22,7 +22,7 @@ const styles = StyleSheet.create((theme) => ({
+     gap: theme.spacing[4],
+     padding: theme.spacing[4],
+     borderRadius: theme.borderRadius.xl,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+   },
+diff --git a/packages/app/src/components/add-host-modal.tsx b/packages/app/src/components/add-host-modal.tsx
+index bf364f1..ccf9429 100644
+--- a/packages/app/src/components/add-host-modal.tsx
++++ b/packages/app/src/components/add-host-modal.tsx
+@@ -59,7 +59,7 @@ const styles = StyleSheet.create((theme) => ({
+     fontWeight: theme.fontWeight.medium,
+   },
+   input: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     borderRadius: theme.borderRadius.lg,
+     paddingHorizontal: theme.spacing[4],
+     paddingVertical: theme.spacing[3],
+@@ -92,8 +92,8 @@ const styles = StyleSheet.create((theme) => ({
+     height: 44,
+     alignItems: "center",
+     justifyContent: "center",
+-    borderRadius: theme.borderRadius.lg,
+-    backgroundColor: theme.colors.surface2,
++    borderRadius: theme.borderRadius.xl,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+   },
+diff --git a/packages/app/src/components/add-project-flow.tsx b/packages/app/src/components/add-project-flow.tsx
+index d874a73..4c29328 100644
+--- a/packages/app/src/components/add-project-flow.tsx
++++ b/packages/app/src/components/add-project-flow.tsx
+@@ -984,7 +984,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+     borderRadius: theme.borderRadius.lg,
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceMenu,
+     overflow: "hidden",
+     ...theme.shadow.lg,
+   },
+@@ -1052,7 +1052,7 @@ const styles = StyleSheet.create((theme) => ({
+     paddingHorizontal: theme.spacing[4],
+     paddingVertical: theme.spacing[2],
+   },
+-  rowActive: { backgroundColor: theme.colors.surface1 },
++  rowActive: { backgroundColor: theme.colors.interactionHighlight },
+   disabled: { opacity: theme.opacity[50] },
+   iconSlot: { width: 18, alignItems: "center" },
+   rowText: { flex: 1, minWidth: 0 },
+diff --git a/packages/app/src/components/add-remote-ssh-host-modal.tsx b/packages/app/src/components/add-remote-ssh-host-modal.tsx
+index c7e25bc..e1f49bb 100644
+--- a/packages/app/src/components/add-remote-ssh-host-modal.tsx
++++ b/packages/app/src/components/add-remote-ssh-host-modal.tsx
+@@ -56,7 +56,7 @@ const styles = StyleSheet.create((theme) => {
+       alignItems: "center",
+       justifyContent: "center",
+       borderRadius: theme.borderRadius.md,
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCard,
+     },
+     iconButtonMd: {
+       minHeight: CONTROL_HEIGHTS.field,
+@@ -64,7 +64,7 @@ const styles = StyleSheet.create((theme) => {
+       alignItems: "center",
+       justifyContent: "center",
+       borderRadius: theme.borderRadius.lg,
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCard,
+     },
+     controlRest: {
+       ...geometry.controlRest,
 diff --git a/packages/app/src/components/agent-list.tsx b/packages/app/src/components/agent-list.tsx
-index 7da3674..43ea6d9 100644
+index 7da3674..5c7b392 100644
 --- a/packages/app/src/components/agent-list.tsx
 +++ b/packages/app/src/components/agent-list.tsx
 @@ -630,13 +630,13 @@ const styles = StyleSheet.create((theme) => ({
@@ -151,6 +362,90 @@ index 7da3674..43ea6d9 100644
    },
    sessionTitle: {
      flexShrink: 1,
+@@ -695,7 +695,7 @@ const styles = StyleSheet.create((theme) => ({
+     backgroundColor: "rgba(0,0,0,0.35)",
+   },
+   sheetContainer: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderTopLeftRadius: theme.borderRadius["2xl"],
+     borderTopRightRadius: theme.borderRadius["2xl"],
+     paddingHorizontal: theme.spacing[6],
+@@ -739,7 +739,7 @@ const styles = StyleSheet.create((theme) => ({
+     opacity: 0.5,
+   },
+   sheetCancelButton: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   sheetCancelText: {
+     color: theme.colors.foreground,
+diff --git a/packages/app/src/components/archived-agent-callout.tsx b/packages/app/src/components/archived-agent-callout.tsx
+index b5f6a3e..5770778 100644
+--- a/packages/app/src/components/archived-agent-callout.tsx
++++ b/packages/app/src/components/archived-agent-callout.tsx
+@@ -84,7 +84,7 @@ const styles = StyleSheet.create((theme: Theme) => ({
+     alignItems: "center",
+     justifyContent: "center",
+     gap: theme.spacing[3],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.borderAccent,
+     borderRadius: theme.borderRadius["2xl"],
+diff --git a/packages/app/src/components/attachment-pill.tsx b/packages/app/src/components/attachment-pill.tsx
+index 4bf7022..61b592b 100644
+--- a/packages/app/src/components/attachment-pill.tsx
++++ b/packages/app/src/components/attachment-pill.tsx
+@@ -161,7 +161,7 @@ const styles = StyleSheet.create((theme) => ({
+     alignItems: "center",
+     gap: theme.spacing[2],
+     paddingHorizontal: theme.spacing[3],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   labelIcon: {
+     width: 18,
+@@ -187,7 +187,7 @@ const styles = StyleSheet.create((theme) => ({
+   thumbnailPlaceholder: {
+     width: ATTACHMENT_CONTENT_HEIGHT,
+     height: ATTACHMENT_CONTENT_HEIGHT,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   closeButton: {
+     position: "absolute",
+@@ -196,7 +196,7 @@ const styles = StyleSheet.create((theme) => ({
+     width: 24,
+     height: 24,
+     borderRadius: 12,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+     alignItems: "center",
+diff --git a/packages/app/src/components/combined-model-selector.tsx b/packages/app/src/components/combined-model-selector.tsx
+index 8473760..ecb627e 100644
+--- a/packages/app/src/components/combined-model-selector.tsx
++++ b/packages/app/src/components/combined-model-selector.tsx
+@@ -303,7 +303,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius["2xl"],
+   },
+   triggerHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   toolbarGlyph16: {
+     width: 16,
+@@ -316,7 +316,7 @@ const styles = StyleSheet.create((theme) => ({
+     flexShrink: 0,
+   },
+   triggerPressed: {
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   triggerDisabled: {
+     opacity: 0.5,
 diff --git a/packages/app/src/components/compact-explorer-sidebar.tsx b/packages/app/src/components/compact-explorer-sidebar.tsx
 index d52a9ea..a8b5279 100644
 --- a/packages/app/src/components/compact-explorer-sidebar.tsx
@@ -164,6 +459,37 @@ index d52a9ea..a8b5279 100644
    },
    tabText: {
      fontSize: theme.fontSize.base,
+diff --git a/packages/app/src/components/context-window-sheet.tsx b/packages/app/src/components/context-window-sheet.tsx
+index 5dd454e..59ce4f6 100644
+--- a/packages/app/src/components/context-window-sheet.tsx
++++ b/packages/app/src/components/context-window-sheet.tsx
+@@ -15,7 +15,7 @@ import {
+ // See docs/unistyles.md.
+ const ThemedBottomSheetModal = withUnistyles(IsolatedBottomSheetModal, (theme) => ({
+   backgroundStyle: {
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderTopLeftRadius: theme.borderRadius["2xl"],
+     borderTopRightRadius: theme.borderRadius["2xl"],
+   },
+diff --git a/packages/app/src/components/dictation-controls.tsx b/packages/app/src/components/dictation-controls.tsx
+index 5c8a990..ce5ab97 100644
+--- a/packages/app/src/components/dictation-controls.tsx
++++ b/packages/app/src/components/dictation-controls.tsx
+@@ -306,11 +306,11 @@ const styles = StyleSheet.create((theme) => ({
+   },
+   actionButtonCancel: {
+     borderColor: theme.colors.border,
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   actionButtonSecondary: {
+     borderColor: theme.colors.border,
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   actionButtonConfirm: {
+     borderColor: theme.colors.foreground,
 diff --git a/packages/app/src/components/diff-viewer.tsx b/packages/app/src/components/diff-viewer.tsx
 index 8d14eff..54ed58d 100644
 --- a/packages/app/src/components/diff-viewer.tsx
@@ -186,8 +512,30 @@ index 8d14eff..54ed58d 100644
      },
      contextText: {
        color: theme.colors.foregroundMuted,
+diff --git a/packages/app/src/components/download-toast.tsx b/packages/app/src/components/download-toast.tsx
+index 300b375..881bfa7 100644
+--- a/packages/app/src/components/download-toast.tsx
++++ b/packages/app/src/components/download-toast.tsx
+@@ -116,7 +116,7 @@ const styles = StyleSheet.create((theme) => ({
+     flexDirection: "row",
+     alignItems: "center",
+     gap: theme.spacing[3],
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderRadius: theme.borderRadius.lg,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+@@ -139,7 +139,7 @@ const styles = StyleSheet.create((theme) => ({
+   },
+   progressBar: {
+     height: 3,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+     borderRadius: theme.borderRadius.full,
+     marginTop: theme.spacing[1],
+     overflow: "hidden",
 diff --git a/packages/app/src/components/file-explorer-pane.tsx b/packages/app/src/components/file-explorer-pane.tsx
-index 209ec74..1a4b40a 100644
+index 209ec74..9d9288d 100644
 --- a/packages/app/src/components/file-explorer-pane.tsx
 +++ b/packages/app/src/components/file-explorer-pane.tsx
 @@ -1696,7 +1696,7 @@ const styles = StyleSheet.create((theme) => ({
@@ -199,6 +547,15 @@ index 209ec74..1a4b40a 100644
    },
    sortTriggerText: {
      fontSize: theme.fontSize.sm,
+@@ -1833,7 +1833,7 @@ const styles = StyleSheet.create((theme) => ({
+     aspectRatio: 1,
+   },
+   sheetBackground: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+   },
+   handleIndicator: {
+     backgroundColor: theme.colors.palette.zinc[600],
 diff --git a/packages/app/src/components/headers/screen-header.tsx b/packages/app/src/components/headers/screen-header.tsx
 index 6492658..581ed35 100644
 --- a/packages/app/src/components/headers/screen-header.tsx
@@ -212,10 +569,109 @@ index 6492658..581ed35 100644
    },
    inner: {},
    row: {
+diff --git a/packages/app/src/components/hosts/host-filter.tsx b/packages/app/src/components/hosts/host-filter.tsx
+index d073dc9..5fa8e1f 100644
+--- a/packages/app/src/components/hosts/host-filter.tsx
++++ b/packages/app/src/components/hosts/host-filter.tsx
+@@ -109,15 +109,15 @@ const styles = StyleSheet.create((theme) => ({
+     paddingVertical: theme.spacing[1.5],
+     paddingHorizontal: theme.spacing[3],
+     borderRadius: theme.borderRadius.md,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+   },
+   filterTriggerHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   filterTriggerPressed: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.surfaceRowPressed,
+   },
+   filterTriggerText: {
+     color: theme.colors.foreground,
+diff --git a/packages/app/src/components/import-session-sheet.tsx b/packages/app/src/components/import-session-sheet.tsx
+index 3be15c0..5264991 100644
+--- a/packages/app/src/components/import-session-sheet.tsx
++++ b/packages/app/src/components/import-session-sheet.tsx
+@@ -836,15 +836,15 @@ const styles = StyleSheet.create((theme) => ({
+     paddingVertical: theme.spacing[1.5],
+     paddingHorizontal: theme.spacing[3],
+     borderRadius: theme.borderRadius.md,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+   },
+   filterTriggerHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   filterTriggerPressed: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.surfaceRowPressed,
+   },
+   filterTriggerText: {
+     flexShrink: 1,
+@@ -870,10 +870,10 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.lg,
+   },
+   rowHovered: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   rowPressed: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   rowIconWrap: {
+     width: theme.iconSize.md,
+@@ -963,7 +963,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.lg,
+   },
+   refreshButtonPressed: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   refreshIconSlot: {
+     width: 16,
+diff --git a/packages/app/src/components/markdown/renderer.tsx b/packages/app/src/components/markdown/renderer.tsx
+index 83380ea..2590c99 100644
+--- a/packages/app/src/components/markdown/renderer.tsx
++++ b/packages/app/src/components/markdown/renderer.tsx
+@@ -741,7 +741,7 @@ const detailsStyles = StyleSheet.create((theme) => ({
+     gap: theme.spacing[1],
+     paddingHorizontal: theme.spacing[2],
+     paddingVertical: theme.spacing[2],
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   summaryIcon: {
+     color: theme.colors.foregroundMuted,
+@@ -780,7 +780,7 @@ const detailsStyles = StyleSheet.create((theme) => ({
+     marginTop: 2,
+     paddingHorizontal: theme.spacing[1],
+     borderRadius: theme.borderRadius.sm,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   flowImageFallbackText: {
+     fontSize: 10,
 diff --git a/packages/app/src/components/message.tsx b/packages/app/src/components/message.tsx
-index 583585b..1598e60 100644
+index 583585b..872dfbe 100644
 --- a/packages/app/src/components/message.tsx
 +++ b/packages/app/src/components/message.tsx
+@@ -349,7 +349,7 @@ const userMessageStylesheet = StyleSheet.create((theme) => ({
+     marginBottom: theme.spacing[4],
+   },
+   bubble: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.surfaceRowSelected,
+     borderRadius: theme.borderRadius["2xl"],
+     borderTopRightRadius: theme.borderRadius.sm,
+     paddingHorizontal: theme.spacing[4],
 @@ -1198,7 +1198,7 @@ const expandableBadgeStylesheet = StyleSheet.create((theme) => ({
      ...(isWeb ? { cursor: "auto" as const, userSelect: "text" as const } : {}),
    },
@@ -225,6 +681,53 @@ index 583585b..1598e60 100644
    },
    pressableExpandedAttached: {
      borderColor: theme.colors.border,
+diff --git a/packages/app/src/components/model-browser.tsx b/packages/app/src/components/model-browser.tsx
+index 17924b2..98e0d91 100644
+--- a/packages/app/src/components/model-browser.tsx
++++ b/packages/app/src/components/model-browser.tsx
+@@ -1553,7 +1553,7 @@ const styles = StyleSheet.create((theme) => ({
+     gap: theme.spacing[1],
+   },
+   profilesContainer: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderBottomWidth: 1,
+     borderBottomColor: theme.colors.border,
+   },
+@@ -1598,16 +1598,16 @@ const styles = StyleSheet.create((theme) => ({
+   },
+   browserModelRow: isWeb ? {} : { marginBottom: theme.spacing[1] },
+   browserRowHovered: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   browserRowHoveredElevated: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   browserRowPressed: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   browserRowPressedElevated: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   browserRowContent: {
+     flex: 1,
+@@ -1683,10 +1683,10 @@ const styles = StyleSheet.create((theme) => ({
+     transform: [{ scale: 0.7 }],
+   },
+   rowIconButtonHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   rowIconButtonPressed: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   profileActionHidden: {
+     opacity: 0,
 diff --git a/packages/app/src/components/page-layout/index.tsx b/packages/app/src/components/page-layout/index.tsx
 index e0c46b6..2b13514 100644
 --- a/packages/app/src/components/page-layout/index.tsx
@@ -238,6 +741,134 @@ index e0c46b6..2b13514 100644
    },
    scroll: {
      flex: 1,
+diff --git a/packages/app/src/components/pair-link-modal.tsx b/packages/app/src/components/pair-link-modal.tsx
+index 8ed9cef..1f03586 100644
+--- a/packages/app/src/components/pair-link-modal.tsx
++++ b/packages/app/src/components/pair-link-modal.tsx
+@@ -41,7 +41,7 @@ const styles = StyleSheet.create((theme) => ({
+     fontWeight: theme.fontWeight.medium,
+   },
+   input: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     borderRadius: theme.borderRadius.lg,
+     paddingHorizontal: theme.spacing[4],
+     paddingVertical: theme.spacing[3],
+diff --git a/packages/app/src/components/plan-card.tsx b/packages/app/src/components/plan-card.tsx
+index 52c7068..4dc692e 100644
+--- a/packages/app/src/components/plan-card.tsx
++++ b/packages/app/src/components/plan-card.tsx
+@@ -276,7 +276,7 @@ const styles = StyleSheet.create((theme) => ({
+     padding: theme.spacing[3],
+     borderRadius: theme.spacing[2],
+     borderWidth: 1,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderColor: theme.colors.border,
+     gap: theme.spacing[2],
+   },
+diff --git a/packages/app/src/components/provider-catalog-list.tsx b/packages/app/src/components/provider-catalog-list.tsx
+index 3e75765..840a61d 100644
+--- a/packages/app/src/components/provider-catalog-list.tsx
++++ b/packages/app/src/components/provider-catalog-list.tsx
+@@ -203,7 +203,7 @@ const styles = StyleSheet.create((theme) => ({
+     width: 36,
+     height: 36,
+     borderRadius: theme.borderRadius.md,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     alignItems: "center",
+     justifyContent: "center",
+   },
+diff --git a/packages/app/src/components/question-form-card.tsx b/packages/app/src/components/question-form-card.tsx
+index 5b3b146..e135828 100644
+--- a/packages/app/src/components/question-form-card.tsx
++++ b/packages/app/src/components/question-form-card.tsx
+@@ -73,11 +73,11 @@ function QuestionOptionRow({
+     ({ pressed, hovered }: PressableStateCallbackType & { hovered?: boolean }) => [
+       styles.optionItem,
+       (Boolean(hovered) || isSelected) && {
+-        backgroundColor: theme.colors.surface2,
++        backgroundColor: theme.colors.interactionHighlight,
+       },
+       pressed && styles.optionItemPressed,
+     ],
+-    [isSelected, theme.colors.surface2],
++    [isSelected, theme.colors.interactionHighlight],
+   );
+ 
+   const optionLabelStyle = useMemo(
+@@ -292,7 +292,7 @@ function QuestionOtherInput({
+         {
+           borderColor: value.length > 0 ? theme.colors.borderAccent : theme.colors.border,
+           color: theme.colors.foreground,
+-          backgroundColor: theme.colors.surface2,
++          backgroundColor: theme.colors.surfaceCard,
+         },
+         IS_WEB ? { outlineStyle: "none", outlineWidth: 0, outlineColor: "transparent" } : null,
+       ] as const,
+@@ -490,11 +490,11 @@ export function QuestionFormCard({ permission, onRespond, isResponding }: Questi
+     () => [
+       styles.container,
+       {
+-        backgroundColor: theme.colors.surface1,
++        backgroundColor: theme.colors.surfaceCard,
+         borderColor: theme.colors.border,
+       },
+     ],
+-    [theme.colors.surface1, theme.colors.border],
++    [theme.colors.surfaceCard, theme.colors.border],
+   );
+   const questionTextStyle = useMemo(
+     () => [styles.questionText, { color: theme.colors.foreground }],
+diff --git a/packages/app/src/components/quitting-overlay.tsx b/packages/app/src/components/quitting-overlay.tsx
+index 51b1353..dc977dd 100644
+--- a/packages/app/src/components/quitting-overlay.tsx
++++ b/packages/app/src/components/quitting-overlay.tsx
+@@ -52,7 +52,7 @@ const styles = StyleSheet.create((theme) => ({
+     left: 0,
+     right: 0,
+     bottom: 0,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceMenu,
+     alignItems: "center",
+     justifyContent: "center",
+     gap: theme.spacing[3],
+diff --git a/packages/app/src/components/realtime-voice-overlay.tsx b/packages/app/src/components/realtime-voice-overlay.tsx
+index 88b2e37..7f647c3 100644
+--- a/packages/app/src/components/realtime-voice-overlay.tsx
++++ b/packages/app/src/components/realtime-voice-overlay.tsx
+@@ -101,7 +101,7 @@ const styles = StyleSheet.create((theme) => ({
+     justifyContent: "space-between",
+     paddingHorizontal: theme.spacing[4],
+     paddingVertical: OVERLAY_VERTICAL_PADDING,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+   },
+@@ -123,7 +123,7 @@ const styles = StyleSheet.create((theme) => ({
+     justifyContent: "center",
+   },
+   muteButton: {
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+   },
+diff --git a/packages/app/src/components/rename-modal.tsx b/packages/app/src/components/rename-modal.tsx
+index 5741abb..8c5df86 100644
+--- a/packages/app/src/components/rename-modal.tsx
++++ b/packages/app/src/components/rename-modal.tsx
+@@ -175,7 +175,7 @@ const styles = StyleSheet.create((theme) => ({
+     paddingBottom: theme.spacing[2],
+   },
+   input: {
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceCard,
+     color: theme.colors.foreground,
+     paddingVertical: theme.spacing[3],
+     paddingHorizontal: theme.spacing[3],
 diff --git a/packages/app/src/components/root-error-boundary.tsx b/packages/app/src/components/root-error-boundary.tsx
 index 01e8b79..93e34b1 100644
 --- a/packages/app/src/components/root-error-boundary.tsx
@@ -251,6 +882,44 @@ index 01e8b79..93e34b1 100644
    },
    content: {
      flex: 1,
+diff --git a/packages/app/src/components/schedules/schedule-form-sheet.tsx b/packages/app/src/components/schedules/schedule-form-sheet.tsx
+index 230a41e..ff1af16 100644
+--- a/packages/app/src/components/schedules/schedule-form-sheet.tsx
++++ b/packages/app/src/components/schedules/schedule-form-sheet.tsx
+@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create((theme) => {
+     readonlyField: {
+       flexDirection: "row",
+       alignItems: "center",
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCard,
+       borderWidth: 1,
+       borderColor: theme.colors.border,
+     },
+diff --git a/packages/app/src/components/schedules/schedule-row.tsx b/packages/app/src/components/schedules/schedule-row.tsx
+index 2af4b33..8d24238 100644
+--- a/packages/app/src/components/schedules/schedule-row.tsx
++++ b/packages/app/src/components/schedules/schedule-row.tsx
+@@ -409,10 +409,10 @@ const styles = StyleSheet.create((theme) => ({
+     gap: theme.spacing[3],
+   },
+   rowHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   rowPressed: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   main: {
+     flex: 1,
+@@ -446,6 +446,6 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.base,
+   },
+   kebabTriggerHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+ }));
 diff --git a/packages/app/src/components/settings/collapsible-row.tsx b/packages/app/src/components/settings/collapsible-row.tsx
 index 219c197..6854204 100644
 --- a/packages/app/src/components/settings/collapsible-row.tsx
@@ -406,6 +1075,18 @@ index c299d07..9362021 100644
 +    backgroundColor: theme.colors.surfaceRowSelected,
    },
  }));
+diff --git a/packages/app/src/components/sidebar/sidebar-workspace-menu.tsx b/packages/app/src/components/sidebar/sidebar-workspace-menu.tsx
+index e1543fa..0764c60 100644
+--- a/packages/app/src/components/sidebar/sidebar-workspace-menu.tsx
++++ b/packages/app/src/components/sidebar/sidebar-workspace-menu.tsx
+@@ -447,6 +447,6 @@ const styles = StyleSheet.create((theme) => ({
+     marginRight: -7,
+   },
+   triggerHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+ }));
 diff --git a/packages/app/src/components/sidebar/sidebar-workspace-row.tsx b/packages/app/src/components/sidebar/sidebar-workspace-row.tsx
 index f8dcdeb..bd61e79 100644
 --- a/packages/app/src/components/sidebar/sidebar-workspace-row.tsx
@@ -445,6 +1126,51 @@ index 9705f3b..87dec24 100644
      overflow: "hidden",
    },
    paneTabs: {
+diff --git a/packages/app/src/components/terminal-copy-paste-actions.tsx b/packages/app/src/components/terminal-copy-paste-actions.tsx
+index 26bba48..e604318 100644
+--- a/packages/app/src/components/terminal-copy-paste-actions.tsx
++++ b/packages/app/src/components/terminal-copy-paste-actions.tsx
+@@ -109,10 +109,10 @@ const styles = StyleSheet.create((theme) => ({
+     alignItems: "center",
+     justifyContent: "center",
+     paddingHorizontal: theme.spacing[1],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   keyButtonHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   keyButtonDisabled: {
+     opacity: 0.45,
+diff --git a/packages/app/src/components/toast-host.tsx b/packages/app/src/components/toast-host.tsx
+index 6b9009d..1e87584 100644
+--- a/packages/app/src/components/toast-host.tsx
++++ b/packages/app/src/components/toast-host.tsx
+@@ -11,7 +11,7 @@ import {
+ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+ import { useSafeAreaInsets } from "react-native-safe-area-context";
+ import { StyleSheet, withUnistyles } from "react-native-unistyles";
+-import type { Theme } from "@/styles/theme";
++import { glassBackdropFilter, type Theme } from "@/styles/theme";
+ import { useTranslation } from "react-i18next";
+ import { useIsCompactFormFactor } from "@/constants/layout";
+ import { isWeb } from "@/constants/platform";
+@@ -288,12 +288,13 @@ const styles = StyleSheet.create((theme) => ({
+     flexDirection: "row",
+     alignItems: "center",
+     gap: theme.spacing[2],
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderRadius: theme.borderRadius["2xl"],
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+     paddingVertical: theme.spacing[2],
+     paddingHorizontal: theme.spacing[3],
++    ...glassBackdropFilter,
+     ...theme.shadow.md,
+   },
+   toastInfo: {
 diff --git a/packages/app/src/components/tool-call-details.tsx b/packages/app/src/components/tool-call-details.tsx
 index 50e4052..51c9185 100644
 --- a/packages/app/src/components/tool-call-details.tsx
@@ -476,6 +1202,37 @@ index 50e4052..51c9185 100644
      },
      scrollContent: {
        padding: insets.padding,
+diff --git a/packages/app/src/components/tool-call-sheet.tsx b/packages/app/src/components/tool-call-sheet.tsx
+index 33009ee..37cc323 100644
+--- a/packages/app/src/components/tool-call-sheet.tsx
++++ b/packages/app/src/components/tool-call-sheet.tsx
+@@ -72,7 +72,7 @@ const ThemedCloseIcon = withUnistyles(X, (theme) => ({
+ 
+ export const ToolCallSheetModal = withUnistyles(IsolatedBottomSheetModal, (theme) => ({
+   backgroundStyle: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderRadius: 16,
+   },
+   handleIndicatorStyle: {
+@@ -198,7 +198,7 @@ function ToolCallSheetContent({ data, onClose }: ToolCallSheetContentProps) {
+ const styles = StyleSheet.create((theme) => ({
+   container: {
+     flex: 1,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+   },
+   header: {
+     flexDirection: "row",
+@@ -227,7 +227,7 @@ const styles = StyleSheet.create((theme) => ({
+   content: {
+     flex: 1,
+     minHeight: 0,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+   },
+   contentContainer: {
+     padding: 0,
 diff --git a/packages/app/src/components/tree-primitives.tsx b/packages/app/src/components/tree-primitives.tsx
 index 378eb2c..89ab166 100644
 --- a/packages/app/src/components/tree-primitives.tsx
@@ -623,6 +1380,32 @@ index 736ca3b..ca7390f 100644
      ...theme.shadow.md,
      maxHeight: 400,
      overflow: "hidden",
+diff --git a/packages/app/src/components/ui/floating-action-button.tsx b/packages/app/src/components/ui/floating-action-button.tsx
+index 33d7298..802ed66 100644
+--- a/packages/app/src/components/ui/floating-action-button.tsx
++++ b/packages/app/src/components/ui/floating-action-button.tsx
+@@ -53,7 +53,7 @@ const styles = StyleSheet.create((theme) => ({
+     alignItems: "center",
+     justifyContent: "center",
+     borderRadius: theme.borderRadius.full,
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.surfaceMenu,
+     ...theme.shadow.md,
+   },
+   pressed: {
+diff --git a/packages/app/src/components/ui/form-field.tsx b/packages/app/src/components/ui/form-field.tsx
+index f55b10b..29710cd 100644
+--- a/packages/app/src/components/ui/form-field.tsx
++++ b/packages/app/src/components/ui/form-field.tsx
+@@ -260,7 +260,7 @@ const formInputStyles = StyleSheet.create((theme) => {
+ 
+   return {
+     chrome: {
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCard,
+     },
+     chromeSm: {
+       ...geometry.fieldControlSm,
 diff --git a/packages/app/src/components/ui/hover-card.tsx b/packages/app/src/components/ui/hover-card.tsx
 index 3d43850..38714dd 100644
 --- a/packages/app/src/components/ui/hover-card.tsx
@@ -731,6 +1514,27 @@ index 0363467..c24f9d0 100644
      borderBottomWidth: 1,
      borderBottomColor: theme.colors.border,
      flexShrink: 0,
+diff --git a/packages/app/src/components/ui/scrollable-code-surface.tsx b/packages/app/src/components/ui/scrollable-code-surface.tsx
+index 3b99f8b..f44eb46 100644
+--- a/packages/app/src/components/ui/scrollable-code-surface.tsx
++++ b/packages/app/src/components/ui/scrollable-code-surface.tsx
+@@ -175,13 +175,13 @@ const styles = StyleSheet.create((theme) => ({
+     borderColor: theme.colors.border,
+   },
+   surface0: {
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceCode,
+   },
+   surface1: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCode,
+   },
+   surface2: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCode,
+   },
+   content: {
+     paddingVertical: theme.spacing[3],
 diff --git a/packages/app/src/components/ui/search-field.tsx b/packages/app/src/components/ui/search-field.tsx
 index 77daed2..6970e09 100644
 --- a/packages/app/src/components/ui/search-field.tsx
@@ -786,7 +1590,7 @@ index a1228cb..ae26d44 100644
      triggerSm: {
        ...geometry.fieldControlSm,
 diff --git a/packages/app/src/components/welcome-screen.tsx b/packages/app/src/components/welcome-screen.tsx
-index 1b3cdbe..ca768cf 100644
+index 1b3cdbe..a81ecea 100644
 --- a/packages/app/src/components/welcome-screen.tsx
 +++ b/packages/app/src/components/welcome-screen.tsx
 @@ -39,7 +39,7 @@ interface WelcomeAction {
@@ -798,8 +1602,180 @@ index 1b3cdbe..ca768cf 100644
    },
    scrollView: {
      flex: 1,
+@@ -84,7 +84,7 @@ const styles = StyleSheet.create((theme) => ({
+     gap: theme.spacing[3],
+     paddingVertical: theme.spacing[4],
+     borderRadius: theme.borderRadius.xl,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+   },
+diff --git a/packages/app/src/components/workspace-hover-card.tsx b/packages/app/src/components/workspace-hover-card.tsx
+index 039fec3..0ff71ae 100644
+--- a/packages/app/src/components/workspace-hover-card.tsx
++++ b/packages/app/src/components/workspace-hover-card.tsx
+@@ -19,7 +19,7 @@ import {
+ } from "lucide-react-native";
+ import { getForgePresentation, normalizeForge } from "@/git/forge";
+ import { ForgeBrandIcon } from "@/git/forge-icon";
+-import type { Theme } from "@/styles/theme";
++import { glassBackdropFilter, type Theme } from "@/styles/theme";
+ import { DiffStat } from "@/components/diff-stat";
+ import { Pressable } from "react-native";
+ import type { GestureResponderEvent } from "react-native";
+@@ -351,12 +351,13 @@ function checksSummaryPressableStyle({ hovered = false }: { pressed: boolean; ho
+ 
+ const styles = StyleSheet.create((theme) => ({
+   card: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderWidth: 1,
+     borderColor: theme.colors.borderAccent,
+     borderRadius: theme.borderRadius.lg,
+     paddingTop: theme.spacing[2],
+     width: HOVER_CARD_WIDTH,
++    ...glassBackdropFilter,
+     shadowColor: "#000",
+     shadowOffset: { width: 0, height: 4 },
+     shadowOpacity: 0.2,
+@@ -399,7 +400,7 @@ const styles = StyleSheet.create((theme) => ({
+     backgroundColor: theme.colors.border,
+   },
+   listRowHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   checksSummaryRow: {
+     flexDirection: "row",
+diff --git a/packages/app/src/components/workspace-setup-dialog.tsx b/packages/app/src/components/workspace-setup-dialog.tsx
+index 1954394..9c0529b 100644
+--- a/packages/app/src/components/workspace-setup-dialog.tsx
++++ b/packages/app/src/components/workspace-setup-dialog.tsx
+@@ -498,6 +498,6 @@ const styles = StyleSheet.create((theme) => ({
+     lineHeight: 20,
+   },
+   composerInputWrapper: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+ }));
+diff --git a/packages/app/src/components/zoomable-viewport/toolbar.tsx b/packages/app/src/components/zoomable-viewport/toolbar.tsx
+index 7f95106..2a46635 100644
+--- a/packages/app/src/components/zoomable-viewport/toolbar.tsx
++++ b/packages/app/src/components/zoomable-viewport/toolbar.tsx
+@@ -123,12 +123,12 @@ const styles = StyleSheet.create((theme) => ({
+     pointerEvents: "box-none",
+   },
+   button: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+     opacity: 1,
+     pointerEvents: "auto",
+   },
+   buttonHidden: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+     opacity: 0,
+     pointerEvents: "none",
+   },
+diff --git a/packages/app/src/composer/agent-controls/control.tsx b/packages/app/src/composer/agent-controls/control.tsx
+index 64b8b39..65c513f 100644
+--- a/packages/app/src/composer/agent-controls/control.tsx
++++ b/packages/app/src/composer/agent-controls/control.tsx
+@@ -128,10 +128,10 @@ const styles = StyleSheet.create((theme) => ({
+     marginHorizontal: -theme.spacing[1],
+     paddingHorizontal: theme.spacing[4],
+     borderRadius: theme.borderRadius["2xl"],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   sheetRowInteractive: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   sheetGlyph: {
+     width: 20,
+@@ -156,10 +156,10 @@ const styles = StyleSheet.create((theme) => ({
+     fontWeight: theme.fontWeight.normal,
+   },
+   hovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   pressed: {
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   disabled: {
+     opacity: 0.5,
+diff --git a/packages/app/src/composer/agent-controls/index.tsx b/packages/app/src/composer/agent-controls/index.tsx
+index 7279528..9f31132 100644
+--- a/packages/app/src/composer/agent-controls/index.tsx
++++ b/packages/app/src/composer/agent-controls/index.tsx
+@@ -1981,10 +1981,10 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.full,
+   },
+   modeBadgeHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   modeBadgePressed: {
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   disabledBadge: {
+     opacity: 0.5,
+diff --git a/packages/app/src/composer/agent-controls/model-sheet.tsx b/packages/app/src/composer/agent-controls/model-sheet.tsx
+index bca5a25..51f06e7 100644
+--- a/packages/app/src/composer/agent-controls/model-sheet.tsx
++++ b/packages/app/src/composer/agent-controls/model-sheet.tsx
+@@ -387,10 +387,10 @@ const styles = StyleSheet.create((theme) => ({
+     backgroundColor: "transparent",
+   },
+   triggerHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   triggerPressed: {
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   triggerDisabled: {
+     opacity: 0.5,
+diff --git a/packages/app/src/composer/index.tsx b/packages/app/src/composer/index.tsx
+index c36d7f9..8c1f76a 100644
+--- a/packages/app/src/composer/index.tsx
++++ b/packages/app/src/composer/index.tsx
+@@ -2537,7 +2537,7 @@ const styles = StyleSheet.create((theme: Theme) => ({
+     borderColor: theme.colors.palette.green[800],
+   },
+   iconButtonHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   attachmentTray: {
+     flexDirection: "row",
+@@ -2566,7 +2566,7 @@ const styles = StyleSheet.create((theme: Theme) => ({
+     justifyContent: "space-between",
+     paddingHorizontal: theme.spacing[3],
+     paddingVertical: theme.spacing[2],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderRadius: theme.borderRadius.lg,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+@@ -2588,7 +2588,7 @@ const styles = StyleSheet.create((theme: Theme) => ({
+     borderRadius: theme.borderRadius.full,
+     alignItems: "center",
+     justifyContent: "center",
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   queueSendButton: {
+     backgroundColor: theme.colors.accent,
 diff --git a/packages/app/src/composer/input/input.tsx b/packages/app/src/composer/input/input.tsx
-index e15a000..2b140e0 100644
+index e15a000..057b20b 100644
 --- a/packages/app/src/composer/input/input.tsx
 +++ b/packages/app/src/composer/input/input.tsx
 @@ -1917,7 +1917,7 @@ const styles = StyleSheet.create((theme: Theme) => ({
@@ -811,6 +1787,15 @@ index e15a000..2b140e0 100644
      borderWidth: theme.borderWidth[1],
      borderColor: theme.colors.borderAccent,
      borderRadius: theme.borderRadius["2xl"],
+@@ -2051,7 +2051,7 @@ const styles = StyleSheet.create((theme: Theme) => ({
+     color: theme.colors.accentForeground,
+   },
+   iconButtonHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   tooltipRow: {
+     flexDirection: "row",
 diff --git a/packages/app/src/composer/pill-styles.ts b/packages/app/src/composer/pill-styles.ts
 index 3ab03c8..9863e19 100644
 --- a/packages/app/src/composer/pill-styles.ts
@@ -828,6 +1813,80 @@ index 3ab03c8..9863e19 100644
    },
    label: {
      fontSize: theme.fontSize.sm,
+diff --git a/packages/app/src/composer/tracks.tsx b/packages/app/src/composer/tracks.tsx
+index e33cd6b..2178c50 100644
+--- a/packages/app/src/composer/tracks.tsx
++++ b/packages/app/src/composer/tracks.tsx
+@@ -353,7 +353,7 @@ const styles = StyleSheet.create((theme) => {
+       paddingHorizontal: theme.spacing[2],
+       paddingVertical: theme.spacing[1],
+       borderRadius: theme.borderRadius.md,
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceRowSelected,
+     },
+     // Segments sit twice as far apart as a mark sits from its own text, so a count reads as
+     // belonging to the mark on its left rather than to the words on its right.
+diff --git a/packages/app/src/desktop/components/desktop-permission-row.tsx b/packages/app/src/desktop/components/desktop-permission-row.tsx
+index a03a3a6..2d3ae70 100644
+--- a/packages/app/src/desktop/components/desktop-permission-row.tsx
++++ b/packages/app/src/desktop/components/desktop-permission-row.tsx
+@@ -82,7 +82,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.full,
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.surfaceCard,
+     paddingHorizontal: theme.spacing[2],
+     paddingVertical: 4,
+     minWidth: 88,
+diff --git a/packages/app/src/desktop/components/pair-device-section.tsx b/packages/app/src/desktop/components/pair-device-section.tsx
+index 9209f6f..598066d 100644
+--- a/packages/app/src/desktop/components/pair-device-section.tsx
++++ b/packages/app/src/desktop/components/pair-device-section.tsx
+@@ -305,7 +305,7 @@ const styles = StyleSheet.create((theme) => ({
+     width: 48,
+     height: 48,
+     borderRadius: theme.borderRadius.full,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+     alignItems: "center",
+@@ -379,7 +379,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.lg,
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     overflow: "hidden",
+   },
+   linkInput: {
+diff --git a/packages/app/src/file-pane/conflict-alert.tsx b/packages/app/src/file-pane/conflict-alert.tsx
+index 12354f1..33061d2 100644
+--- a/packages/app/src/file-pane/conflict-alert.tsx
++++ b/packages/app/src/file-pane/conflict-alert.tsx
+@@ -63,7 +63,7 @@ const styles = StyleSheet.create((theme) => ({
+     paddingVertical: theme.spacing[2],
+     borderBottomWidth: 1,
+     borderBottomColor: theme.colors.palette.amber[500],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   message: {
+     flex: 1,
+diff --git a/packages/app/src/file-pane/markdown-preview/index.tsx b/packages/app/src/file-pane/markdown-preview/index.tsx
+index e8d172c..7343b07 100644
+--- a/packages/app/src/file-pane/markdown-preview/index.tsx
++++ b/packages/app/src/file-pane/markdown-preview/index.tsx
+@@ -72,7 +72,7 @@ const styles = StyleSheet.create((theme) => ({
+     maxWidth: 180,
+     paddingHorizontal: theme.spacing[3],
+     paddingVertical: theme.spacing[2],
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   frontMatterValueCell: {
+     flex: 1,
 diff --git a/packages/app/src/git/actions-split-button.tsx b/packages/app/src/git/actions-split-button.tsx
 index 193154b..bdf2115 100644
 --- a/packages/app/src/git/actions-split-button.tsx
@@ -904,6 +1963,72 @@ index d19d58c..db8d745 100644
    canvasInteraction: {
      backgroundColor: "transparent",
      borderColor: "transparent",
+diff --git a/packages/app/src/git/forges/gitlab.view.tsx b/packages/app/src/git/forges/gitlab.view.tsx
+index 39bf349..b878fde 100644
+--- a/packages/app/src/git/forges/gitlab.view.tsx
++++ b/packages/app/src/git/forges/gitlab.view.tsx
+@@ -281,7 +281,7 @@ const styles = StyleSheet.create((theme) => ({
+     color: theme.colors.foregroundMuted,
+   },
+   hoverable: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   pipelineStageHeader: {
+     flexDirection: "row",
+diff --git a/packages/app/src/git/pull-request-panel/pane.tsx b/packages/app/src/git/pull-request-panel/pane.tsx
+index 429dd2b..fccff9d 100644
+--- a/packages/app/src/git/pull-request-panel/pane.tsx
++++ b/packages/app/src/git/pull-request-panel/pane.tsx
+@@ -1383,7 +1383,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: 4,
+   },
+   kebabButtonHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   cardBody: {
+     paddingHorizontal: theme.spacing[3],
+@@ -1415,7 +1415,7 @@ const styles = StyleSheet.create((theme) => ({
+     paddingHorizontal: theme.spacing[3],
+     paddingVertical: theme.spacing[2],
+     minHeight: 36,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   threadPath: {
+     fontSize: theme.fontSize.sm,
+@@ -1454,7 +1454,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+     borderRadius: theme.borderRadius.md,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     marginBottom: theme.spacing[2],
+     overflow: "hidden",
+   },
+diff --git a/packages/app/src/hosts/host-chooser.tsx b/packages/app/src/hosts/host-chooser.tsx
+index 5181fb6..b6ff693 100644
+--- a/packages/app/src/hosts/host-chooser.tsx
++++ b/packages/app/src/hosts/host-chooser.tsx
+@@ -302,7 +302,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+     borderRadius: theme.borderRadius.lg,
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceMenu,
+     overflow: "hidden",
+     ...theme.shadow.lg,
+   },
+@@ -339,7 +339,7 @@ const styles = StyleSheet.create((theme) => ({
+     paddingVertical: theme.spacing[3],
+   },
+   rowActive: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   rowIconSlot: {
+     width: 18,
 diff --git a/packages/app/src/navigation/themed-stack.tsx b/packages/app/src/navigation/themed-stack.tsx
 index 010877c..8bc19d6 100644
 --- a/packages/app/src/navigation/themed-stack.tsx
@@ -917,8 +2042,30 @@ index 010877c..8bc19d6 100644
 +export const ThemedStack = withUnistyles(ThemedStackBase, () => ({
 +  backgroundColor: "transparent",
  }));
+diff --git a/packages/app/src/pane-find/index.tsx b/packages/app/src/pane-find/index.tsx
+index 761ac18..0efb0d4 100644
+--- a/packages/app/src/pane-find/index.tsx
++++ b/packages/app/src/pane-find/index.tsx
+@@ -330,7 +330,7 @@ const styles = StyleSheet.create((theme) => {
+       flexDirection: "row",
+       padding: theme.spacing[1.5],
+       gap: theme.spacing[1],
+-      backgroundColor: theme.colors.surface1,
++      backgroundColor: theme.colors.surfaceMenu,
+       borderWidth: theme.borderWidth[1],
+       borderColor: theme.colors.border,
+       borderRadius: theme.borderRadius.lg,
+@@ -347,7 +347,7 @@ const styles = StyleSheet.create((theme) => {
+       alignItems: "center",
+       gap: theme.spacing[2],
+       paddingHorizontal: theme.spacing[2],
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCard,
+       borderRadius: theme.borderRadius.md,
+     },
+     controlRest: { ...geometry.controlRest },
 diff --git a/packages/app/src/panels/agent-panel.tsx b/packages/app/src/panels/agent-panel.tsx
-index 2d8a605..c959a3b 100644
+index 2d8a605..e34c7c7 100644
 --- a/packages/app/src/panels/agent-panel.tsx
 +++ b/packages/app/src/panels/agent-panel.tsx
 @@ -1727,11 +1727,11 @@ const animatedStaticStyles = RNStyleSheet.create({
@@ -935,8 +2082,50 @@ index 2d8a605..c959a3b 100644
    },
    contentContainer: {
      flex: 1,
+@@ -1753,7 +1753,7 @@ const styles = StyleSheet.create((theme) => ({
+     alignItems: "center",
+     justifyContent: "center",
+     gap: theme.spacing[3],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.statusDanger,
+     borderRadius: theme.borderRadius["2xl"],
+@@ -1770,7 +1770,7 @@ const styles = StyleSheet.create((theme) => ({
+     right: 0,
+     bottom: 0,
+     left: 0,
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceMenu,
+     alignItems: "center",
+     justifyContent: "center",
+     zIndex: 40,
+diff --git a/packages/app/src/panels/new-tab-panel.tsx b/packages/app/src/panels/new-tab-panel.tsx
+index da1039a..2503f55 100644
+--- a/packages/app/src/panels/new-tab-panel.tsx
++++ b/packages/app/src/panels/new-tab-panel.tsx
+@@ -304,9 +304,9 @@ const styles = StyleSheet.create((theme) => ({
+     borderColor: "transparent",
+     outlineWidth: 0,
+     outlineColor: "transparent",
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+-  rowHovered: { backgroundColor: theme.colors.surface2 },
++  rowHovered: { backgroundColor: theme.colors.surfaceRowHover },
+   rowFocused: { borderColor: theme.colors.borderAccent },
+   rowPressed: { opacity: 0.85 },
+   rowLabel: { flex: 1, color: theme.colors.foreground },
+@@ -344,6 +344,6 @@ const styles = StyleSheet.create((theme) => ({
+     opacity: theme.opacity[50],
+   },
+   editProfilesHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+ }));
 diff --git a/packages/app/src/panels/setup-panel.tsx b/packages/app/src/panels/setup-panel.tsx
-index 3648bf5..f959e49 100644
+index 3648bf5..f06861e 100644
 --- a/packages/app/src/panels/setup-panel.tsx
 +++ b/packages/app/src/panels/setup-panel.tsx
 @@ -569,7 +569,7 @@ const styles = StyleSheet.create((theme) => ({
@@ -948,6 +2137,24 @@ index 3648bf5..f959e49 100644
    },
    contentContainer: {
      padding: theme.spacing[4],
+@@ -616,7 +616,7 @@ const styles = StyleSheet.create((theme) => ({
+     gap: theme.spacing[2],
+     paddingHorizontal: theme.spacing[3],
+     paddingVertical: theme.spacing[2],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   commandRowExpanded: {
+     borderBottomWidth: theme.borderWidth[1],
+@@ -649,7 +649,7 @@ const styles = StyleSheet.create((theme) => ({
+     transform: [{ rotate: "90deg" }],
+   },
+   commandDetail: {
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceCode,
+   },
+   logScroll: {
+     maxHeight: 400,
 diff --git a/packages/app/src/plugins/surface-screen.tsx b/packages/app/src/plugins/surface-screen.tsx
 index f2f9997..cd63b17 100644
 --- a/packages/app/src/plugins/surface-screen.tsx
@@ -961,6 +2168,46 @@ index f2f9997..cd63b17 100644
    },
    body: {
      flex: 1,
+diff --git a/packages/app/src/review/surface.tsx b/packages/app/src/review/surface.tsx
+index 43b6af9..4c8441c 100644
+--- a/packages/app/src/review/surface.tsx
++++ b/packages/app/src/review/surface.tsx
+@@ -583,7 +583,7 @@ const styles = StyleSheet.create((theme) => ({
+     paddingHorizontal: theme.spacing[3],
+   },
+   commentBlock: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.borderAccent,
+     borderRadius: theme.borderRadius.lg,
+@@ -621,14 +621,14 @@ const styles = StyleSheet.create((theme) => ({
+       : {}),
+   },
+   iconButtonHovered: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   iconButtonDestructiveHovered: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   editorBlock: {
+     minHeight: INLINE_REVIEW_EDITOR_HEIGHT,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.borderAccent,
+     borderRadius: theme.borderRadius.lg,
+@@ -640,7 +640,7 @@ const styles = StyleSheet.create((theme) => ({
+     flex: 1,
+     minHeight: 0,
+     color: theme.colors.foreground,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+     borderRadius: theme.borderRadius.md,
 diff --git a/packages/app/src/screens/new-workspace-screen.tsx b/packages/app/src/screens/new-workspace-screen.tsx
 index c919ab4..a035fb8 100644
 --- a/packages/app/src/screens/new-workspace-screen.tsx
@@ -1004,6 +2251,45 @@ index 4c340e0..636558a 100644
      borderColor: theme.colors.borderAccent,
    },
    tilePressed: {
+diff --git a/packages/app/src/screens/project-settings-screen.tsx b/packages/app/src/screens/project-settings-screen.tsx
+index 50c81a0..9de314c 100644
+--- a/packages/app/src/screens/project-settings-screen.tsx
++++ b/packages/app/src/screens/project-settings-screen.tsx
+@@ -1221,7 +1221,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.md,
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   modalMultilineInput: {
+     color: theme.colors.foreground,
+@@ -1231,7 +1231,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.md,
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     minHeight: 100,
+     textAlignVertical: "top",
+   },
+diff --git a/packages/app/src/screens/projects-screen.tsx b/packages/app/src/screens/projects-screen.tsx
+index 0220bbf..b2a886b 100644
+--- a/packages/app/src/screens/projects-screen.tsx
++++ b/packages/app/src/screens/projects-screen.tsx
+@@ -206,10 +206,10 @@ const styles = StyleSheet.create((theme) => ({
+     gap: theme.spacing[3],
+   },
+   rowHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   rowPressed: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   leading: {
+     width: 16,
 diff --git a/packages/app/src/screens/schedules-screen.tsx b/packages/app/src/screens/schedules-screen.tsx
 index ce2f8b9..acbcb97 100644
 --- a/packages/app/src/screens/schedules-screen.tsx
@@ -1074,8 +2360,124 @@ index 925607a..e751544 100644
    },
    pickerTriggerLabel: {
      flex: 1,
+diff --git a/packages/app/src/screens/settings/appearance/appearance-preview.tsx b/packages/app/src/screens/settings/appearance/appearance-preview.tsx
+index 01699b6..00cb268 100644
+--- a/packages/app/src/screens/settings/appearance/appearance-preview.tsx
++++ b/packages/app/src/screens/settings/appearance/appearance-preview.tsx
+@@ -188,7 +188,7 @@ export function AppearancePreview({ overrides }: AppearancePreviewProps) {
+ 
+ const styles = StyleSheet.create((theme) => ({
+   card: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderRadius: theme.borderRadius.lg,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+diff --git a/packages/app/src/screens/settings/appearance/appearance-section.tsx b/packages/app/src/screens/settings/appearance/appearance-section.tsx
+index 6e98819..f63d85e 100644
+--- a/packages/app/src/screens/settings/appearance/appearance-section.tsx
++++ b/packages/app/src/screens/settings/appearance/appearance-section.tsx
+@@ -734,10 +734,10 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.md,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     color: theme.colors.foreground,
+     fontSize: theme.fontSize.base,
+-    textAlign: "left",
++    textAlign: "right",
+   },
+   sizeField: {
+     flexDirection: "row",
+@@ -752,7 +752,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.md,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     color: theme.colors.foreground,
+     fontSize: theme.fontSize.base,
+     textAlign: "right",
+@@ -765,7 +765,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.md,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     color: theme.colors.foreground,
+     fontSize: theme.fontSize.base,
+     textAlign: "right",
+diff --git a/packages/app/src/screens/settings/keyboard-shortcuts-section.tsx b/packages/app/src/screens/settings/keyboard-shortcuts-section.tsx
+index 3798a5f..ba948fc 100644
+--- a/packages/app/src/screens/settings/keyboard-shortcuts-section.tsx
++++ b/packages/app/src/screens/settings/keyboard-shortcuts-section.tsx
+@@ -501,7 +501,7 @@ const styles = StyleSheet.create((theme) => ({
+     paddingVertical: theme.spacing[3],
+   },
+   rowCapturing: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   rowLabel: {
+     fontSize: theme.fontSize.base,
+@@ -528,10 +528,10 @@ const styles = StyleSheet.create((theme) => ({
+     justifyContent: "center",
+   },
+   menuButtonHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   menuButtonPressed: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   capturingText: {
+     fontSize: theme.fontSize.base,
+diff --git a/packages/app/src/screens/settings/plugins-page.tsx b/packages/app/src/screens/settings/plugins-page.tsx
+index f3bdab3..a620f62 100644
+--- a/packages/app/src/screens/settings/plugins-page.tsx
++++ b/packages/app/src/screens/settings/plugins-page.tsx
+@@ -567,7 +567,7 @@ const styles = StyleSheet.create((theme) => ({
+   logEntry: {
+     padding: theme.spacing[3],
+     gap: theme.spacing[1],
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+     borderRadius: theme.borderRadius.md,
+   },
+   logStdout: {
+diff --git a/packages/app/src/screens/settings/providers-section.tsx b/packages/app/src/screens/settings/providers-section.tsx
+index 72234b7..6b7fdf4 100644
+--- a/packages/app/src/screens/settings/providers-section.tsx
++++ b/packages/app/src/screens/settings/providers-section.tsx
+@@ -511,10 +511,10 @@ const styles = StyleSheet.create((theme) => ({
+     minHeight: 56,
+   },
+   rowHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   rowPressed: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   rowContent: {
+     flex: 1,
+@@ -571,9 +571,9 @@ const styles = StyleSheet.create((theme) => ({
+     height: 32,
+   },
+   menuButtonHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   menuButtonPressed: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+ }));
 diff --git a/packages/app/src/screens/startup-splash-screen.tsx b/packages/app/src/screens/startup-splash-screen.tsx
-index 1f12d90..4fdf861 100644
+index 1f12d90..5830e70 100644
 --- a/packages/app/src/screens/startup-splash-screen.tsx
 +++ b/packages/app/src/screens/startup-splash-screen.tsx
 @@ -185,14 +185,14 @@ const styles = StyleSheet.create((theme) => ({
@@ -1095,6 +2497,15 @@ index 1f12d90..4fdf861 100644
    },
    errorScrollView: {
      flex: 1,
+@@ -245,7 +245,7 @@ const styles = StyleSheet.create((theme) => ({
+   logsContainer: {
+     height: 200,
+     borderRadius: theme.borderRadius.xl,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCode,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+     overflow: "hidden",
 diff --git a/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx b/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
 index f1806ed..dc143cd 100644
 --- a/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
@@ -1126,9 +2537,33 @@ index f1806ed..dc143cd 100644
    tabHoverFrame: {
      position: "relative",
 diff --git a/packages/app/src/screens/workspace/workspace-screen.tsx b/packages/app/src/screens/workspace/workspace-screen.tsx
-index d94b7e5..5979a6f 100644
+index d94b7e5..3c401b0 100644
 --- a/packages/app/src/screens/workspace/workspace-screen.tsx
 +++ b/packages/app/src/screens/workspace/workspace-screen.tsx
+@@ -1337,7 +1337,7 @@ function renderWorkspaceScreenGateShell(input: {
+ 
+   return (
+     <WorkspaceFocusProvider workspaceKey={input.workspaceKey}>
+-      <View style={styles.container}>
++      <View style={[styles.container, styles.containerWorkspaceBackground]}>
+         <View style={styles.threePaneRow}>
+           <View style={styles.centerColumn}>
+             <WorkspaceScreenGateFrame>{input.gate}</WorkspaceScreenGateFrame>
+@@ -4255,12 +4255,12 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.md,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     alignItems: "center",
+     justifyContent: "center",
+   },
+   newTabActionButtonHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   newTabTooltipText: {
+     fontSize: theme.fontSize.base,
 @@ -4273,7 +4273,7 @@ const styles = StyleSheet.create((theme) => ({
    },
    newTabTooltipShortcut: {},
@@ -1138,6 +2573,15 @@ index d94b7e5..5979a6f 100644
      borderBottomWidth: theme.borderWidth[1],
      borderBottomColor: theme.colors.border,
    },
+@@ -4285,7 +4285,7 @@ const styles = StyleSheet.create((theme) => ({
+     paddingVertical: theme.spacing[2],
+   },
+   switcherTriggerPressed: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   switcherTriggerLeft: {
+     flexDirection: "row",
 @@ -4310,7 +4310,7 @@ const styles = StyleSheet.create((theme) => ({
    tabsContainer: {
      borderBottomWidth: 1,
@@ -1160,7 +2604,13 @@ index d94b7e5..5979a6f 100644
    },
    tabLabel: {
      flexShrink: 1,
-@@ -4394,7 +4394,7 @@ const styles = StyleSheet.create((theme) => ({
+@@ -4389,12 +4389,12 @@ const styles = StyleSheet.create((theme) => ({
+     opacity: 0,
+   },
+   tabCloseButtonActive: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
    content: {
      flex: 1,
      minHeight: 0,
@@ -1178,6 +2628,28 @@ index d94b7e5..5979a6f 100644
    },
    emptyState: {
      flex: 1,
+diff --git a/packages/app/src/screens/workspace/workspace-scripts-button.tsx b/packages/app/src/screens/workspace/workspace-scripts-button.tsx
+index 59ddd9a..0e62a3f 100644
+--- a/packages/app/src/screens/workspace/workspace-scripts-button.tsx
++++ b/packages/app/src/screens/workspace/workspace-scripts-button.tsx
+@@ -763,7 +763,7 @@ const styles = StyleSheet.create((theme) => ({
+     justifyContent: "center",
+   },
+   ghostButtonHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   splitButtonPrimary: {
+     paddingHorizontal: {
+@@ -773,7 +773,7 @@ const styles = StyleSheet.create((theme) => ({
+     justifyContent: "center",
+   },
+   splitButtonPrimaryHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   splitButtonText: {
+     fontSize: theme.fontSize.base,
 diff --git a/packages/app/src/screens/workspace/workspace-tab-presentation.tsx b/packages/app/src/screens/workspace/workspace-tab-presentation.tsx
 index 8b49942..84516e6 100644
 --- a/packages/app/src/screens/workspace/workspace-tab-presentation.tsx
@@ -1191,6 +2663,64 @@ index 8b49942..84516e6 100644
    },
    optionLeadingSlot: {
      width: 16,
+diff --git a/packages/app/src/styles/markdown-styles.ts b/packages/app/src/styles/markdown-styles.ts
+index 5d10624..a6741aa 100644
+--- a/packages/app/src/styles/markdown-styles.ts
++++ b/packages/app/src/styles/markdown-styles.ts
+@@ -175,7 +175,7 @@ export function createMarkdownStyles(theme: Theme) {
+ 
+     code_inline: {
+       ...webSelectableTextStyle,
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCode,
+       color: theme.colors.foreground,
+       paddingHorizontal: theme.spacing[1],
+       paddingVertical: 2,
+@@ -187,7 +187,7 @@ export function createMarkdownStyles(theme: Theme) {
+ 
+     code_block: {
+       ...webSelectableTextStyle,
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCode,
+       color: theme.colors.foreground,
+       padding: theme.spacing[3],
+       borderRadius: theme.borderRadius.md,
+@@ -198,7 +198,7 @@ export function createMarkdownStyles(theme: Theme) {
+ 
+     fence: {
+       ...webSelectableTextStyle,
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCode,
+       color: theme.colors.foreground,
+       padding: theme.spacing[3],
+       borderRadius: theme.borderRadius.md,
+@@ -225,7 +225,7 @@ export function createMarkdownStyles(theme: Theme) {
+     },
+ 
+     thead: {
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCard,
+     },
+ 
+     tbody: {},
+@@ -236,7 +236,7 @@ export function createMarkdownStyles(theme: Theme) {
+       borderBottomWidth: 1,
+       borderRightWidth: 1,
+       borderColor: theme.colors.border,
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCard,
+       fontWeight: theme.fontWeight.semibold,
+       color: theme.colors.foreground,
+       fontSize: theme.fontSize.content,
+@@ -313,7 +313,7 @@ export function createMarkdownStyles(theme: Theme) {
+     // =========================================================================
+ 
+     blockquote: {
+-      backgroundColor: theme.colors.surface1,
++      backgroundColor: theme.colors.surfaceCard,
+       color: `${theme.colors.foreground}cc`,
+       borderLeftWidth: 4,
+       borderLeftColor: theme.colors.surface2,
 diff --git a/packages/app/src/styles/settings.ts b/packages/app/src/styles/settings.ts
 index 4f6d377..62da5e8 100644
 --- a/packages/app/src/styles/settings.ts
@@ -1205,7 +2735,7 @@ index 4f6d377..62da5e8 100644
      borderWidth: 1,
      borderColor: theme.colors.border,
 diff --git a/packages/app/src/styles/theme.ts b/packages/app/src/styles/theme.ts
-index 04b1e8f..2413458 100644
+index 04b1e8f..d82a9ed 100644
 --- a/packages/app/src/styles/theme.ts
 +++ b/packages/app/src/styles/theme.ts
 @@ -1,5 +1,33 @@
@@ -1242,7 +2772,7 @@ index 04b1e8f..2413458 100644
  
  export const baseColors = {
    // Base colors
-@@ -270,6 +298,15 @@ export function buildLightSemanticColors(tint: LightThemeConfig) {
+@@ -270,6 +298,16 @@ export function buildLightSemanticColors(tint: LightThemeConfig) {
      surfaceSidebarHover: tint.surface1,
      surfaceSidebarSelected: tint.surface3,
      surfaceWorkspace: tint.surface0,
@@ -1254,11 +2784,12 @@ index 04b1e8f..2413458 100644
 +    surfaceRowHover: "rgba(0, 0, 0, 0.035)",
 +    surfaceRowSelected: "rgba(0, 0, 0, 0.06)",
 +    surfaceRowPressed: "rgba(0, 0, 0, 0.09)",
++    surfaceCode: "rgba(0, 0, 0, 0.045)",
 +    surfaceMenu: "rgba(255, 255, 255, 0.9)",
      interactionHighlight: "rgba(0, 0, 0, 0.06)",
  
      foreground: tint.foreground,
-@@ -397,10 +434,21 @@ export function buildDarkSemanticColors(tint: DarkThemeConfig) {
+@@ -397,10 +435,22 @@ export function buildDarkSemanticColors(tint: DarkThemeConfig) {
      surface3: tint.surface3,
      surface4: tint.surface4,
      surfaceDiffEmpty: tint.surfaceDiffEmpty,
@@ -1276,12 +2807,56 @@ index 04b1e8f..2413458 100644
 +    surfaceRowHover: GLASS_ENABLED ? "rgba(255, 255, 255, 0.04)" : tint.surface1,
 +    surfaceRowSelected: GLASS_ENABLED ? "rgba(255, 255, 255, 0.07)" : tint.surface2,
 +    surfaceRowPressed: GLASS_ENABLED ? "rgba(255, 255, 255, 0.09)" : tint.surface2,
++    surfaceCode: GLASS_ENABLED ? "rgba(255, 255, 255, 0.07)" : tint.surface2,
 +    // Popovers: a darker base than cards because the content behind them is
 +    // sharp app UI, not wallpaper; the web renderer blurs that backdrop.
 +    surfaceMenu: GLASS_ENABLED ? withAlpha(tint.surface1, 0.55) : tint.surface1,
      interactionHighlight: "rgba(255, 255, 255, 0.08)",
  
      foreground,
+diff --git a/packages/app/src/tool-calls/detail-level/overview/sheet.tsx b/packages/app/src/tool-calls/detail-level/overview/sheet.tsx
+index b3b5bf3..9c47448 100644
+--- a/packages/app/src/tool-calls/detail-level/overview/sheet.tsx
++++ b/packages/app/src/tool-calls/detail-level/overview/sheet.tsx
+@@ -91,7 +91,7 @@ export function OverviewToolCallGroupSheet({
+ const styles = StyleSheet.create((theme) => ({
+   container: {
+     flex: 1,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+   },
+   header: {
+     flexDirection: "row",
+@@ -120,7 +120,7 @@ const styles = StyleSheet.create((theme) => ({
+   content: {
+     flex: 1,
+     minHeight: 0,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceMenu,
+   },
+   contentContainer: {
+     paddingHorizontal: 13,
+diff --git a/packages/app/src/workspace/open-in-editor/button.tsx b/packages/app/src/workspace/open-in-editor/button.tsx
+index 384ffe7..893fcb2 100644
+--- a/packages/app/src/workspace/open-in-editor/button.tsx
++++ b/packages/app/src/workspace/open-in-editor/button.tsx
+@@ -321,7 +321,7 @@ const styles = StyleSheet.create((theme) => ({
+     position: "relative",
+   },
+   splitButtonPrimaryHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   splitButtonPrimaryDisabled: {
+     opacity: 0.6,
+@@ -353,6 +353,6 @@ const styles = StyleSheet.create((theme) => ({
+     borderLeftColor: theme.colors.borderAccent,
+   },
+   splitButtonCaretHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+ }));
 diff --git a/packages/desktop/src/main.ts b/packages/desktop/src/main.ts
 index 63ab832..ab62b5b 100644
 --- a/packages/desktop/src/main.ts
