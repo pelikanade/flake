@@ -1589,6 +1589,41 @@ index a1228cb..ae26d44 100644
      },
      triggerSm: {
        ...geometry.fieldControlSm,
+diff --git a/packages/app/src/components/ui/trailing-action-scrim.tsx b/packages/app/src/components/ui/trailing-action-scrim.tsx
+index e106bf3..1a17d85 100644
+--- a/packages/app/src/components/ui/trailing-action-scrim.tsx
++++ b/packages/app/src/components/ui/trailing-action-scrim.tsx
+@@ -1,5 +1,5 @@
+ import { useId } from "react";
+-import { View } from "react-native";
++import { Platform, View } from "react-native";
+ import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from "react-native-svg";
+ import { StyleSheet, withUnistyles } from "react-native-unistyles";
+ import type { SurfaceBackdrop } from "@/styles/surface-backdrop";
+@@ -31,9 +31,11 @@ const backdropColorMappings: Record<SurfaceBackdrop, (theme: Theme) => { color:
+   surface0: (theme) => ({ color: theme.colors.surface0 }),
+   surface1: (theme) => ({ color: theme.colors.surface1 }),
+   surface2: (theme) => ({ color: theme.colors.surface2 }),
+-  surfaceSidebar: (theme) => ({ color: theme.colors.surfaceSidebar }),
+-  surfaceSidebarHover: (theme) => ({ color: theme.colors.surfaceSidebarHover }),
+-  surfaceSidebarSelected: (theme) => ({ color: theme.colors.surfaceSidebarSelected }),
++  // Sidebar rows are glass now. Paint the same low-alpha overlay and blur the
++  // trailing content behind it instead of covering the row with an opaque plate.
++  surfaceSidebar: (theme) => ({ color: theme.colors.surfaceCard }),
++  surfaceSidebarHover: (theme) => ({ color: theme.colors.surfaceRowHover }),
++  surfaceSidebarSelected: (theme) => ({ color: theme.colors.surfaceRowSelected }),
+ };
+ 
+ /** Fades trailing content into the surface beneath an absolutely overlaid action. */
+@@ -63,5 +65,8 @@ const styles = StyleSheet.create({
+     bottom: 0,
+     right: 0,
+     width: SCRIM_WIDTH,
++    ...(Platform.OS === "web"
++      ? { backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" }
++      : null),
+   },
+ });
 diff --git a/packages/app/src/components/welcome-screen.tsx b/packages/app/src/components/welcome-screen.tsx
 index 1b3cdbe..a81ecea 100644
 --- a/packages/app/src/components/welcome-screen.tsx

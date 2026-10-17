@@ -78,7 +78,9 @@ The patch is organised by intent, not by file count:
 - **Structural surfaces**: workspace, tabs, headers, sidebar, splits, screen
   roots, splash and error screens, setup/plugin screens, `page-layout`.
 - **Rows and selection**: agent list, sidebar workspace/status renderers,
-  explorer tree, settings sidebar, collapsible rows, segmented controls.
+  explorer tree, settings sidebar, collapsible rows, segmented controls. The
+  sidebar trailing-action scrim uses the row's translucent fill plus a web
+  backdrop blur; an opaque scrim turns the kebab area into a plate again.
 - **Cards and pills**: composer input, composer pills, `DiffStat` pill, thinking
   / tool-call expansion, settings cards, open-project tiles.
 - **Popovers**: shared menu surface and menu items, combobox, autocomplete,
