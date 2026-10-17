@@ -1,5 +1,5 @@
 diff --git a/packages/app/public/index.html b/packages/app/public/index.html
-index a95e7b8..7f298fd 100644
+index a95e7b8..55863a7 100644
 --- a/packages/app/public/index.html
 +++ b/packages/app/public/index.html
 @@ -32,12 +32,12 @@
@@ -21,6 +21,36 @@ index a95e7b8..7f298fd 100644
        }
        /* These styles make the root element full-height */
        #root {
+@@ -51,6 +51,13 @@
+       }
+     </style>
+     <style>
++      /* The window compositor blurs the desktop behind the window; popovers
++         float over the app itself, so blur their own backdrop in CSS. */
++      [data-menu-surface="true"] {
++        -webkit-backdrop-filter: blur(20px) saturate(1.1) !important;
++        backdrop-filter: blur(20px) saturate(1.1) !important;
++      }
++
+       button,
+       a,
+       input,
+diff --git a/packages/app/react-native-web.d.ts b/packages/app/react-native-web.d.ts
+index 9cc000e..c1bbc8f 100644
+--- a/packages/app/react-native-web.d.ts
++++ b/packages/app/react-native-web.d.ts
+@@ -4,4 +4,11 @@ declare module "react-native" {
+   interface PressableStateCallbackType {
+     hovered?: boolean;
+   }
++
++  // Web-only: React Native Web passes these through to CSS, and the glass
++  // popovers use them to blur the app content behind a menu.
++  interface ViewStyle {
++    backdropFilter?: string;
++    WebkitBackdropFilter?: string;
++  }
+ }
 diff --git a/packages/app/src/agent-stream/view.tsx b/packages/app/src/agent-stream/view.tsx
 index 12f628d..04614e9 100644
 --- a/packages/app/src/agent-stream/view.tsx
@@ -134,6 +164,28 @@ index d52a9ea..a8b5279 100644
    },
    tabText: {
      fontSize: theme.fontSize.base,
+diff --git a/packages/app/src/components/diff-viewer.tsx b/packages/app/src/components/diff-viewer.tsx
+index 8d14eff..54ed58d 100644
+--- a/packages/app/src/components/diff-viewer.tsx
++++ b/packages/app/src/components/diff-viewer.tsx
+@@ -236,7 +236,7 @@ const styles = StyleSheet.create((theme) => {
+         : null),
+     },
+     headerLine: {
+-      backgroundColor: theme.colors.surface1,
++      backgroundColor: theme.colors.surfaceCard,
+     },
+     headerText: {
+       color: theme.colors.foregroundMuted,
+@@ -260,7 +260,7 @@ const styles = StyleSheet.create((theme) => {
+       backgroundColor: "rgba(248, 81, 73, 0.35)",
+     },
+     contextLine: {
+-      backgroundColor: theme.colors.surface1,
++      backgroundColor: theme.colors.surfaceCard,
+     },
+     contextText: {
+       color: theme.colors.foregroundMuted,
 diff --git a/packages/app/src/components/file-explorer-pane.tsx b/packages/app/src/components/file-explorer-pane.tsx
 index 209ec74..1a4b40a 100644
 --- a/packages/app/src/components/file-explorer-pane.tsx
@@ -393,6 +445,37 @@ index 9705f3b..87dec24 100644
      overflow: "hidden",
    },
    paneTabs: {
+diff --git a/packages/app/src/components/tool-call-details.tsx b/packages/app/src/components/tool-call-details.tsx
+index 50e4052..51c9185 100644
+--- a/packages/app/src/components/tool-call-details.tsx
++++ b/packages/app/src/components/tool-call-details.tsx
+@@ -907,13 +907,15 @@ const styles = StyleSheet.create((theme) => {
+       borderColor: theme.colors.border,
+       borderRadius: theme.borderRadius.base,
+       overflow: "hidden",
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCard,
+     },
+     fullBleedBlock: {
+       borderWidth: 0,
+       borderRadius: 0,
+       overflow: "hidden",
+-      backgroundColor: theme.colors.surface1,
++      // The expanded card already paints its glass tint; an opaque fill here
++      // would turn the body into a plate again.
++      backgroundColor: "transparent",
+     },
+     codeVerticalScroll: {},
+     codeVerticalContent: {
+@@ -932,7 +934,7 @@ const styles = StyleSheet.create((theme) => {
+       borderWidth: theme.borderWidth[1],
+       borderColor: theme.colors.border,
+       borderRadius: theme.borderRadius.base,
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCard,
+     },
+     scrollContent: {
+       padding: insets.padding,
 diff --git a/packages/app/src/components/tree-primitives.tsx b/packages/app/src/components/tree-primitives.tsx
 index 378eb2c..89ab166 100644
 --- a/packages/app/src/components/tree-primitives.tsx
@@ -406,6 +489,302 @@ index 378eb2c..89ab166 100644
    },
    name: { color: theme.colors.foreground, opacity: 0.76 },
    nameHovered: { opacity: 1 },
+diff --git a/packages/app/src/components/ui/autocomplete.tsx b/packages/app/src/components/ui/autocomplete.tsx
+index cc684f8..d54475f 100644
+--- a/packages/app/src/components/ui/autocomplete.tsx
++++ b/packages/app/src/components/ui/autocomplete.tsx
+@@ -12,7 +12,7 @@ import {
+ import { StyleSheet, useUnistyles } from "react-native-unistyles";
+ import { useTranslation } from "react-i18next";
+ import { File, Folder } from "lucide-react-native";
+-import type { Theme } from "@/styles/theme";
++import { glassBackdropFilter, type Theme } from "@/styles/theme";
+ import { getAutocompleteScrollOffset } from "./autocomplete-utils";
+ 
+ export interface AutocompleteOption {
+@@ -293,7 +293,7 @@ const styles = StyleSheet.create((theme: Theme) => ({
+     gap: theme.spacing[1],
+   },
+   detailCard: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.borderAccent,
+     borderRadius: theme.borderRadius.lg,
+@@ -319,11 +319,12 @@ const styles = StyleSheet.create((theme: Theme) => ({
+   container: {
+     flexShrink: 1,
+     minHeight: 0,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.borderAccent,
+     borderRadius: theme.borderRadius.lg,
+     overflow: "hidden",
++    ...glassBackdropFilter,
+     ...theme.shadow.md,
+   },
+   scrollView: {
+@@ -347,7 +348,7 @@ const styles = StyleSheet.create((theme: Theme) => ({
+     marginRight: theme.spacing[1],
+   },
+   itemActive: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   itemMain: {
+     flex: 1,
+diff --git a/packages/app/src/components/ui/button.tsx b/packages/app/src/components/ui/button.tsx
+index e160970..6a499e7 100644
+--- a/packages/app/src/components/ui/button.tsx
++++ b/packages/app/src/components/ui/button.tsx
+@@ -115,8 +115,8 @@ const styles = StyleSheet.create((theme) => {
+       borderColor: theme.colors.accent,
+     },
+     secondary: {
+-      backgroundColor: theme.colors.surface3,
+-      borderColor: theme.colors.surface3,
++      backgroundColor: theme.colors.surfaceCard,
++      borderColor: theme.colors.borderAccent,
+     },
+     outline: {
+       backgroundColor: "transparent",
+diff --git a/packages/app/src/components/ui/combobox.tsx b/packages/app/src/components/ui/combobox.tsx
+index 736ca3b..ca7390f 100644
+--- a/packages/app/src/components/ui/combobox.tsx
++++ b/packages/app/src/components/ui/combobox.tsx
+@@ -27,6 +27,7 @@ import { useTranslation } from "react-i18next";
+ import { useSafeAreaInsets } from "react-native-safe-area-context";
+ import type { EditingTextInputHandle } from "@/components/ui/text-input";
+ import { StyleSheet, useUnistyles } from "react-native-unistyles";
++import { glassBackdropFilter } from "@/styles/theme";
+ import { useIsCompactFormFactor } from "@/constants/layout";
+ import { BottomSheetScrollView, BottomSheetBackgroundProps } from "@gorhom/bottom-sheet";
+ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+@@ -163,12 +164,12 @@ function ComboboxSheetBackground({ style }: BottomSheetBackgroundProps) {
+     () => [
+       style,
+       {
+-        backgroundColor: theme.colors.surface0,
++        backgroundColor: theme.colors.surfaceMenu,
+         borderTopLeftRadius: theme.borderRadius["2xl"],
+         borderTopRightRadius: theme.borderRadius["2xl"],
+       },
+     ],
+-    [style, theme.colors.surface0, theme.borderRadius],
++    [style, theme.colors.surfaceMenu, theme.borderRadius],
+   );
+ 
+   return <Animated.View pointerEvents="none" style={combinedStyle} />;
+@@ -1646,7 +1647,7 @@ const styles = StyleSheet.create((theme) => ({
+     alignItems: "center",
+     paddingHorizontal: theme.spacing[3],
+     gap: theme.spacing[2],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderBottomWidth: 1,
+     borderBottomColor: theme.colors.border,
+     ...(IS_WEB ? {} : { marginHorizontal: theme.spacing[1] }),
+@@ -1673,19 +1674,19 @@ const styles = StyleSheet.create((theme) => ({
+         }),
+   },
+   comboboxItemHovered: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   comboboxItemHoveredElevated: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   comboboxItemPressed: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   comboboxItemPressedElevated: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   comboboxItemActive: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   comboboxItemDisabled: {
+     opacity: 0.55,
+@@ -1764,10 +1765,11 @@ const styles = StyleSheet.create((theme) => ({
+     left: 0,
+   },
+   desktopContainer: {
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderRadius: theme.borderRadius.lg,
+     borderWidth: 1,
+     borderColor: theme.colors.border,
++    ...glassBackdropFilter,
+     ...theme.shadow.md,
+     maxHeight: 400,
+     overflow: "hidden",
+diff --git a/packages/app/src/components/ui/hover-card.tsx b/packages/app/src/components/ui/hover-card.tsx
+index 3d43850..38714dd 100644
+--- a/packages/app/src/components/ui/hover-card.tsx
++++ b/packages/app/src/components/ui/hover-card.tsx
+@@ -21,6 +21,7 @@ import {
+   useWebOverlayRegistration,
+ } from "@/lib/overlay-root";
+ import { FloatingSurface } from "@/components/ui/floating";
++import { glassBackdropFilter } from "@/styles/theme";
+ import { isWeb } from "@/constants/platform";
+ import { useHoverSafeZone } from "@/hooks/use-hover-safe-zone";
+ import {
+@@ -408,10 +409,11 @@ const styles = StyleSheet.create((theme) => ({
+     zIndex: 1000,
+   },
+   surface: {
+-    backgroundColor: theme.colors.popover,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.borderAccent,
+     borderRadius: theme.borderRadius.xl,
++    ...glassBackdropFilter,
+     ...theme.shadow.md,
+     zIndex: 1000,
+   },
+diff --git a/packages/app/src/components/ui/menu/menu-item.tsx b/packages/app/src/components/ui/menu/menu-item.tsx
+index 771f8f8..edd16e0 100644
+--- a/packages/app/src/components/ui/menu/menu-item.tsx
++++ b/packages/app/src/components/ui/menu/menu-item.tsx
+@@ -464,7 +464,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+     borderRadius: theme.borderRadius.md,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   fieldFocused: {
+     borderColor: theme.colors.borderAccent,
+@@ -478,14 +478,14 @@ const styles = StyleSheet.create((theme) => ({
+     paddingHorizontal: 0,
+   },
+   itemHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   itemPressed: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.interactionHighlight,
+   },
+   // The row you are inside, not the value you chose. A chosen value is marked by its check.
+   itemActive: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   itemDisabled: {
+     opacity: 0.5,
+diff --git a/packages/app/src/components/ui/menu/menu-overlay.tsx b/packages/app/src/components/ui/menu/menu-overlay.tsx
+index 52afc71..78f1c01 100644
+--- a/packages/app/src/components/ui/menu/menu-overlay.tsx
++++ b/packages/app/src/components/ui/menu/menu-overlay.tsx
+@@ -21,6 +21,7 @@ import {
+ } from "react-native";
+ import { Keyframe, runOnJS } from "react-native-reanimated";
+ import { StyleSheet } from "react-native-unistyles";
++import { glassBackdropFilter } from "@/styles/theme";
+ import { FloatingScrollView, FloatingSurface } from "@/components/ui/floating";
+ import { isWeb } from "@/constants/platform";
+ import type { KeyboardFocusScope } from "@/keyboard/actions";
+@@ -538,11 +539,12 @@ const styles = StyleSheet.create((theme) => ({
+     left: 0,
+   },
+   content: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderWidth: 1,
+     borderColor: theme.colors.borderAccent,
+     borderRadius: theme.borderRadius.lg,
+     overflow: "hidden",
++    ...glassBackdropFilter,
+     ...theme.shadow.md,
+   },
+ }));
+diff --git a/packages/app/src/components/ui/menu/menu-surface.tsx b/packages/app/src/components/ui/menu/menu-surface.tsx
+index 3b76d4c..261f8b5 100644
+--- a/packages/app/src/components/ui/menu/menu-surface.tsx
++++ b/packages/app/src/components/ui/menu/menu-surface.tsx
+@@ -40,7 +40,7 @@ const ThemedBottomSheetModal = withUnistyles(IsolatedBottomSheetModal, (theme) =
+     borderTopLeftRadius: theme.borderRadius.xl,
+     borderTopRightRadius: theme.borderRadius.xl,
+     borderWidth: 1,
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceMenu,
+     borderColor: theme.colors.border,
+   },
+   handleIndicatorStyle: {
+diff --git a/packages/app/src/components/ui/pane-content-toolbar.tsx b/packages/app/src/components/ui/pane-content-toolbar.tsx
+index 0363467..c24f9d0 100644
+--- a/packages/app/src/components/ui/pane-content-toolbar.tsx
++++ b/packages/app/src/components/ui/pane-content-toolbar.tsx
+@@ -202,7 +202,7 @@ export function paneContentToolbarIconButtonStyle(
+ const styles = StyleSheet.create((theme) => ({
+   toolbar: {
+     height: WORKSPACE_SECONDARY_HEADER_HEIGHT,
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceCard,
+     borderBottomWidth: 1,
+     borderBottomColor: theme.colors.border,
+     flexShrink: 0,
+diff --git a/packages/app/src/components/ui/search-field.tsx b/packages/app/src/components/ui/search-field.tsx
+index 77daed2..6970e09 100644
+--- a/packages/app/src/components/ui/search-field.tsx
++++ b/packages/app/src/components/ui/search-field.tsx
+@@ -99,13 +99,13 @@ const styles = StyleSheet.create((theme) => ({
+     paddingVertical: theme.spacing[1.5],
+     paddingHorizontal: theme.spacing[3],
+     borderRadius: theme.borderRadius.md,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.border,
+   },
+   fieldFocused: {
+     borderColor: theme.colors.borderAccent,
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   input: {
+     flex: 1,
+diff --git a/packages/app/src/components/ui/segmented-control.tsx b/packages/app/src/components/ui/segmented-control.tsx
+index e0bbdf3..b0df1a7 100644
+--- a/packages/app/src/components/ui/segmented-control.tsx
++++ b/packages/app/src/components/ui/segmented-control.tsx
+@@ -196,13 +196,13 @@ const styles = StyleSheet.create((theme) => {
+       ...geometry.segmentedSegmentMd,
+     },
+     segmentSelected: {
+-      backgroundColor: theme.colors.surface3,
++      backgroundColor: theme.colors.surfaceRowSelected,
+     },
+     segmentHover: {
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceRowHover,
+     },
+     segmentPressed: {
+-      backgroundColor: theme.colors.surface3,
++      backgroundColor: theme.colors.surfaceRowPressed,
+     },
+     segmentDisabled: {
+       opacity: theme.opacity[50],
+diff --git a/packages/app/src/components/ui/select-field.tsx b/packages/app/src/components/ui/select-field.tsx
+index a1228cb..ae26d44 100644
+--- a/packages/app/src/components/ui/select-field.tsx
++++ b/packages/app/src/components/ui/select-field.tsx
+@@ -349,7 +349,7 @@ const styles = StyleSheet.create((theme) => {
+       flexDirection: "row",
+       alignItems: "center",
+       gap: theme.spacing[2],
+-      backgroundColor: theme.colors.surface2,
++      backgroundColor: theme.colors.surfaceCard,
+     },
+     triggerSm: {
+       ...geometry.fieldControlSm,
 diff --git a/packages/app/src/components/welcome-screen.tsx b/packages/app/src/components/welcome-screen.tsx
 index 1b3cdbe..ca768cf 100644
 --- a/packages/app/src/components/welcome-screen.tsx
@@ -432,6 +811,99 @@ index e15a000..2b140e0 100644
      borderWidth: theme.borderWidth[1],
      borderColor: theme.colors.borderAccent,
      borderRadius: theme.borderRadius["2xl"],
+diff --git a/packages/app/src/composer/pill-styles.ts b/packages/app/src/composer/pill-styles.ts
+index 3ab03c8..9863e19 100644
+--- a/packages/app/src/composer/pill-styles.ts
++++ b/packages/app/src/composer/pill-styles.ts
+@@ -36,10 +36,10 @@ export const composerPillStyles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius["2xl"],
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.borderAccent,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   bodyActive: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   label: {
+     fontSize: theme.fontSize.sm,
+diff --git a/packages/app/src/git/actions-split-button.tsx b/packages/app/src/git/actions-split-button.tsx
+index 193154b..bdf2115 100644
+--- a/packages/app/src/git/actions-split-button.tsx
++++ b/packages/app/src/git/actions-split-button.tsx
+@@ -105,28 +105,28 @@ export function GitActionsSplitButton({
+     ({ hovered, pressed }: PressableStateCallbackType & { hovered?: boolean }) => [
+       styles.splitButtonPrimary,
+       (Boolean(hovered) || pressed) &&
+-        inlineUnistylesStyle({ backgroundColor: theme.colors.surface2 }),
++        inlineUnistylesStyle({ backgroundColor: theme.colors.surfaceRowHover }),
+       primaryDisabled && styles.splitButtonPrimaryDisabled,
+     ],
+-    [primaryDisabled, theme.colors.surface2],
++    [primaryDisabled, theme.colors.surfaceRowHover],
+   );
+ 
+   const caretTriggerStyle = useCallback(
+     ({ hovered, pressed, open }: { hovered: boolean; pressed: boolean; open: boolean }) => [
+       styles.splitButtonCaret,
+       (hovered || pressed || open) &&
+-        inlineUnistylesStyle({ backgroundColor: theme.colors.surface2 }),
++        inlineUnistylesStyle({ backgroundColor: theme.colors.surfaceRowHover }),
+     ],
+-    [theme.colors.surface2],
++    [theme.colors.surfaceRowHover],
+   );
+ 
+   const menuOnlyTriggerStyle = useCallback(
+     ({ hovered, pressed, open }: { hovered: boolean; pressed: boolean; open: boolean }) => [
+       styles.menuOnlyTrigger,
+       (hovered || pressed || open) &&
+-        inlineUnistylesStyle({ backgroundColor: theme.colors.surface2 }),
++        inlineUnistylesStyle({ backgroundColor: theme.colors.surfaceRowHover }),
+     ],
+-    [theme.colors.surface2],
++    [theme.colors.surfaceRowHover],
+   );
+ 
+   const menuOnlyActions = useMemo(
+diff --git a/packages/app/src/git/diff-pane.tsx b/packages/app/src/git/diff-pane.tsx
+index 139387c..8a7b532 100644
+--- a/packages/app/src/git/diff-pane.tsx
++++ b/packages/app/src/git/diff-pane.tsx
+@@ -1990,7 +1990,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+     borderRadius: theme.borderRadius.md,
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   forgeSetupCalloutText: {
+     fontSize: theme.fontSize.sm,
+diff --git a/packages/app/src/git/file-header.tsx b/packages/app/src/git/file-header.tsx
+index d19d58c..db8d745 100644
+--- a/packages/app/src/git/file-header.tsx
++++ b/packages/app/src/git/file-header.tsx
+@@ -363,7 +363,7 @@ const styles = StyleSheet.create((theme) => ({
+   container: { width: "100%", overflow: "hidden", userSelect: "none" },
+   documentContainer: {
+     height: 30,
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: theme.colors.surfaceCard,
+     borderBottomWidth: theme.borderWidth[1],
+     borderBottomColor: theme.colors.borderAccent,
+   },
+@@ -398,8 +398,8 @@ const styles = StyleSheet.create((theme) => ({
+     paddingLeft: theme.spacing[3],
+     paddingRight: WORKSPACE_PANE_TRAILING_GLYPH_RAIL,
+   },
+-  documentActive: { backgroundColor: theme.colors.surface1 },
+-  documentPressFeedback: { backgroundColor: theme.colors.surface1 },
++  documentActive: { backgroundColor: theme.colors.surfaceRowSelected },
++  documentPressFeedback: { backgroundColor: theme.colors.surfaceRowPressed },
+   canvasInteraction: {
+     backgroundColor: "transparent",
+     borderColor: "transparent",
 diff --git a/packages/app/src/navigation/themed-stack.tsx b/packages/app/src/navigation/themed-stack.tsx
 index 010877c..8bc19d6 100644
 --- a/packages/app/src/navigation/themed-stack.tsx
@@ -624,7 +1096,7 @@ index 1f12d90..4fdf861 100644
    errorScrollView: {
      flex: 1,
 diff --git a/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx b/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
-index f1806ed..9e63ca3 100644
+index f1806ed..dc143cd 100644
 --- a/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
 +++ b/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
 @@ -1567,7 +1567,7 @@ const styles = StyleSheet.create((theme) => ({
@@ -636,8 +1108,25 @@ index f1806ed..9e63ca3 100644
      flexDirection: "row",
      alignItems: "center",
      overflow: "visible",
+@@ -1622,13 +1622,13 @@ const styles = StyleSheet.create((theme) => ({
+     userSelect: "none",
+   },
+   tabHovered: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   tabActive: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   tabActiveUnfocused: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   tabHoverFrame: {
+     position: "relative",
 diff --git a/packages/app/src/screens/workspace/workspace-screen.tsx b/packages/app/src/screens/workspace/workspace-screen.tsx
-index d94b7e5..04b2a52 100644
+index d94b7e5..5979a6f 100644
 --- a/packages/app/src/screens/workspace/workspace-screen.tsx
 +++ b/packages/app/src/screens/workspace/workspace-screen.tsx
 @@ -4273,7 +4273,7 @@ const styles = StyleSheet.create((theme) => ({
@@ -658,6 +1147,19 @@ index d94b7e5..04b2a52 100644
      flexDirection: "row",
      alignItems: "center",
    },
+@@ -4356,10 +4356,10 @@ const styles = StyleSheet.create((theme) => ({
+     flexShrink: 0,
+   },
+   tabActive: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   tabHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   tabLabel: {
+     flexShrink: 1,
 @@ -4394,7 +4394,7 @@ const styles = StyleSheet.create((theme) => ({
    content: {
      flex: 1,
@@ -676,6 +1178,19 @@ index d94b7e5..04b2a52 100644
    },
    emptyState: {
      flex: 1,
+diff --git a/packages/app/src/screens/workspace/workspace-tab-presentation.tsx b/packages/app/src/screens/workspace/workspace-tab-presentation.tsx
+index 8b49942..84516e6 100644
+--- a/packages/app/src/screens/workspace/workspace-tab-presentation.tsx
++++ b/packages/app/src/screens/workspace/workspace-tab-presentation.tsx
+@@ -326,7 +326,7 @@ const styles = StyleSheet.create((theme) => ({
+     paddingVertical: theme.spacing[2],
+   },
+   optionRowActive: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   optionLeadingSlot: {
+     width: 16,
 diff --git a/packages/app/src/styles/settings.ts b/packages/app/src/styles/settings.ts
 index 4f6d377..62da5e8 100644
 --- a/packages/app/src/styles/settings.ts
@@ -690,10 +1205,10 @@ index 4f6d377..62da5e8 100644
      borderWidth: 1,
      borderColor: theme.colors.border,
 diff --git a/packages/app/src/styles/theme.ts b/packages/app/src/styles/theme.ts
-index 04b1e8f..7ec358c 100644
+index 04b1e8f..2413458 100644
 --- a/packages/app/src/styles/theme.ts
 +++ b/packages/app/src/styles/theme.ts
-@@ -1,5 +1,23 @@
+@@ -1,5 +1,33 @@
  import { Platform } from "react-native";
  import { darkHighlightColors, lightHighlightColors } from "@getpaseo/highlight";
 +import { getDesktopHost } from "@/desktop/host";
@@ -714,10 +1229,20 @@ index 04b1e8f..7ec358c 100644
 +  const blue = value & 0xff;
 +  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 +}
++
++/**
++ * Popovers float over the app, not over the desktop, so the compositor's blur
++ * cannot help them read. Blur their own backdrop on the web renderer, where
++ * `backdrop-filter` is available; native keeps the translucent fill alone.
++ */
++export const glassBackdropFilter =
++  Platform.OS === "web"
++    ? ({ backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" } as const)
++    : {};
  
  export const baseColors = {
    // Base colors
-@@ -270,6 +288,14 @@ export function buildLightSemanticColors(tint: LightThemeConfig) {
+@@ -270,6 +298,15 @@ export function buildLightSemanticColors(tint: LightThemeConfig) {
      surfaceSidebarHover: tint.surface1,
      surfaceSidebarSelected: tint.surface3,
      surfaceWorkspace: tint.surface0,
@@ -729,10 +1254,11 @@ index 04b1e8f..7ec358c 100644
 +    surfaceRowHover: "rgba(0, 0, 0, 0.035)",
 +    surfaceRowSelected: "rgba(0, 0, 0, 0.06)",
 +    surfaceRowPressed: "rgba(0, 0, 0, 0.09)",
++    surfaceMenu: "rgba(255, 255, 255, 0.9)",
      interactionHighlight: "rgba(0, 0, 0, 0.06)",
  
      foreground: tint.foreground,
-@@ -397,10 +423,18 @@ export function buildDarkSemanticColors(tint: DarkThemeConfig) {
+@@ -397,10 +434,21 @@ export function buildDarkSemanticColors(tint: DarkThemeConfig) {
      surface3: tint.surface3,
      surface4: tint.surface4,
      surfaceDiffEmpty: tint.surfaceDiffEmpty,
@@ -750,6 +1276,9 @@ index 04b1e8f..7ec358c 100644
 +    surfaceRowHover: GLASS_ENABLED ? "rgba(255, 255, 255, 0.04)" : tint.surface1,
 +    surfaceRowSelected: GLASS_ENABLED ? "rgba(255, 255, 255, 0.07)" : tint.surface2,
 +    surfaceRowPressed: GLASS_ENABLED ? "rgba(255, 255, 255, 0.09)" : tint.surface2,
++    // Popovers: a darker base than cards because the content behind them is
++    // sharp app UI, not wallpaper; the web renderer blurs that backdrop.
++    surfaceMenu: GLASS_ENABLED ? withAlpha(tint.surface1, 0.55) : tint.surface1,
      interactionHighlight: "rgba(255, 255, 255, 0.08)",
  
      foreground,
