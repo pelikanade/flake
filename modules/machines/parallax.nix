@@ -12,7 +12,7 @@
       i18n
       substituter-cn
     ];
-    diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;
+    diskoConfig = inputs.self.diskoConfigurations.xfs-workstation;
     hardware =
       {
         config,
@@ -43,7 +43,7 @@
           domain = "lotus.local";
         };
 
-        disko.devices.disk.main.device = "/dev/disk/by-id/nvme-ZHITAI_Ti600_1TB_ZTA601TAB240960FR7";
+        disko.devices.disk.main.device = "/dev/disk/by-id/nvme-KINGSTON_SKC3000D4096G_50026B768682EAC1";
 
         hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
       };
@@ -55,16 +55,6 @@
         # mode, which it refuses while the display is being restored at resume.
         "video=DP-3:2560x1440@60,rotate=90"
       ];
-      swapDevices = [
-        {
-          device = "/swapfile";
-          size = 32 * 1024;
-          priority = 10;
-        }
-      ];
-      # Hibernating to a swapfile needs a resume device and offset this machine
-      # does not have, so only suspend is available.
-      systemd.sleep.settings.Sleep.AllowHibernation = false;
     };
     # Workspace 1 stays on the Odyssey; the portrait side display starts at 10.
     homeModule = {
