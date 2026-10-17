@@ -57,6 +57,7 @@ Defined in `packages/app/src/styles/theme.ts`:
 | `surfaceRowPressed` | `rgba(255, 255, 255, 0.09)` | `rgba(0, 0, 0, 0.09)` | opaque `surface2` |
 | `surfaceCode` | `rgba(255, 255, 255, 0.07)` | `rgba(0, 0, 0, 0.045)` | opaque `surface2` |
 | `surfaceMenu` | `rgba(surface1, 0.55)` | `rgba(255, 255, 255, 0.9)` | opaque `surface1` |
+| `borderGlass` | `rgba(255, 255, 255, 0.06)` | `rgba(0, 0, 0, 0.08)` | opaque `border` |
 
 `glassBackdropFilter` is the web-only blur object used by menus, dropdowns and
 hover cards. `react-native-web.d.ts` declares the two CSS properties for
@@ -72,6 +73,8 @@ The patch is organised by intent, not by file count:
 
 - **Window and chrome**: `packages/desktop/src/main.ts`,
   `packages/desktop/src/window/window-manager.ts`.
+- **Structural dividers**: pane resize handles, sidebar/tab/header rails and
+  settings/sidebar edges use `borderGlass`, not the opaque `border` colour.
 - **Root and navigation**: `packages/app/public/index.html`,
   `packages/app/react-native-web.d.ts`, `packages/app/src/app/_layout.tsx`,
   `packages/app/src/navigation/themed-stack.tsx`.
@@ -82,7 +85,8 @@ The patch is organised by intent, not by file count:
   sidebar trailing-action scrim uses the row's translucent fill plus a web
   backdrop blur; an opaque scrim turns the kebab area into a plate again.
   Tab chips use the hover overlay for both hover and active; the label colour
-  carries the active state, so the chip never becomes a solid plate.
+  carries the active state, so the chip never becomes a solid plate. The tab
+  close-button scrim passes `useRowGlass` for the same reason.
 - **Cards and pills**: composer input, composer pills, `DiffStat` pill, thinking
   / tool-call expansion, settings cards, open-project tiles.
 - **Popovers**: shared menu surface and menu items, combobox, autocomplete,

@@ -447,9 +447,29 @@ index 8473760..ecb627e 100644
    triggerDisabled: {
      opacity: 0.5,
 diff --git a/packages/app/src/components/compact-explorer-sidebar.tsx b/packages/app/src/components/compact-explorer-sidebar.tsx
-index d52a9ea..95d7783 100644
+index d52a9ea..8f0c02a 100644
 --- a/packages/app/src/components/compact-explorer-sidebar.tsx
 +++ b/packages/app/src/components/compact-explorer-sidebar.tsx
+@@ -240,8 +240,8 @@ export function NativeExplorerSidebarDock({
+     [animatedWidthStyle, insets.top, isOpen, theme.colors.surfaceSidebar],
+   );
+   const dockContentStyle = useMemo(
+-    () => [styles.nativeDockContent, { borderLeftColor: theme.colors.border }],
+-    [theme.colors.border],
++    () => [styles.nativeDockContent, { borderLeftColor: theme.colors.borderGlass }],
++    [theme.colors.borderGlass],
+   );
+ 
+   return (
+@@ -531,7 +531,7 @@ const styles = StyleSheet.create((theme) => ({
+     alignItems: "center",
+     justifyContent: "space-between",
+     borderBottomWidth: 1,
+-    borderBottomColor: theme.colors.border,
++    borderBottomColor: theme.colors.borderGlass,
+   },
+   tabsContainer: (isCompact: boolean) => ({
+     flexDirection: "row",
 @@ -549,7 +549,7 @@ const styles = StyleSheet.create((theme) => ({
      borderRadius: theme.borderRadius.md,
    }),
@@ -535,9 +555,18 @@ index 300b375..881bfa7 100644
      marginTop: theme.spacing[1],
      overflow: "hidden",
 diff --git a/packages/app/src/components/file-explorer-pane.tsx b/packages/app/src/components/file-explorer-pane.tsx
-index 209ec74..9d9288d 100644
+index 209ec74..22fd1cc 100644
 --- a/packages/app/src/components/file-explorer-pane.tsx
 +++ b/packages/app/src/components/file-explorer-pane.tsx
+@@ -1665,7 +1665,7 @@ const styles = StyleSheet.create((theme) => ({
+     flexGrow: 0,
+     flexShrink: 0,
+     borderLeftWidth: 1,
+-    borderLeftColor: theme.colors.border,
++    borderLeftColor: theme.colors.borderGlass,
+   },
+   splitResizeHandle: {
+     position: "absolute",
 @@ -1696,7 +1696,7 @@ const styles = StyleSheet.create((theme) => ({
      borderRadius: theme.borderRadius.base,
    },
@@ -556,8 +585,17 @@ index 209ec74..9d9288d 100644
    },
    handleIndicator: {
      backgroundColor: theme.colors.palette.zinc[600],
+@@ -1845,7 +1845,7 @@ const styles = StyleSheet.create((theme) => ({
+     paddingHorizontal: theme.spacing[4],
+     paddingVertical: theme.spacing[3],
+     borderBottomWidth: theme.borderWidth[1],
+-    borderBottomColor: theme.colors.border,
++    borderBottomColor: theme.colors.borderGlass,
+   },
+   sheetTitle: {
+     fontSize: theme.fontSize.base,
 diff --git a/packages/app/src/components/headers/screen-header.tsx b/packages/app/src/components/headers/screen-header.tsx
-index 6492658..581ed35 100644
+index 6492658..1aa9735 100644
 --- a/packages/app/src/components/headers/screen-header.tsx
 +++ b/packages/app/src/components/headers/screen-header.tsx
 @@ -69,7 +69,7 @@ export function ScreenHeader({
@@ -569,6 +607,15 @@ index 6492658..581ed35 100644
    },
    inner: {},
    row: {
+@@ -82,7 +82,7 @@ const styles = StyleSheet.create((theme) => ({
+     alignItems: "center",
+     justifyContent: "space-between",
+     borderBottomWidth: theme.borderWidth[1],
+-    borderBottomColor: theme.colors.border,
++    borderBottomColor: theme.colors.borderGlass,
+     userSelect: "none",
+   },
+   left: {
 diff --git a/packages/app/src/components/hosts/host-filter.tsx b/packages/app/src/components/hosts/host-filter.tsx
 index d073dc9..5fa8e1f 100644
 --- a/packages/app/src/components/hosts/host-filter.tsx
@@ -637,6 +684,37 @@ index 3be15c0..5264991 100644
    },
    refreshIconSlot: {
      width: 16,
+diff --git a/packages/app/src/components/left-sidebar.tsx b/packages/app/src/components/left-sidebar.tsx
+index ddfc9e2..2f28a98 100644
+--- a/packages/app/src/components/left-sidebar.tsx
++++ b/packages/app/src/components/left-sidebar.tsx
+@@ -850,7 +850,7 @@ const styles = StyleSheet.create((theme) => ({
+     gap: 2,
+     paddingBottom: theme.spacing[1.5],
+     borderBottomWidth: 1,
+-    borderBottomColor: theme.colors.border,
++    borderBottomColor: theme.colors.borderGlass,
+   },
+   sidebarHeaderGroupBelowChrome: {
+     paddingTop: 0,
+@@ -903,7 +903,7 @@ const styles = StyleSheet.create((theme) => ({
+   },
+   desktopSidebarBorder: {
+     borderRightWidth: 1,
+-    borderRightColor: theme.colors.border,
++    borderRightColor: theme.colors.borderGlass,
+     backgroundColor: theme.colors.surfaceSidebar,
+   },
+   sidebarDragArea: {
+@@ -938,7 +938,7 @@ const styles = StyleSheet.create((theme) => ({
+   },
+   footerContainer: {
+     borderTopWidth: 1,
+-    borderTopColor: theme.colors.border,
++    borderTopColor: theme.colors.borderGlass,
+   },
+   // Buttons sit edge to edge; their own inset spaces the glyphs.
+   sidebarFooter: {
 diff --git a/packages/app/src/components/markdown/renderer.tsx b/packages/app/src/components/markdown/renderer.tsx
 index 83380ea..2590c99 100644
 --- a/packages/app/src/components/markdown/renderer.tsx
@@ -869,6 +947,22 @@ index 5741abb..8c5df86 100644
      color: theme.colors.foreground,
      paddingVertical: theme.spacing[3],
      paddingHorizontal: theme.spacing[3],
+diff --git a/packages/app/src/components/resize-handle.tsx b/packages/app/src/components/resize-handle.tsx
+index 6576728..14765b1 100644
+--- a/packages/app/src/components/resize-handle.tsx
++++ b/packages/app/src/components/resize-handle.tsx
+@@ -198,9 +198,9 @@ export function ResizeHandle({
+     () => [
+       styles.handle,
+       direction === "horizontal" ? styles.handleHorizontal : styles.handleVertical,
+-      { backgroundColor: theme.colors.border },
++      { backgroundColor: theme.colors.borderGlass },
+     ],
+-    [direction, theme.colors.border],
++    [direction, theme.colors.borderGlass],
+   );
+   const highlightStyle = useMemo(
+     () => [
 diff --git a/packages/app/src/components/root-error-boundary.tsx b/packages/app/src/components/root-error-boundary.tsx
 index 01e8b79..93e34b1 100644
 --- a/packages/app/src/components/root-error-boundary.tsx
@@ -1025,9 +1119,18 @@ index f67bd73..60b9f13 100644
    // The width of a workspace row's status slot, so the label lands on the same rail as the
    // titles above it rather than two points to their left.
 diff --git a/packages/app/src/components/sidebar/sidebar-header-row.tsx b/packages/app/src/components/sidebar/sidebar-header-row.tsx
-index 4519f6d..eb4d3f9 100644
+index 4519f6d..655923d 100644
 --- a/packages/app/src/components/sidebar/sidebar-header-row.tsx
 +++ b/packages/app/src/components/sidebar/sidebar-header-row.tsx
+@@ -122,7 +122,7 @@ const styles = StyleSheet.create((theme) => ({
+     paddingHorizontal: theme.spacing[2],
+     justifyContent: "center",
+     borderBottomWidth: 1,
+-    borderBottomColor: theme.colors.border,
++    borderBottomColor: theme.colors.borderGlass,
+     userSelect: "none",
+   },
+   containerCompact: {
 @@ -144,7 +144,7 @@ const styles = StyleSheet.create((theme) => ({
      borderRadius: theme.borderRadius.lg,
    },
@@ -1037,6 +1140,18 @@ index 4519f6d..eb4d3f9 100644
    },
    button: {
      flex: 1,
+diff --git a/packages/app/src/components/sidebar/sidebar-separator.tsx b/packages/app/src/components/sidebar/sidebar-separator.tsx
+index 30310d8..3721298 100644
+--- a/packages/app/src/components/sidebar/sidebar-separator.tsx
++++ b/packages/app/src/components/sidebar/sidebar-separator.tsx
+@@ -13,6 +13,6 @@ export function SidebarSeparator({ testID }: { testID?: string } = {}) {
+ const styles = StyleSheet.create((theme) => ({
+   line: {
+     borderBottomWidth: 1,
+-    borderBottomColor: theme.colors.border,
++    borderBottomColor: theme.colors.borderGlass,
+   },
+ }));
 diff --git a/packages/app/src/components/sidebar/sidebar-status-list.tsx b/packages/app/src/components/sidebar/sidebar-status-list.tsx
 index c299d07..9362021 100644
 --- a/packages/app/src/components/sidebar/sidebar-status-list.tsx
@@ -1246,6 +1361,18 @@ index 378eb2c..89ab166 100644
    },
    name: { color: theme.colors.foreground, opacity: 0.76 },
    nameHovered: { opacity: 1 },
+diff --git a/packages/app/src/components/tree-rail.tsx b/packages/app/src/components/tree-rail.tsx
+index e0a4319..9df03a8 100644
+--- a/packages/app/src/components/tree-rail.tsx
++++ b/packages/app/src/components/tree-rail.tsx
+@@ -126,6 +126,6 @@ const styles = StyleSheet.create((theme) => ({
+     position: "relative",
+     flexShrink: 0,
+     borderLeftWidth: 1,
+-    borderLeftColor: theme.colors.border,
++    borderLeftColor: theme.colors.borderGlass,
+   },
+ }));
 diff --git a/packages/app/src/components/ui/autocomplete.tsx b/packages/app/src/components/ui/autocomplete.tsx
 index cc684f8..d54475f 100644
 --- a/packages/app/src/components/ui/autocomplete.tsx
@@ -1502,18 +1629,21 @@ index 3b76d4c..261f8b5 100644
    },
    handleIndicatorStyle: {
 diff --git a/packages/app/src/components/ui/pane-content-toolbar.tsx b/packages/app/src/components/ui/pane-content-toolbar.tsx
-index 0363467..c24f9d0 100644
+index 0363467..a218ec0 100644
 --- a/packages/app/src/components/ui/pane-content-toolbar.tsx
 +++ b/packages/app/src/components/ui/pane-content-toolbar.tsx
-@@ -202,7 +202,7 @@ export function paneContentToolbarIconButtonStyle(
+@@ -202,9 +202,9 @@ export function paneContentToolbarIconButtonStyle(
  const styles = StyleSheet.create((theme) => ({
    toolbar: {
      height: WORKSPACE_SECONDARY_HEADER_HEIGHT,
 -    backgroundColor: theme.colors.surface0,
 +    backgroundColor: theme.colors.surfaceCard,
      borderBottomWidth: 1,
-     borderBottomColor: theme.colors.border,
+-    borderBottomColor: theme.colors.border,
++    borderBottomColor: theme.colors.borderGlass,
      flexShrink: 0,
+   },
+   controls: {
 diff --git a/packages/app/src/components/ui/scrollable-code-surface.tsx b/packages/app/src/components/ui/scrollable-code-surface.tsx
 index 3b99f8b..f44eb46 100644
 --- a/packages/app/src/components/ui/scrollable-code-surface.tsx
@@ -1590,7 +1720,7 @@ index a1228cb..ae26d44 100644
      triggerSm: {
        ...geometry.fieldControlSm,
 diff --git a/packages/app/src/components/ui/trailing-action-scrim.tsx b/packages/app/src/components/ui/trailing-action-scrim.tsx
-index e106bf3..1a17d85 100644
+index e106bf3..f14972c 100644
 --- a/packages/app/src/components/ui/trailing-action-scrim.tsx
 +++ b/packages/app/src/components/ui/trailing-action-scrim.tsx
 @@ -1,5 +1,5 @@
@@ -1600,7 +1730,7 @@ index e106bf3..1a17d85 100644
  import Svg, { Defs, LinearGradient as SvgLinearGradient, Rect, Stop } from "react-native-svg";
  import { StyleSheet, withUnistyles } from "react-native-unistyles";
  import type { SurfaceBackdrop } from "@/styles/surface-backdrop";
-@@ -31,9 +31,11 @@ const backdropColorMappings: Record<SurfaceBackdrop, (theme: Theme) => { color:
+@@ -31,17 +31,24 @@ const backdropColorMappings: Record<SurfaceBackdrop, (theme: Theme) => { color:
    surface0: (theme) => ({ color: theme.colors.surface0 }),
    surface1: (theme) => ({ color: theme.colors.surface1 }),
    surface2: (theme) => ({ color: theme.colors.surface2 }),
@@ -1614,8 +1744,30 @@ index e106bf3..1a17d85 100644
 +  surfaceSidebarSelected: (theme) => ({ color: theme.colors.surfaceRowSelected }),
  };
  
++const rowGlassMapping = (theme: Theme) => ({ color: theme.colors.surfaceRowHover });
++
  /** Fades trailing content into the surface beneath an absolutely overlaid action. */
-@@ -63,5 +65,8 @@ const styles = StyleSheet.create({
+ export function TrailingActionScrim({
+   backdrop,
++  useRowGlass = false,
+   testID,
+ }: {
+   backdrop: SurfaceBackdrop;
++  /** Tabs and other glass rows: use their row overlay instead of an opaque surface. */
++  useRowGlass?: boolean;
+   testID?: string;
+ }) {
+   // React-generated ids contain characters that are invalid inside SVG fragment references.
+@@ -50,7 +57,7 @@ export function TrailingActionScrim({
+     <View style={styles.scrim} pointerEvents="none" testID={testID}>
+       <ThemedTrailingActionScrimSvg
+         gradientId={gradientId}
+-        uniProps={backdropColorMappings[backdrop]}
++        uniProps={useRowGlass ? rowGlassMapping : backdropColorMappings[backdrop]}
+       />
+     </View>
+   );
+@@ -63,5 +70,8 @@ const styles = StyleSheet.create({
      bottom: 0,
      right: 0,
      width: SCRIM_WIDTH,
@@ -2352,7 +2504,7 @@ index bcd1e4f..b12ecf7 100644
    filterContainer: {
      flexDirection: "row",
 diff --git a/packages/app/src/screens/settings-screen.tsx b/packages/app/src/screens/settings-screen.tsx
-index 925607a..e751544 100644
+index 925607a..a4f44ce 100644
 --- a/packages/app/src/screens/settings-screen.tsx
 +++ b/packages/app/src/screens/settings-screen.tsx
 @@ -1498,7 +1498,7 @@ export default function SettingsScreen({ view, openAddHostIntent = null }: Setti
@@ -2373,6 +2525,15 @@ index 925607a..e751544 100644
    },
    scrollView: {
      flex: 1,
+@@ -1559,7 +1559,7 @@ const sidebarStyles = StyleSheet.create((theme) => ({
+   desktopContainer: {
+     width: SETTINGS_DESKTOP_SIDEBAR_WIDTH,
+     borderRightWidth: 1,
+-    borderRightColor: theme.colors.border,
++    borderRightColor: theme.colors.borderGlass,
+     backgroundColor: theme.colors.surfaceSidebar,
+   },
+   scrollBody: {
 @@ -1594,10 +1594,10 @@ const sidebarStyles = StyleSheet.create((theme) => ({
      borderRadius: theme.borderRadius.lg,
    },
@@ -2541,19 +2702,52 @@ index 1f12d90..5830e70 100644
      borderWidth: theme.borderWidth[1],
      borderColor: theme.colors.border,
      overflow: "hidden",
+diff --git a/packages/app/src/screens/workspace/explorer-sidebar.tsx b/packages/app/src/screens/workspace/explorer-sidebar.tsx
+index 175be36..8d41ea1 100644
+--- a/packages/app/src/screens/workspace/explorer-sidebar.tsx
++++ b/packages/app/src/screens/workspace/explorer-sidebar.tsx
+@@ -207,7 +207,7 @@ const styles = StyleSheet.create((theme) => ({
+     bottom: 0,
+     left: 0,
+     height: theme.borderWidth[1],
+-    backgroundColor: theme.colors.border,
++    backgroundColor: theme.colors.borderGlass,
+   },
+   content: {
+     flex: 1,
 diff --git a/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx b/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
-index f1806ed..ab22159 100644
+index f1806ed..fb4e4e4 100644
 --- a/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
 +++ b/packages/app/src/screens/workspace/workspace-desktop-tabs-row.tsx
-@@ -1567,7 +1567,7 @@ const styles = StyleSheet.create((theme) => ({
+@@ -903,7 +903,7 @@ function TabChip({
+               showCloseControl ? styles.tabTrailingOverlayShown : styles.tabTrailingOverlayHidden,
+             ]}
+           >
+-            <TrailingActionScrim backdrop={chipBackdrop} />
++            <TrailingActionScrim backdrop={chipBackdrop} useRowGlass />
+             <Pressable
+               {...(closeButtonDragBlockers as object | undefined)}
+               testID={closeButtonTestId}
+@@ -1566,8 +1566,8 @@ const styles = StyleSheet.create((theme) => ({
+     minWidth: 0,
      height: WORKSPACE_SECONDARY_HEADER_HEIGHT,
      borderBottomWidth: 1,
-     borderBottomColor: theme.colors.border,
+-    borderBottomColor: theme.colors.border,
 -    backgroundColor: theme.colors.surface0,
++    borderBottomColor: theme.colors.borderGlass,
 +    backgroundColor: "transparent",
      flexDirection: "row",
      alignItems: "center",
      overflow: "visible",
+@@ -1597,7 +1597,7 @@ const styles = StyleSheet.create((theme) => ({
+     alignItems: "center",
+     paddingHorizontal: theme.spacing[0.5],
+     borderRightWidth: 1,
+-    borderRightColor: theme.colors.border,
++    borderRightColor: theme.colors.borderGlass,
+   },
+   inlineAddButton: {
+     flexDirection: "row",
 @@ -1622,13 +1622,13 @@ const styles = StyleSheet.create((theme) => ({
      userSelect: "none",
    },
@@ -2572,7 +2766,7 @@ index f1806ed..ab22159 100644
    tabHoverFrame: {
      position: "relative",
 diff --git a/packages/app/src/screens/workspace/workspace-screen.tsx b/packages/app/src/screens/workspace/workspace-screen.tsx
-index d94b7e5..0c9e810 100644
+index d94b7e5..7d26a42 100644
 --- a/packages/app/src/screens/workspace/workspace-screen.tsx
 +++ b/packages/app/src/screens/workspace/workspace-screen.tsx
 @@ -1337,7 +1337,7 @@ function renderWorkspaceScreenGateShell(input: {
@@ -2599,15 +2793,18 @@ index d94b7e5..0c9e810 100644
    },
    newTabTooltipText: {
      fontSize: theme.fontSize.base,
-@@ -4273,7 +4273,7 @@ const styles = StyleSheet.create((theme) => ({
+@@ -4273,9 +4273,9 @@ const styles = StyleSheet.create((theme) => ({
    },
    newTabTooltipShortcut: {},
    mobileTabsRow: {
 -    backgroundColor: theme.colors.surface0,
 +    backgroundColor: "transparent",
      borderBottomWidth: theme.borderWidth[1],
-     borderBottomColor: theme.colors.border,
+-    borderBottomColor: theme.colors.border,
++    borderBottomColor: theme.colors.borderGlass,
    },
+   switcherTrigger: {
+     flexDirection: "row",
 @@ -4285,7 +4285,7 @@ const styles = StyleSheet.create((theme) => ({
      paddingVertical: theme.spacing[2],
    },
@@ -2617,11 +2814,13 @@ index d94b7e5..0c9e810 100644
    },
    switcherTriggerLeft: {
      flexDirection: "row",
-@@ -4310,7 +4310,7 @@ const styles = StyleSheet.create((theme) => ({
+@@ -4309,8 +4309,8 @@ const styles = StyleSheet.create((theme) => ({
+   },
    tabsContainer: {
      borderBottomWidth: 1,
-     borderBottomColor: theme.colors.border,
+-    borderBottomColor: theme.colors.border,
 -    backgroundColor: theme.colors.surface0,
++    borderBottomColor: theme.colors.borderGlass,
 +    backgroundColor: "transparent",
      flexDirection: "row",
      alignItems: "center",
@@ -2770,7 +2969,7 @@ index 4f6d377..62da5e8 100644
      borderWidth: 1,
      borderColor: theme.colors.border,
 diff --git a/packages/app/src/styles/theme.ts b/packages/app/src/styles/theme.ts
-index 04b1e8f..d82a9ed 100644
+index 04b1e8f..7b5b6ce 100644
 --- a/packages/app/src/styles/theme.ts
 +++ b/packages/app/src/styles/theme.ts
 @@ -1,5 +1,33 @@
@@ -2824,7 +3023,15 @@ index 04b1e8f..d82a9ed 100644
      interactionHighlight: "rgba(0, 0, 0, 0.06)",
  
      foreground: tint.foreground,
-@@ -397,10 +435,22 @@ export function buildDarkSemanticColors(tint: DarkThemeConfig) {
+@@ -277,6 +315,7 @@ export function buildLightSemanticColors(tint: LightThemeConfig) {
+     foregroundExtraMuted: tint.foregroundExtraMuted,
+ 
+     border: tint.border,
++    borderGlass: "rgba(0, 0, 0, 0.08)",
+     borderAccent: tint.borderAccent,
+ 
+     accent: tint.accent,
+@@ -397,10 +436,22 @@ export function buildDarkSemanticColors(tint: DarkThemeConfig) {
      surface3: tint.surface3,
      surface4: tint.surface4,
      surfaceDiffEmpty: tint.surfaceDiffEmpty,
@@ -2849,6 +3056,14 @@ index 04b1e8f..d82a9ed 100644
      interactionHighlight: "rgba(255, 255, 255, 0.08)",
  
      foreground,
+@@ -408,6 +459,7 @@ export function buildDarkSemanticColors(tint: DarkThemeConfig) {
+     foregroundExtraMuted: tint.foregroundExtraMuted,
+ 
+     border: tint.border,
++    borderGlass: GLASS_ENABLED ? "rgba(255, 255, 255, 0.06)" : tint.border,
+     borderAccent: tint.borderAccent,
+ 
+     accent: tint.accent,
 diff --git a/packages/app/src/tool-calls/detail-level/overview/sheet.tsx b/packages/app/src/tool-calls/detail-level/overview/sheet.tsx
 index b3b5bf3..9c47448 100644
 --- a/packages/app/src/tool-calls/detail-level/overview/sheet.tsx
