@@ -100,6 +100,53 @@ index 6e9b506..b0c7644 100644
    },
    windowSidebarToggle: {
      position: "absolute",
+diff --git a/packages/app/src/components/agent-list.tsx b/packages/app/src/components/agent-list.tsx
+index 7da3674..43ea6d9 100644
+--- a/packages/app/src/components/agent-list.tsx
++++ b/packages/app/src/components/agent-list.tsx
+@@ -630,13 +630,13 @@ const styles = StyleSheet.create((theme) => ({
+     marginLeft: theme.spacing[2],
+   },
+   rowSelected: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   rowHovered: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   rowPressed: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowPressed,
+   },
+   sessionTitle: {
+     flexShrink: 1,
+diff --git a/packages/app/src/components/compact-explorer-sidebar.tsx b/packages/app/src/components/compact-explorer-sidebar.tsx
+index d52a9ea..a8b5279 100644
+--- a/packages/app/src/components/compact-explorer-sidebar.tsx
++++ b/packages/app/src/components/compact-explorer-sidebar.tsx
+@@ -549,7 +549,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.md,
+   }),
+   tabActive: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   tabText: {
+     fontSize: theme.fontSize.base,
+diff --git a/packages/app/src/components/file-explorer-pane.tsx b/packages/app/src/components/file-explorer-pane.tsx
+index 209ec74..1a4b40a 100644
+--- a/packages/app/src/components/file-explorer-pane.tsx
++++ b/packages/app/src/components/file-explorer-pane.tsx
+@@ -1696,7 +1696,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.base,
+   },
+   sortTriggerHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   sortTriggerText: {
+     fontSize: theme.fontSize.sm,
 diff --git a/packages/app/src/components/headers/screen-header.tsx b/packages/app/src/components/headers/screen-header.tsx
 index 6492658..581ed35 100644
 --- a/packages/app/src/components/headers/screen-header.tsx
@@ -113,6 +160,19 @@ index 6492658..581ed35 100644
    },
    inner: {},
    row: {
+diff --git a/packages/app/src/components/message.tsx b/packages/app/src/components/message.tsx
+index 583585b..1598e60 100644
+--- a/packages/app/src/components/message.tsx
++++ b/packages/app/src/components/message.tsx
+@@ -1198,7 +1198,7 @@ const expandableBadgeStylesheet = StyleSheet.create((theme) => ({
+     ...(isWeb ? { cursor: "auto" as const, userSelect: "text" as const } : {}),
+   },
+   pressableExpanded: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+   },
+   pressableExpandedAttached: {
+     borderColor: theme.colors.border,
 diff --git a/packages/app/src/components/page-layout/index.tsx b/packages/app/src/components/page-layout/index.tsx
 index e0c46b6..2b13514 100644
 --- a/packages/app/src/components/page-layout/index.tsx
@@ -139,6 +199,187 @@ index 01e8b79..93e34b1 100644
    },
    content: {
      flex: 1,
+diff --git a/packages/app/src/components/settings/collapsible-row.tsx b/packages/app/src/components/settings/collapsible-row.tsx
+index 219c197..6854204 100644
+--- a/packages/app/src/components/settings/collapsible-row.tsx
++++ b/packages/app/src/components/settings/collapsible-row.tsx
+@@ -88,10 +88,10 @@ export function SettingsCollapsibleRow({
+ 
+ const styles = StyleSheet.create((theme) => ({
+   headerHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   headerPressed: {
+-    backgroundColor: theme.colors.surface3,
++    backgroundColor: theme.colors.surfaceRowPressed,
+   },
+   // Optical: the chevron's ink sits about 4px inside its box whether it points right or down; this
+   // puts the ink on the card's trailing rail, where the switch and the reports' refresh buttons end.
+diff --git a/packages/app/src/components/sidebar-workspace-list.tsx b/packages/app/src/components/sidebar-workspace-list.tsx
+index 4275099..f52bc48 100644
+--- a/packages/app/src/components/sidebar-workspace-list.tsx
++++ b/packages/app/src/components/sidebar-workspace-list.tsx
+@@ -2539,10 +2539,10 @@ const styles = StyleSheet.create((theme) => ({
+     userSelect: "none",
+   },
+   newWorkspaceGhostRowHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   newWorkspaceGhostRowPressed: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowPressed,
+   },
+   // The width of a workspace row's status slot, so the label lands on the same rail as the
+   // titles above it.
+@@ -2579,10 +2579,10 @@ const styles = StyleSheet.create((theme) => ({
+     userSelect: "none",
+   },
+   projectRowHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   projectRowPressed: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowPressed,
+   },
+   projectRowDragging: {
+     backgroundColor: theme.colors.surface2,
+@@ -2623,7 +2623,7 @@ const styles = StyleSheet.create((theme) => ({
+     flexShrink: 0,
+   },
+   projectActionButtonHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   projectActionButtonText: {
+     color: theme.colors.foregroundMuted,
+@@ -2638,7 +2638,7 @@ const styles = StyleSheet.create((theme) => ({
+     flexShrink: 0,
+   },
+   projectIconActionButtonHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   projectIconActionButtonHidden: {
+     opacity: 0,
+@@ -2722,10 +2722,10 @@ const styles = StyleSheet.create((theme) => ({
+     flexShrink: 0,
+   },
+   workspaceRowHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   workspaceRowPressed: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowPressed,
+   },
+   workspaceRowDragging: {
+     backgroundColor: theme.colors.surface2,
+@@ -2736,7 +2736,7 @@ const styles = StyleSheet.create((theme) => ({
+     ...theme.shadow.md,
+   },
+   sidebarRowSelected: {
+-    backgroundColor: theme.colors.surfaceSidebarSelected,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   workspaceRowContainer: {
+     position: "relative",
+diff --git a/packages/app/src/components/sidebar/sidebar-group-toggle-row.tsx b/packages/app/src/components/sidebar/sidebar-group-toggle-row.tsx
+index f67bd73..60b9f13 100644
+--- a/packages/app/src/components/sidebar/sidebar-group-toggle-row.tsx
++++ b/packages/app/src/components/sidebar/sidebar-group-toggle-row.tsx
+@@ -98,10 +98,10 @@ const styles = StyleSheet.create((theme) => ({
+     userSelect: "none",
+   },
+   rowHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   rowPressed: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowPressed,
+   },
+   // The width of a workspace row's status slot, so the label lands on the same rail as the
+   // titles above it rather than two points to their left.
+diff --git a/packages/app/src/components/sidebar/sidebar-header-row.tsx b/packages/app/src/components/sidebar/sidebar-header-row.tsx
+index 4519f6d..eb4d3f9 100644
+--- a/packages/app/src/components/sidebar/sidebar-header-row.tsx
++++ b/packages/app/src/components/sidebar/sidebar-header-row.tsx
+@@ -144,7 +144,7 @@ const styles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.lg,
+   },
+   rowHighlighted: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   button: {
+     flex: 1,
+diff --git a/packages/app/src/components/sidebar/sidebar-status-list.tsx b/packages/app/src/components/sidebar/sidebar-status-list.tsx
+index c299d07..9362021 100644
+--- a/packages/app/src/components/sidebar/sidebar-status-list.tsx
++++ b/packages/app/src/components/sidebar/sidebar-status-list.tsx
+@@ -1070,10 +1070,10 @@ const styles = StyleSheet.create((theme) => ({
+     userSelect: "none",
+   },
+   statusGroupRowHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   statusGroupRowPressed: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowPressed,
+   },
+   statusGroupRowLeft: {
+     flexDirection: "row",
+@@ -1121,10 +1121,10 @@ const styles = StyleSheet.create((theme) => ({
+     userSelect: "none",
+   },
+   workspaceRowHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   workspaceRowPressed: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowPressed,
+   },
+   workspaceRowDragging: {
+     backgroundColor: theme.colors.surface2,
+@@ -1135,6 +1135,6 @@ const styles = StyleSheet.create((theme) => ({
+     ...theme.shadow.md,
+   },
+   sidebarRowSelected: {
+-    backgroundColor: theme.colors.surfaceSidebarSelected,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+ }));
+diff --git a/packages/app/src/components/sidebar/sidebar-workspace-row.tsx b/packages/app/src/components/sidebar/sidebar-workspace-row.tsx
+index f8dcdeb..bd61e79 100644
+--- a/packages/app/src/components/sidebar/sidebar-workspace-row.tsx
++++ b/packages/app/src/components/sidebar/sidebar-workspace-row.tsx
+@@ -498,10 +498,10 @@ const styles = StyleSheet.create((theme) => ({
+     userSelect: "none",
+   },
+   workspaceRowHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   workspaceRowPressed: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowPressed,
+   },
+   workspaceRowDragging: {
+     backgroundColor: theme.colors.surface2,
+@@ -512,7 +512,7 @@ const styles = StyleSheet.create((theme) => ({
+     ...theme.shadow.md,
+   },
+   sidebarRowSelected: {
+-    backgroundColor: theme.colors.surfaceSidebarSelected,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   workspaceCreatingText: {
+     color: theme.colors.foregroundMuted,
 diff --git a/packages/app/src/components/split-container.tsx b/packages/app/src/components/split-container.tsx
 index 9705f3b..87dec24 100644
 --- a/packages/app/src/components/split-container.tsx
@@ -152,6 +393,19 @@ index 9705f3b..87dec24 100644
      overflow: "hidden",
    },
    paneTabs: {
+diff --git a/packages/app/src/components/tree-primitives.tsx b/packages/app/src/components/tree-primitives.tsx
+index 378eb2c..89ab166 100644
+--- a/packages/app/src/components/tree-primitives.tsx
++++ b/packages/app/src/components/tree-primitives.tsx
+@@ -53,7 +53,7 @@ export const workspaceTreeRowStyles = StyleSheet.create((theme: Theme) => ({
+     paddingRight: WORKSPACE_PANE_TRAILING_GLYPH_RAIL,
+   },
+   active: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   name: { color: theme.colors.foreground, opacity: 0.76 },
+   nameHovered: { opacity: 1 },
 diff --git a/packages/app/src/components/welcome-screen.tsx b/packages/app/src/components/welcome-screen.tsx
 index 1b3cdbe..ca768cf 100644
 --- a/packages/app/src/components/welcome-screen.tsx
@@ -165,6 +419,19 @@ index 1b3cdbe..ca768cf 100644
    },
    scrollView: {
      flex: 1,
+diff --git a/packages/app/src/composer/input/input.tsx b/packages/app/src/composer/input/input.tsx
+index e15a000..2b140e0 100644
+--- a/packages/app/src/composer/input/input.tsx
++++ b/packages/app/src/composer/input/input.tsx
+@@ -1917,7 +1917,7 @@ const styles = StyleSheet.create((theme: Theme) => ({
+     flexShrink: 1,
+     flexDirection: "column",
+     gap: theme.spacing[3],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: theme.borderWidth[1],
+     borderColor: theme.colors.borderAccent,
+     borderRadius: theme.borderRadius["2xl"],
 diff --git a/packages/app/src/navigation/themed-stack.tsx b/packages/app/src/navigation/themed-stack.tsx
 index 010877c..8bc19d6 100644
 --- a/packages/app/src/navigation/themed-stack.tsx
@@ -236,7 +503,7 @@ index c919ab4..a035fb8 100644
    },
    content: {
 diff --git a/packages/app/src/screens/open-project-screen.tsx b/packages/app/src/screens/open-project-screen.tsx
-index 4c340e0..7951622 100644
+index 4c340e0..636558a 100644
 --- a/packages/app/src/screens/open-project-screen.tsx
 +++ b/packages/app/src/screens/open-project-screen.tsx
 @@ -173,7 +173,7 @@ function HomeTile({ icon: Icon, title, description, onPress, testID, accent }: H
@@ -248,6 +515,23 @@ index 4c340e0..7951622 100644
      userSelect: "none",
    },
    content: {
+@@ -211,14 +211,14 @@ const styles = StyleSheet.create((theme) => ({
+     width: { xs: "100%", md: 220 },
+     minHeight: { xs: 0, md: 132 },
+     padding: theme.spacing[4],
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderWidth: 1,
+     borderColor: theme.colors.border,
+     borderRadius: theme.borderRadius.xl,
+     gap: theme.spacing[3],
+   },
+   tileHovered: {
+-    backgroundColor: theme.colors.surface2,
++    backgroundColor: theme.colors.surfaceRowHover,
+     borderColor: theme.colors.borderAccent,
+   },
+   tilePressed: {
 diff --git a/packages/app/src/screens/schedules-screen.tsx b/packages/app/src/screens/schedules-screen.tsx
 index ce2f8b9..acbcb97 100644
 --- a/packages/app/src/screens/schedules-screen.tsx
@@ -275,7 +559,7 @@ index bcd1e4f..b12ecf7 100644
    filterContainer: {
      flexDirection: "row",
 diff --git a/packages/app/src/screens/settings-screen.tsx b/packages/app/src/screens/settings-screen.tsx
-index 925607a..1110190 100644
+index 925607a..e751544 100644
 --- a/packages/app/src/screens/settings-screen.tsx
 +++ b/packages/app/src/screens/settings-screen.tsx
 @@ -1498,7 +1498,7 @@ export default function SettingsScreen({ view, openAddHostIntent = null }: Setti
@@ -295,6 +579,28 @@ index 925607a..1110190 100644
 +    backgroundColor: "transparent",
    },
    scrollView: {
+     flex: 1,
+@@ -1594,10 +1594,10 @@ const sidebarStyles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.lg,
+   },
+   itemHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   itemSelected: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowSelected,
+   },
+   label: {
+     fontSize: theme.fontSize.base,
+@@ -1615,7 +1615,7 @@ const sidebarStyles = StyleSheet.create((theme) => ({
+     borderRadius: theme.borderRadius.lg,
+   },
+   pickerTriggerHovered: {
+-    backgroundColor: theme.colors.surfaceSidebarHover,
++    backgroundColor: theme.colors.surfaceRowHover,
+   },
+   pickerTriggerLabel: {
      flex: 1,
 diff --git a/packages/app/src/screens/startup-splash-screen.tsx b/packages/app/src/screens/startup-splash-screen.tsx
 index 1f12d90..4fdf861 100644
@@ -370,8 +676,21 @@ index d94b7e5..04b2a52 100644
    },
    emptyState: {
      flex: 1,
+diff --git a/packages/app/src/styles/settings.ts b/packages/app/src/styles/settings.ts
+index 4f6d377..62da5e8 100644
+--- a/packages/app/src/styles/settings.ts
++++ b/packages/app/src/styles/settings.ts
+@@ -26,7 +26,7 @@ export const settingsStyles = StyleSheet.create((theme) => ({
+     fontSize: theme.fontSize.sm,
+   },
+   card: {
+-    backgroundColor: theme.colors.surface1,
++    backgroundColor: theme.colors.surfaceCard,
+     borderRadius: theme.borderRadius.lg,
+     borderWidth: 1,
+     borderColor: theme.colors.border,
 diff --git a/packages/app/src/styles/theme.ts b/packages/app/src/styles/theme.ts
-index 04b1e8f..725bd40 100644
+index 04b1e8f..7ec358c 100644
 --- a/packages/app/src/styles/theme.ts
 +++ b/packages/app/src/styles/theme.ts
 @@ -1,5 +1,23 @@
@@ -398,15 +717,22 @@ index 04b1e8f..725bd40 100644
  
  export const baseColors = {
    // Base colors
-@@ -270,6 +288,7 @@ export function buildLightSemanticColors(tint: LightThemeConfig) {
+@@ -270,6 +288,14 @@ export function buildLightSemanticColors(tint: LightThemeConfig) {
      surfaceSidebarHover: tint.surface1,
      surfaceSidebarSelected: tint.surface3,
      surfaceWorkspace: tint.surface0,
 +    surfaceGlass: tint.surface0,
++    // Tinted glass for cards and row states: enough base colour to read as a
++    // surface, little enough alpha that the blurred desktop still shows
++    // through, like the transcript's notification bar.
++    surfaceCard: "rgba(0, 0, 0, 0.035)",
++    surfaceRowHover: "rgba(0, 0, 0, 0.035)",
++    surfaceRowSelected: "rgba(0, 0, 0, 0.06)",
++    surfaceRowPressed: "rgba(0, 0, 0, 0.09)",
      interactionHighlight: "rgba(0, 0, 0, 0.06)",
  
      foreground: tint.foreground,
-@@ -397,10 +416,11 @@ export function buildDarkSemanticColors(tint: DarkThemeConfig) {
+@@ -397,10 +423,18 @@ export function buildDarkSemanticColors(tint: DarkThemeConfig) {
      surface3: tint.surface3,
      surface4: tint.surface4,
      surfaceDiffEmpty: tint.surfaceDiffEmpty,
@@ -417,6 +743,13 @@ index 04b1e8f..725bd40 100644
 -    surfaceWorkspace: tint.surface1,
 +    surfaceWorkspace: GLASS_ENABLED ? "transparent" : tint.surface1,
 +    surfaceGlass: GLASS_ENABLED ? withAlpha(tint.surface0, GLASS_ALPHA) : tint.surface0,
++    // Tinted glass for cards and row states: enough base colour to read as a
++    // surface, little enough alpha that the blurred desktop still shows
++    // through, like the transcript's notification bar.
++    surfaceCard: GLASS_ENABLED ? "rgba(255, 255, 255, 0.06)" : tint.surface1,
++    surfaceRowHover: GLASS_ENABLED ? "rgba(255, 255, 255, 0.04)" : tint.surface1,
++    surfaceRowSelected: GLASS_ENABLED ? "rgba(255, 255, 255, 0.07)" : tint.surface2,
++    surfaceRowPressed: GLASS_ENABLED ? "rgba(255, 255, 255, 0.09)" : tint.surface2,
      interactionHighlight: "rgba(255, 255, 255, 0.08)",
  
      foreground,
