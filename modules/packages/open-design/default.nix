@@ -210,7 +210,10 @@
         buildPhase = ''
           runHook preBuild
 
-          pnpm -r --if-present \
+          # Next's in-process type check runs past V8's default old-space limit
+          # for this build; the desktop package sets the same ceiling for the
+          # same `@open-design/web` compile.
+          NODE_OPTIONS=--max-old-space-size=4096 pnpm -r --if-present \
             --filter '@open-design/daemon...' \
             --filter '@open-design/web...' \
             --filter '@open-design/dsh-runtime...' \
