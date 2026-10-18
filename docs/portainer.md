@@ -99,12 +99,15 @@ the firewall admits it by port: a tailnet peer's connection arrives on
 `tailscale0`, which is a trusted interface, so Portainer's own login is what bounds
 it. The image's HTTP listener
 and edge tunnel stay unpublished and unreachable. Portainer serves HTTPS with a
-self-signed certificate it generates into `/data`, so browsers warn until you
-accept it. Reach it through [the ingress](ingress.md), which terminates the
-trusted certificate and republishes this listener as
-`https://portainer.neko-sphere.nvirellia.im/`; the direct
-`https://neko-sphere.leaffish-halfmoon.ts.net:9443/` address is then only for
-diagnosing the container itself.
+self-signed certificate it generates into `/data`, so a direct connection warns
+until you accept it. [The `tailscale-ingress` module](tailscale-ingress.md) publishes it as
+`svc:nsphere-portainer` on `tcp:443` with the target
+`https+insecure://127.0.0.1:9443`: the daemon terminates the service's trusted
+certificate and skips verification of Portainer's self-signed one, so the UI
+answers at `https://nsphere-portainer.dwelf-hoki.ts.net/` without a warning.
+The direct `https://neko-sphere.dwelf-hoki.ts.net:9443/` address remains for
+diagnosing the container itself. Portainer's own login is what bounds either
+path.
 
 ## First start
 

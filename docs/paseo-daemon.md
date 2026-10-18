@@ -339,8 +339,9 @@ tailnet rather than opening 6767 anywhere else.
 The daemon refuses a `Host` header it was not told about, answering `403 Invalid
 Host header` (which a client shows as a transport that closed); its defaults allow
 `localhost`, `*.localhost` and any IP literal. The module therefore passes the
-zone [the ingress](ingress.md) serves and the tailnet's MagicDNS zone through
-`PASEO_HOSTNAMES`, so both names are accepted — a bare IP always is, which is the
+tailnet's MagicDNS zone through `PASEO_HOSTNAMES`, which covers both the node's
+own name and [the Tailscale Service](tailscale-ingress.md)
+`nsphere-paseo.dwelf-hoki.ts.net` — a bare IP always is, which is the
 workaround if a client cannot be pointed at a name.
 
 Keep the daemon on loopback instead by setting

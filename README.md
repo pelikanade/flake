@@ -8,7 +8,7 @@ Desktop hosts run [omp](docs/omp.md) with per-host Codex and Cursor logins and a
 
 Asymmetry, Parallax and neko-sphere each join the tailnet through [the tailnet module](docs/tailscale.md), which runs `tailscaled` beside the proxy rather than inside it, so the daemon's own interface, CLI and `serve` all work. NetBird's desktop UI and its local daemon remain for workplace login.
 
-neko-sphere's own services answer under a wildcard subdomain of the maintainer's domain with a Let's Encrypt certificate, through [the HTTPS ingress](docs/ingress.md), so a client that joins the tailnet — a home device included — uses a browser-trusted name instead of a per-service certificate and a port number. That host also runs a NetBird client in [userspace mode](docs/netbird-userspace.md), which serves a service from another network on a loopback port without touching its routing, DNS or firewall.
+neko-sphere's own services are advertised as [Tailscale Services](docs/tailscale-ingress.md), so a client that joins the tailnet — a home device included — reaches each one by a stable `*.dwelf-hoki.ts.net` name with a certificate the daemon issues and terminates, and the service keeps that name if it moves to another host. That host also runs a NetBird client in [userspace mode](docs/netbird-userspace.md), which serves a service from another network on a loopback port without touching its routing, DNS or firewall.
 
 It is intended for the maintainer's machines and for people comfortable adapting a NixOS configuration. The machine definitions target `x86_64-linux` and include personal accounts, hardware, disk paths, network settings, and trusted keys. Adopting the configuration requires replacing those values and supplying your own secrets and recipients.
 

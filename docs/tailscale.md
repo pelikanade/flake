@@ -139,11 +139,10 @@ off and use split DNS, or accept that the tailnet's server answers everything.
 
 ## Funnel and port 443
 
-`tailscale funnel` is served by `tailscaled` itself, so its listener competes with
-the [HTTPS ingress](ingress.md) for the same address. Caddy binds every interface
-on 80 and 443 (`*:443`), and that binding belongs to the ingress: it terminates
-the wildcard certificate for the whole zone. `tailscaled` therefore cannot bind
-443, and a Funnel on 443 has no listener to serve.
+`tailscale funnel` and [Tailscale Services](tailscale-ingress.md) do not compete for an
+address. Funnel publishes a port on the node's own MagicDNS name and is served by
+`tailscaled`; a Service answers on its own virtual tailnet address. Nothing else
+on this host binds 443, so a Funnel may use it.
 
 Tailscale accepts Funnel on three ports: 443, 8443 and 10000. Use 8443, or 10000
 when 8443 is taken:
@@ -154,9 +153,10 @@ tailscale funnel status
 ```
 
 The published URL carries that port, and peers reach the service on this node's
-tailnet address under the same port. This is a deliberate constraint rather than
-a misconfiguration: Funnel is an exception for a service that is not published
-under the zone, not a second HTTPS front end, and the ingress keeps 443.
+tailnet address under the same port. Funnel works only over TLS and only under a
+`*.ts.net` name; a public domain reaches it through a CNAME to the name Funnel
+prints. It does not accept a `svc:` target, so a Service that must also be public
+needs a separate node-level Funnel entry for the same local port.
 
 ## Verification
 

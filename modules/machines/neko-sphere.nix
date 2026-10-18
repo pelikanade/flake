@@ -17,7 +17,7 @@
       paseo-daemon
       paseo-deploy
       gh
-      ingress
+      tailscale-ingress
       zswap
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;
@@ -33,38 +33,32 @@
           (modulesPath + "/installer/scan/not-detected.nix")
         ];
 
-        # Every service this host runs is published here, under the zone whose
-        # records point at this host; the ingress module knows about TLS and
-        # reachability, not about which services exist. One interface carries both
-        # the LAN and the machine's public addresses, so the LAN is admitted as a
-        # source rather than an interface.
-        services.ingress = {
-          domain = "neko-sphere.nvirellia.im";
-          lanSources = [ "10.0.0.0/24" ];
+        # Tailscale Services this host advertises. Each name and its endpoints
+        # are defined in the tailnet's admin console; this is only the local
+        # forwarding table. HTTP and HTTPS targets are Tailscale's L7 handlers,
+        # so the tailnet certificate is terminated here; a `tcp` target would
+        # forward the connection unmodified instead.
+        services.tailscale-ingress.services = {
+          # A container on 127.0.0.1:8080.
+          nsphere-freezer.endpoints."tcp:443" = "http://127.0.0.1:8080";
 
-          proxies = {
-            # Magpie's browser page and its gateway API are one process on two
-            # ports; the API takes its own name so every route upstream serves
-            # stays reachable without guessing path prefixes.
-            magpie = {
-              upstream = "127.0.0.1:3430";
-            };
-            magpie-api = {
-              upstream = "127.0.0.1:3425";
-            };
+          # Magpie's browser page and gateway API are one process on two ports,
+          # so each gets its own name; both Services answer on 443.
+          nsphere-magpie.endpoints."tcp:443" = "http://127.0.0.1:3430";
+          nsphere-magpie-api.endpoints."tcp:443" = "http://127.0.0.1:3425";
 
-            # Portainer serves its own listener with the self-signed certificate
-            # it generates into /data.
-            portainer = {
-              upstream = "https://127.0.0.1:9443";
-              upstreamInsecureTls = true;
-            };
+          # The personal site's container is published on 127.0.0.1:8081. The
+          # HTTPS endpoint terminates the tailnet certificate here; a later
+          # Funnel entry points at the same local backend for public traffic.
+          nsphere-nvirellia-im.endpoints."tcp:443" = "http://127.0.0.1:8081";
 
-            # The Paseo daemon serves HTTP and WebSocket on one port.
-            paseo = {
-              upstream = "127.0.0.1:6767";
-            };
-          };
+          # Portainer serves its own HTTPS listener with a self-signed
+          # certificate, so the layer-7 handler terminates the service's
+          # trusted certificate and skips verification of the upstream one.
+          nsphere-portainer.endpoints."tcp:443" = "https+insecure://127.0.0.1:9443";
+
+          # The Paseo daemon serves HTTP and WebSocket on one port.
+          nsphere-paseo.endpoints."tcp:443" = "http://127.0.0.1:6767";
         };
 
         networking = {
