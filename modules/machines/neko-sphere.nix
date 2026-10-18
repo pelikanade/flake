@@ -40,25 +40,25 @@
         # forward the connection unmodified instead.
         services.tailscale-ingress.services = {
           # A container on 127.0.0.1:8080.
-          nsphere-freezer.endpoints."https:443" = "http://127.0.0.1:8080";
+          nsphere-freezer.endpoints."tcp:80" = "http://127.0.0.1:8080";
 
           # Magpie's browser page and gateway API are one process on two ports,
           # so each gets its own name; both Services answer on 443.
-          nsphere-magpie.endpoints."https:443" = "http://127.0.0.1:3430";
-          nsphere-magpie-api.endpoints."https:443" = "http://127.0.0.1:3425";
+          nsphere-magpie.endpoints."tcp:80" = "http://127.0.0.1:3430";
+          nsphere-magpie-api.endpoints."tcp:80" = "http://127.0.0.1:3425";
 
           # The personal site's container is published on 127.0.0.1:8081. The
           # HTTPS endpoint terminates the tailnet certificate here; a later
           # Funnel entry points at the same local backend for public traffic.
-          nsphere-nvirellia-im.endpoints."https:443" = "http://127.0.0.1:8081";
+          nsphere-nvirellia-im.endpoints."tcp:80" = "http://127.0.0.1:8081";
 
           # Portainer serves its own HTTPS listener with a self-signed
           # certificate, so the layer-7 handler terminates the service's
           # trusted certificate and skips verification of the upstream one.
-          nsphere-portainer.endpoints."https:443" = "https+insecure://127.0.0.1:9443";
+          nsphere-portainer.endpoints."tcp:80" = "https+insecure://127.0.0.1:9443";
 
           # The Paseo daemon serves HTTP and WebSocket on one port.
-          nsphere-paseo.endpoints."https:443" = "http://127.0.0.1:6767";
+          nsphere-paseo.endpoints."tcp:80" = "http://127.0.0.1:6767";
         };
 
         networking = {
