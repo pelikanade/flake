@@ -67,8 +67,10 @@
           description = "Advertise this host's Tailscale Services";
           wantedBy = [ "multi-user.target" ];
           wants = [ "tailscaled.service" ];
+          # No ordering against `network-online.target`: the daemon's backend
+          # reaching `Running` is the readiness signal, and this unit polls for
+          # it below rather than treating the system's network as up.
           after = [
-            "network-online.target"
             "tailscaled.service"
             "tailscaled-autoconnect.service"
           ];
