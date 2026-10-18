@@ -1,7 +1,5 @@
 { inputs, ... }:
 {
-  flake.modules.aspects.herdr.imports = [ inputs.self.modules.aspects.agent-upstream ];
-
   flake.modules.homeManager.herdr.programs.herdr = {
     enable = true;
     reviewr.enable = true;

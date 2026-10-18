@@ -27,8 +27,6 @@ in
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    flake.modules.aspects.omp.imports = [ inputs.self.modules.aspects.agent-upstream ];
-
     flake.modules.nixos.omp =
       {
         config,

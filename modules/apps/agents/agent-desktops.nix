@@ -1,7 +1,5 @@
 { inputs, ... }:
 {
-  flake.modules.aspects.agent-desktops.imports = [ inputs.self.modules.aspects.agent-upstream ];
-
   flake.modules.homeManager.agent-desktops =
     { pkgs, ... }:
     let
