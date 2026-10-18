@@ -197,6 +197,17 @@ rebuilding the package, so the packaged config carries no `updateMetadataUrl`.
   runtime is reported unavailable, and every cloud-transport call the collab
   layer classifies as infrastructure reaches the web client as 502 — the state
   the packaged desktop application cannot sign in from.
+- **The OpenCode companion is never stripped.** It is a Bun standalone
+  executable: its module graph lives in a `.bun` section that the kernel maps at
+  the virtual address a compiled-in pointer names. The fixup phase's
+  `strip -S -p` rewrites that section layout, the pointer stops resolving, and
+  the binary silently runs as plain Bun instead of OpenCode — every agent spawn
+  then exits 1 with `error: Script not found "json"`, because the daemon's
+  `run --format json` argv reaches Bun as a script name. `stripExclude =
+  [ "opencode" ]` in the vela, daemon and desktop derivations keeps it out;
+  `patchelf` and `--shrink-rpath` leave the payload alone, so the companion keeps
+  going through `autoPatchelfHook`. Each derivation's install check runs the
+  companion's `--help` and fails if Bun's own help appears.
 
 ## Updating
 
@@ -210,8 +221,9 @@ whatever `electron_42` nixpkgs carries.
 
 ## Checks
 
-`doInstallCheck` runs the wrapped `od --help`, the sharp probe and the bundled
-Vela CLI's `--version` in the daemon package, and in the desktop package resolves
+`doInstallCheck` runs the wrapped `od --help`, the sharp probe, the bundled
+Vela CLI's `--version` and the OpenCode companion's `--help` (which must not be
+Bun's) in the daemon package, and in the desktop package resolves
 the four entry points the packaged runtime asks Node for
 (`@open-design/packaged`, `@open-design/desktop/main`, `@open-design/daemon/sidecar`,
 `@open-design/web/sidecar`) and asserts the bundled Node, Vela CLI, companion,

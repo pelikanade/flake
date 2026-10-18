@@ -138,6 +138,29 @@
           cp -r bin/libexec "$out/bin/libexec"
           runHook postInstall
         '';
+
+        # The OpenCode companion is a Bun standalone executable: the kernel maps
+        # its embedded module graph from the `.bun` section at the virtual
+        # address a compiled-in pointer names. `strip` rewrites that section
+        # layout, the pointer no longer resolves, and the binary falls back to
+        # Bun's own CLI — every agent spawn then exits 1 with
+        # `error: Script not found "json"` (the daemon's
+        # `run --format json` argv reaches Bun as a script name). Keep it out of
+        # the fixup strip. `patchelf` and `--shrink-rpath` leave the payload
+        # alone, so autoPatchelfHook stays enabled.
+        stripExclude = [ "opencode" ];
+
+        doInstallCheck = true;
+        installCheckPhase = ''
+          runHook preInstallCheck
+          test "$("$out/bin/vela" --version)" = "${velaVersion}"
+          if "$out/bin/libexec/opencode/opencode" --help 2>&1 \
+              | grep -qF 'Bun is a fast JavaScript runtime'; then
+            echo "vela-cli: the OpenCode companion fell back to the Bun CLI; its embedded payload was damaged" >&2
+            exit 1
+          fi
+          runHook postInstallCheck
+        '';
       };
     in
     {
@@ -169,6 +192,11 @@
           npm_config_nodedir = "${nodejs_24}";
           npm_config_build_from_source = "true";
         };
+
+        # The resource root carries the OpenCode companion from the vela
+        # derivation; stripping that Bun standalone executable destroys the
+        # embedded payload it resolves at startup (see vela's stripExclude).
+        stripExclude = [ "opencode" ];
 
         # The daemon anchors scratch space for its design-system importers at the
         # workspace root, which upstream's container image makes writable. A
@@ -369,7 +397,12 @@
           vela="$out/lib/${pname}/resources/bin/vela"
           test -x "$vela"
           test "$("$vela" --version)" = "${velaVersion}"
-          test -x "$out/lib/${pname}/resources/bin/libexec/opencode/opencode"
+          opencode="$out/lib/${pname}/resources/bin/libexec/opencode/opencode"
+          test -x "$opencode"
+          if "$opencode" --help 2>&1 | grep -qF 'Bun is a fast JavaScript runtime'; then
+            echo "open-design: the OpenCode companion fell back to the Bun CLI; its embedded payload was damaged" >&2
+            exit 1
+          fi
 
           # The substituted libvips has to actually load and rasterize; the
           # prebuilt one this package drops exits 139 on the same call.
@@ -462,6 +495,10 @@
         # wrapGAppsHook3 only supplies `gappsWrapperArgs` here, so the wrapper
         # below can hand Electron the GSettings schemas path its GTK surfaces read.
         dontWrapGApps = true;
+
+        # The copied resource root contains the OpenCode companion, whose Bun
+        # standalone payload `strip` would destroy (see vela's stripExclude).
+        stripExclude = [ "opencode" ];
 
         env = {
           CI = "true";
@@ -748,7 +785,12 @@
           test -x "$out/bin/open-design-desktop"
           test -f "$out/lib/${pname}/linux-unpacked/resources/open-design/bin/node"
           test -x "$out/lib/${pname}/linux-unpacked/resources/open-design/bin/vela"
-          test -x "$out/lib/${pname}/linux-unpacked/resources/open-design/bin/libexec/opencode/opencode"
+          opencode="$out/lib/${pname}/linux-unpacked/resources/open-design/bin/libexec/opencode/opencode"
+          test -x "$opencode"
+          if "$opencode" --help 2>&1 | grep -qF 'Bun is a fast JavaScript runtime'; then
+            echo "open-design-desktop: the OpenCode companion fell back to the Bun CLI; its embedded payload was damaged" >&2
+            exit 1
+          fi
           test -f "$out/lib/${pname}/linux-unpacked/resources/open-design-config.json"
 
           # ANGLE and Chromium dlopen these by name, so shrink-rpath cannot
