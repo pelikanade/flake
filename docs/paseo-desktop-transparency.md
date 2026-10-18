@@ -103,6 +103,9 @@ The patch is organised by intent, not by file count:
 - **Workspace gate**: the loading/unavailable/recovery shell uses
   `containerWorkspaceBackground`, not the opaque `container`, so a freshly
   created or temporarily unavailable workspace stays glass.
+- **New agent drafts**: `composer/draft/workspace-tab.tsx` paints its own
+  `surface0` root. It is transparent like the rest of the pane, so an empty
+  draft stays glass until the first message.
 
 ## Updating the patch for a new Paseo release
 

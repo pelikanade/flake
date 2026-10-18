@@ -2093,6 +2093,19 @@ index bca5a25..51f06e7 100644
    },
    triggerDisabled: {
      opacity: 0.5,
+diff --git a/packages/app/src/composer/draft/workspace-tab.tsx b/packages/app/src/composer/draft/workspace-tab.tsx
+index 6e9c45e..e6b03e1 100644
+--- a/packages/app/src/composer/draft/workspace-tab.tsx
++++ b/packages/app/src/composer/draft/workspace-tab.tsx
+@@ -699,7 +699,7 @@ const styles = StyleSheet.create((theme) => ({
+   container: {
+     flex: 1,
+     width: "100%",
+-    backgroundColor: theme.colors.surface0,
++    backgroundColor: "transparent",
+   },
+   contentContainer: {
+     flex: 1,
 diff --git a/packages/app/src/composer/index.tsx b/packages/app/src/composer/index.tsx
 index c36d7f9..8c1f76a 100644
 --- a/packages/app/src/composer/index.tsx
