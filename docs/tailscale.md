@@ -80,6 +80,18 @@ output hook, at a priority below the tun's own chains, matching
 it puts on every connection it dials itself. sing-box skips a packet that carries
 it, so the whole transport keeps the route the kernel gave it.
 
+DNS is the one exception. The daemon's resolver entries point at the system
+resolver (`127.0.0.53`), the same path every other local client uses and the path
+sing-box feeds its DNS servers and rules into. A marked query to that resolver
+skips the path sing-box installs for DNS and times out: `tailscale cert` then
+cannot resolve the ACME directory, `tailscale dns query` answers
+`RCodeServerFailure`, and `tailscale status` reports that the node cannot reach
+the configured DNS servers. The ruleset therefore returns for UDP and TCP port 53
+before it sets the mark, so the transport keeps the physical route while
+resolution behaves like any other local process. Both rules match the daemon's
+cgroup and the chain is `inet`, so no other process and neither address family is
+affected.
+
 The rule is installed at run time rather than declared in
 `networking.nftables.tables` because the boot ruleset is checked and loaded before
 the daemon's cgroup exists: a rule whose cgroup path cannot be resolved fails the
@@ -124,6 +136,27 @@ The tailnet's own DNS settings matter here: if the tailnet is configured to
 override local DNS with a global nameserver, `tailscaled` publishes that nameserver
 for every name and the arrangement above no longer holds. Keep global nameservers
 off and use split DNS, or accept that the tailnet's server answers everything.
+
+## Funnel and port 443
+
+`tailscale funnel` is served by `tailscaled` itself, so its listener competes with
+the [HTTPS ingress](ingress.md) for the same address. Caddy binds every interface
+on 80 and 443 (`*:443`), and that binding belongs to the ingress: it terminates
+the wildcard certificate for the whole zone. `tailscaled` therefore cannot bind
+443, and a Funnel on 443 has no listener to serve.
+
+Tailscale accepts Funnel on three ports: 443, 8443 and 10000. Use 8443, or 10000
+when 8443 is taken:
+
+```sh
+tailscale funnel --bg --https=8443 <port>
+tailscale funnel status
+```
+
+The published URL carries that port, and peers reach the service on this node's
+tailnet address under the same port. This is a deliberate constraint rather than
+a misconfiguration: Funnel is an exception for a service that is not published
+under the zone, not a second HTTPS front end, and the ingress keeps 443.
 
 ## Verification
 
