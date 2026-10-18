@@ -7,12 +7,25 @@
       ...
     }:
     let
-      # The rule the unit below installs: everything this service sends keeps the
+      # The rule the unit below installs: this service's own transport keeps the
       # route the kernel gave it. Priority -151 sits above the tun's capture chains.
+      #
+      # DNS is the exception. The mark exists so the control connection, the DERP
+      # relays and the WireGuard handshakes stay on the physical interface instead
+      # of being proxied; the daemon's name resolution must not join them. Its
+      # resolver entries point at the system resolver (`127.0.0.53`), which is the
+      # path every other local client uses and the one sing-box feeds its DNS
+      # servers and rules into. Marked, a query to that resolver skips the path
+      # sing-box installs for DNS and times out, so `tailscale cert` cannot resolve
+      # the ACME directory and `tailscale status` reports the configured DNS
+      # servers unreachable. Return before the mark for port 53, for both
+      # transports; the chain is `inet`, so this covers IPv4 and IPv6 alike.
       bypassRuleset = pkgs.writeText "tailscale-bypass.nft" ''
         table inet tailscale-bypass {
           chain output {
             type filter hook output priority -151; policy accept;
+            socket cgroupv2 level 2 "system.slice/tailscaled.service" udp dport 53 return
+            socket cgroupv2 level 2 "system.slice/tailscaled.service" tcp dport 53 return
             socket cgroupv2 level 2 "system.slice/tailscaled.service" meta mark set ${config.services.sing-box.tunBypassMark}
           }
         }
@@ -56,8 +69,9 @@
       # otherwise route and proxy, which would put the whole tailnet behind the
       # proxy and leave the node relay-only: its observed endpoint would be the
       # proxy's address, so peers could not reach it directly. Marking this unit's
-      # sockets keeps all of it on the physical interface, which is where the
-      # endpoint that used to run inside sing-box dialled from too.
+      # transport sockets keeps all of it on the physical interface, which is where
+      # the endpoint that used to run inside sing-box dialled from too. The rule
+      # exempts DNS before it sets the mark; the ruleset above explains why.
       #
       # The match is the daemon's own cgroup, so the rule names the service and
       # nothing else that happens to run as root. It is installed by a unit rather
