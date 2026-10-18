@@ -19,8 +19,7 @@ host.
 | `svc:nsphere-freezer` | `tcp:443` | `http://127.0.0.1:8080` | The freezer container; HTTPS is terminated here |
 | `svc:nsphere-magpie` | `tcp:3425` | `http://127.0.0.1:3425` | Magpie's gateway, every route upstream serves |
 | | `tcp:3430` | `http://127.0.0.1:3430` | Magpie's browser page, guarded by `magpie_web_key` |
-| `svc:nsphere-nvirellia-im` | `tcp:80` | `http://127.0.0.1:8081` | The personal site over HTTP |
-| | `tcp:443` | `http://127.0.0.1:8081` | The same backend over the tailnet certificate |
+| `svc:nsphere-nvirellia-im` | `tcp:443` | `http://127.0.0.1:8081` | The personal site over the tailnet certificate |
 | `svc:nsphere-portainer` | `tcp:443` | `https+insecure://127.0.0.1:9443` | Portainer's own HTTPS listener with its self-signed certificate |
 | `svc:nsphere-paseo` | `tcp:6767` | `http://127.0.0.1:6767` | The Paseo daemon, HTTP and WebSocket |
 
@@ -160,8 +159,7 @@ From another tailnet device:
 curl -sI https://nsphere-freezer.dwelf-hoki.ts.net/ | head -1          # 443
 curl -sI https://nsphere-magpie.dwelf-hoki.ts.net:3430/ | head -1      # 401 or 200
 curl -s  https://nsphere-magpie.dwelf-hoki.ts.net:3425/v1/models | head
-curl -sI https://nsphere-nvirellia-im.dwelf-hoki.ts.net/ | head -1     # 443
-curl -sI http://nsphere-nvirellia-im.dwelf-hoki.ts.net/ | head -1      # 80
+curl -sI https://nsphere-nvirellia-im.dwelf-hoki.ts.net/ | head -1
 curl -sI https://nsphere-portainer.dwelf-hoki.ts.net/ | head -1        # 443
 curl -sI https://nsphere-paseo.dwelf-hoki.ts.net:6767/ | head -1
 ```

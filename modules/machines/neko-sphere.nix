@@ -53,10 +53,7 @@
           # The personal site's container is published on 127.0.0.1:8081. The
           # HTTPS endpoint terminates the tailnet certificate here; a later
           # Funnel entry points at the same local backend for public traffic.
-          nsphere-nvirellia-im.endpoints = {
-            "tcp:80" = "http://127.0.0.1:8081";
-            "tcp:443" = "http://127.0.0.1:8081";
-          };
+          nsphere-nvirellia-im.endpoints."tcp:443" = "http://127.0.0.1:8081";
 
           # Portainer serves its own HTTPS listener with a self-signed
           # certificate, so the layer-7 handler terminates the service's
