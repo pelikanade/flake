@@ -35,14 +35,17 @@
         fetchurl
         git
         lib
+        libGL
         makeDesktopItem
         makeWrapper
         node-gyp
         nodejs_24
         patchelf
+        pciutils
         poppler-utils
         python3
         stdenv
+        vulkan-loader
         wrapGAppsHook3
         xdg-utils
         ;
@@ -459,7 +462,10 @@
         ];
 
         buildInputs = [
+          libGL
+          pciutils
           stdenv.cc.cc.lib
+          vulkan-loader
         ];
 
         # The unpacked Electron runtime is nixpkgs' own build: its binaries carry
@@ -700,6 +706,21 @@
           # that already carry their own RPATHs.
           autoPatchelf "$unpacked/resources/app"
 
+          # The fixup phase's shrink-rpath keeps only directories that satisfy
+          # DT_NEEDED; ANGLE dlopens libGL and libvulkan by name and Chromium
+          # dlopens libpci for GPU discovery. Restore those paths after the
+          # shrink, as nixpkgs does for its own Electron dist — without them
+          # the GPU process falls back to software compositing.
+          for elf in "libGLESv2.so" "Open Design"; do
+            patchelf --add-rpath "${
+              lib.makeLibraryPath [
+                libGL
+                pciutils
+                vulkan-loader
+              ]
+            }" "$unpacked/$elf"
+          done
+
           makeShellWrapper "$unpacked/Open Design" "$out/bin/open-design-desktop" \
             "''${gappsWrapperArgs[@]}" \
             --prefix LD_LIBRARY_PATH : "$unpacked/resources/app/sharp-libvips/lib" \
@@ -757,6 +778,21 @@
           test -x "$out/lib/${pname}/linux-unpacked/resources/open-design/bin/vela"
           test -x "$out/lib/${pname}/linux-unpacked/resources/open-design/bin/libexec/opencode/opencode"
           test -f "$out/lib/${pname}/linux-unpacked/resources/open-design-config.json"
+
+          # ANGLE and Chromium dlopen these by name, so shrink-rpath cannot
+          # see them; assert the postFixup restore put them back.
+          for elf in "libGLESv2.so" "Open Design"; do
+            rpath="$(patchelf --print-rpath "$out/lib/${pname}/linux-unpacked/$elf")"
+            for needle in libglvnd vulkan-loader pciutils; do
+              case "$rpath" in
+                *"$needle"*) ;;
+                *)
+                  echo "open-design-desktop: $elf lost $needle from its RPATH: $rpath" >&2
+                  exit 1
+                  ;;
+              esac
+            done
+          done
 
           runHook postInstallCheck
         '';

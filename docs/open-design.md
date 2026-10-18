@@ -98,6 +98,16 @@ Four details are load-bearing, three of them found by running the thing:
   This is the same reason upstream's electron-builder config turns `npmRebuild`
   and `nodeGypRebuild` off, and why sharp's libvips substitution from the daemon
   package is repeated here.
+- **The copied Electron dist keeps its dlopen RPATHs.** The fixup phase's
+  `patchelf` hook shrinks RPATHs to the directories that satisfy `DT_NEEDED`;
+  ANGLE opens `libGL` and `libvulkan` by name and Chromium opens `libpci` for
+  GPU discovery, so those are invisible to it. The desktop package adds the
+  three back to `libGLESv2.so` and the `Open Design` binary after
+  `autoPatchelf`, and `installCheck` asserts they stayed. Without them the GPU
+  process logs `Could not dlopen libGL.so.1` and falls back to
+  `gpu_compositing: disabled_software`: the welcome screen still looks fine,
+  but the blur-and-liquid-glass workspace after sign-in runs at software frame
+  rates and burns CPU. Re-check this after an Electron bump.
 - **Electron 42, not upstream's 41.** nixpkgs marks `electron_41` insecure; 42 is
   the nearest line its build accepts. The shell uses only stable Electron APIs
   (`app`, `BrowserWindow`, `protocol`, `dialog`, `shell`), and does not run the
