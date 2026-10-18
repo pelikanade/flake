@@ -142,7 +142,7 @@
           # enablement there too: a deployment env override would prevent later
           # changes.
         }
-        // lib.optionalAttrs ((config.services.ingress.services or { }) != { }) {
+        // lib.optionalAttrs ((config.services.tailscale-ingress.services or { }) != { }) {
           # The daemon answers a Host header it was not told about with 403
           # "Invalid Host header" — its defaults allow localhost and plain IPs
           # only — and a client reports that as a transport that closed. Its

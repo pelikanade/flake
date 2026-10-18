@@ -1,5 +1,5 @@
 {
-  flake.modules.nixos.ingress =
+  flake.modules.nixos.tailscale-ingress =
     {
       config,
       lib,
@@ -7,7 +7,7 @@
       ...
     }:
     let
-      services = config.services.ingress.services;
+      services = config.services.tailscale-ingress.services;
       tailscale = lib.getExe config.services.tailscale.package;
 
       # The configuration file is the whole declaration for this host: `set-config
@@ -28,7 +28,7 @@
       );
     in
     {
-      options.services.ingress.services = lib.mkOption {
+      options.services.tailscale-ingress.services = lib.mkOption {
         type = lib.types.attrsOf (
           lib.types.submodule {
             options.endpoints = lib.mkOption {

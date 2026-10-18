@@ -1,6 +1,6 @@
 # Tailscale Services ingress
 
-`modules/services/ingress.nix` publishes neko-sphere's own services under stable
+`modules/services/tailscale-ingress.nix` publishes neko-sphere's own services under stable
 Tailscale Services names. The daemon terminates the tailnet's HTTPS certificate
 and forwards each endpoint to a loopback port; there is no Caddy instance, no
 wildcard certificate, no ACME challenge and no Cloudflare token.
@@ -39,7 +39,7 @@ serves HTTPS with a certificate the daemon cannot verify, as Portainer does.
 TCP is the only transport a Service endpoint can advertise.
 
 That table is the host's own publication table. It lives in the machine
-definition as `services.ingress.services`, keyed by service name, and each entry
+definition as `services.tailscale-ingress.services`, keyed by service name, and each entry
 maps the endpoints defined in the tailnet to local targets. The module knows how
 to apply the configuration and advertise it; it does not define services, their
 ports or their access policy.
@@ -101,7 +101,7 @@ tailnet, the connection arrives through `tailscale0`, which
 LAN listener and no firewall rule to widen. A device that has not joined the
 tailnet cannot resolve or reach any of these names.
 
-The ingress adds no authentication. Magpie's page needs its sign-in key, its
+The `tailscale-ingress` module adds no authentication. Magpie's page needs its sign-in key, its
 gateway requires an enabled gateway key for calls that arrive through the proxy
 (as it does for any non-loopback caller), and the Paseo daemon needs its
 password. The tailnet's ACLs are the other bound: an `svc:` name is a grant
@@ -110,7 +110,7 @@ destination, so a policy can admit one service without admitting the rest.
 The services keep advertising their own addresses. `MAGPIE_PUBLIC_URL` still uses
 the node's MagicDNS name and port, and the omp endpoint in
 [modules/secrets/magpie.yaml](../modules/secrets/magpie.yaml) is still the
-gateway's port. The ingress adds names; it does not rename what the services
+gateway's port. It adds names; it does not rename what the services
 tell their clients.
 
 ## The personal site and Funnel
@@ -135,7 +135,7 @@ else on this host binds 443.
 2. Add its local mapping to the machine definition:
 
 ```nix
-services.ingress.services.nsphere-wiki.endpoints."tcp:443" =
+services.tailscale-ingress.services.nsphere-wiki.endpoints."tcp:443" =
   "http://127.0.0.1:3000";
 ```
 

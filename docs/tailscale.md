@@ -139,7 +139,7 @@ off and use split DNS, or accept that the tailnet's server answers everything.
 
 ## Funnel and port 443
 
-`tailscale funnel` and [Tailscale Services](ingress.md) do not compete for an
+`tailscale funnel` and [Tailscale Services](tailscale-ingress.md) do not compete for an
 address. Funnel publishes a port on the node's own MagicDNS name and is served by
 `tailscaled`; a Service answers on its own virtual tailnet address. Nothing else
 on this host binds 443, so a Funnel may use it.

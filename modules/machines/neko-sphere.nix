@@ -17,7 +17,7 @@
       paseo-daemon
       paseo-deploy
       gh
-      ingress
+      tailscale-ingress
       zswap
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;
@@ -38,7 +38,7 @@
         # forwarding table. HTTP and HTTPS targets are Tailscale's L7 handlers,
         # so the tailnet certificate is terminated here; a `tcp` target would
         # forward the connection unmodified instead.
-        services.ingress.services = {
+        services.tailscale-ingress.services = {
           # A container on 127.0.0.1:8080.
           nsphere-freezer.endpoints."tcp:443" = "http://127.0.0.1:8080";
 

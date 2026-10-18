@@ -25,12 +25,12 @@ carries a forwarding header such as `X-Forwarded-For` is answered as one from
 another machine and needs an enabled gateway key (`Authorization: Bearer <key>` or
 `x-api-key`; the key in [the encrypted document](../modules/secrets/magpie.yaml) is
 one). Settings → Share on local network is what lets another machine in at all.
-[The Service ingress](ingress.md) fronts the gateway and Tailscale's layer-7
+[The `tailscale-ingress` module](tailscale-ingress.md) fronts the gateway and Tailscale's layer-7
 handler sends `X-Forwarded-For`, so every call that arrives through it carries
 that key. The tailnet's MagicDNS name is handed to the gateway in
 `MAGPIE_PUBLIC_URL`.
 
-[The ingress](ingress.md) also publishes both listeners as one Tailscale Service,
+[The `tailscale-ingress` module](tailscale-ingress.md) also publishes both listeners as one Tailscale Service,
 `svc:nsphere-magpie`, with the daemon's certificate: the page answers at
 `https://nsphere-magpie.dwelf-hoki.ts.net:3430/` and the gateway at
 `https://nsphere-magpie.dwelf-hoki.ts.net:3425/`, which is the base URL a client

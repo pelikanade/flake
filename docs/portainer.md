@@ -100,7 +100,7 @@ the firewall admits it by port: a tailnet peer's connection arrives on
 it. The image's HTTP listener
 and edge tunnel stay unpublished and unreachable. Portainer serves HTTPS with a
 self-signed certificate it generates into `/data`, so a direct connection warns
-until you accept it. [The ingress](ingress.md) publishes it as
+until you accept it. [The `tailscale-ingress` module](tailscale-ingress.md) publishes it as
 `svc:nsphere-portainer` on `tcp:443` with the target
 `https+insecure://127.0.0.1:9443`: the daemon terminates the service's trusted
 certificate and skips verification of Portainer's self-signed one, so the UI
