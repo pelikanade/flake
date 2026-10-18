@@ -1,9 +1,5 @@
 {
   flake.diskoConfigurations.xfs-workstation = {
-    # Swap sits at the end of the table so the root partition can grow into it
-    # and the swap partition can be dropped without moving anything else. The
-    # root partition ends 32G short of the disk, and disko creates the 100%
-    # swap partition last, spanning what is left.
     disko.devices = {
       disk = {
         main = {

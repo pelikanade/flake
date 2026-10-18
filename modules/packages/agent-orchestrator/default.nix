@@ -50,14 +50,6 @@
 # post-copy rebuild then skips, because the .forge-meta file that step leaves
 # behind matches the ABI). Those headers come from nixpkgs' electron and are
 # handed to node-gyp through npm_config_nodedir, so that step is offline too.
-#
-# Update: bump `version`/`rev`, then refresh the pinned hashes with
-#   nix store prefetch-file --unpack --json https://codeload.github.com/OrchestratorInc/agent-orchestrator/tar.gz/REV
-#   nix store prefetch-file --json https://github.com/electron/electron/releases/download/vVER/electron-vVER-linux-x64.zip
-#   nix store prefetch-file --json https://artifacts.electronjs.org/headers/dist/vVER/node-vVER-headers.tar.gz
-#   prefetch-npm-deps frontend/package-lock.json
-#   prefetch-npm-deps frontend/acp-runtime/package-lock.json
-#   (buildGo127Module's vendorHash is reported by a build with lib.fakeHash)
 _:
 let
   package =
@@ -354,7 +346,6 @@ let
           gtk4
         ];
 
-        # npm lives in frontend/, not at the repository root.
         npmRoot = "frontend";
 
         npmDeps = fetchNpmDeps {

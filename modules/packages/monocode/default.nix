@@ -1,21 +1,3 @@
-# MonoCode: the Tauri desktop GUI for coding-agent CLIs, built from the
-# upstream release tag.
-#
-# The frontend is React/Vite and the shell is Rust/Tauri, so the build is
-# upstream's own `cargo tauri build` driven by nixpkgs' cargo-tauri hook. That
-# hook runs the configured `beforeBuildCommand` (`npm run build`), compiles the
-# Rust binary, and unpacks the generated .deb into the output, which leaves the
-# store path with the usual /bin, /share/applications and hicolor icon layout.
-#
-# No runtime Node is shipped: the desktop app only embeds the web bundle. The
-# separately distributed `monocode-host` runtime used for remote sessions is
-# downloaded on demand by the app, so it is not a build input here.
-#
-# Update: bump `version`, then refresh the three hashes with
-#   nix store prefetch-file --unpack --json \
-#     https://codeload.github.com/hardbeat920/monocode/tar.gz/refs/tags/vVER
-#   nix shell nixpkgs#prefetch-npm-deps -c prefetch-npm-deps package-lock.json
-#   nix build .#monocode   # cargoHash mismatch reports the correct value
 _:
 let
   package =
@@ -70,8 +52,6 @@ let
         glib-networking
       ];
 
-      # Tauri's updater is configured with an empty pubkey and no endpoints; the
-      # bundled updater plugin is inert rather than a build-time dependency.
       meta = {
         description = "GUI for coding agents";
         homepage = "https://usemono.dev";

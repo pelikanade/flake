@@ -25,14 +25,10 @@
       managementUrl = config.sops.secrets."netbird-userspace-management-url".path;
       setupKey = config.sops.secrets."netbird-userspace-setup-key".path;
 
-      # None of these are options: nothing else on the host depends on them, and
-      # the tunnels are the only consumer of the proxy.
       stateDir = "/var/lib/netbird-userspace";
       socksPort = 1080;
       daemonAddr = "unix:///run/netbird-userspace/sock";
 
-      # One environment for the daemon, the registration unit and the CLI, so
-      # all three address the same client and the same state.
       clientEnv = {
         NB_USE_NETSTACK_MODE = "true";
         NB_SOCKS5_LISTENER_PORT = toString socksPort;
@@ -53,8 +49,6 @@
         exec "$@"
       '';
 
-      # The CLI carries the same environment, so `netbird-userspace` talks to
-      # this client rather than to another daemon, and the same endpoint.
       cli = pkgs.writeShellScriptBin "netbird-userspace" ''
         ${envLines}
         exec ${endpointWrapper} ${lib.getExe netbird} "$@"

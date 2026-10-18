@@ -83,22 +83,17 @@ let
       buildPhase = ''
         runHook preBuild
 
-        # Native deps (terminal emulation; libuv-linked on Linux).
         # node-gyp-build skips compilation when a matching prebuilt binary exists,
         # so remove the bundled prebuilds first to force a real build.
         rm -rf packages/server/node_modules/node-pty/prebuilds
         npm rebuild node-pty --workspace=@getpaseo/server
 
-        # Server workspaces (highlight + relay + protocol + client + server + cli)
         npm run build:server
 
-        # App workspace deps not covered by build:server
         npm run build --workspace=@getpaseo/expo-two-way-audio
 
-        # Expo web export for the Electron renderer
         ( cd packages/app && PASEO_WEB_PLATFORM=electron npx expo export --platform web )
 
-        # Desktop main process and upstream Linux packaging (no installer targets).
         npm run build:main --workspace=@getpaseo/desktop
 
         cp -r ${electron_42.dist} electronDist
@@ -120,8 +115,6 @@ let
 
         mkdir -p $out/share/paseo-desktop $out/bin
 
-        # Preserve the complete builder/afterPack layout. Paseo is a shell launcher;
-        # Paseo.bin is the application's own Electron ELF, beside its resources.
         cp -r packages/desktop/release/linux*unpacked/. $out/share/paseo-desktop/
         patchShebangs --build $out/share/paseo-desktop/Paseo \
           $out/share/paseo-desktop/resources/bin/paseo
@@ -181,7 +174,6 @@ let
         changelog = "https://github.com/getpaseo/paseo/releases/tag/v${finalAttrs.version}";
         license = lib.licenses.asl20;
         sourceProvenance = [ lib.sourceTypes.fromSource ];
-        # nvirellia's nixpkgs maintainer entry keeps its original attribute name.
         maintainers = [ lib.maintainers.asterismono ];
         mainProgram = "paseo-desktop";
         platforms = lib.platforms.linux;

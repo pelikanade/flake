@@ -3,13 +3,11 @@
   flake.modules.aspects.server.imports = [ inputs.self.modules.aspects.ssh ];
 
   flake.modules.nixos.server = { config, ... }: {
-    # Boot
     boot.loader = {
       systemd-boot.configurationLimit = 5;
       grub.configurationLimit = 5;
     };
 
-    # No need for fonts and documentation on a server
     documentation = {
       man.enable = false;
       dev.enable = false;
@@ -32,9 +30,6 @@
     };
 
     systemd = {
-      # Given that our systems are headless, emergency mode is useless.
-      # We prefer the system to attempt to continue booting so
-      # that we can hopefully still access it remotely.
       enableEmergencyMode = false;
 
       # For more detail, see:
@@ -56,7 +51,6 @@
       };
     };
 
-    # use TCP BBR has significantly increased throughput and reduced latency for connections
     boot.kernel.sysctl = {
       "net.core.default_qdisc" = "fq";
       "net.ipv4.tcp_congestion_control" = "bbr";

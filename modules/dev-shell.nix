@@ -38,8 +38,6 @@
           nixos-anywhere
           uv
           sshpass
-          # `just prompt-luks-password` asks the user for the LUKS passphrase in
-          # a graphical dialog.
           pinentry-gnome3
         ];
         inherit (config.checks.pre-commit-check) shellHook;

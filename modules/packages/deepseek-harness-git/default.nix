@@ -1,5 +1,3 @@
-# DeepSeek Harness (dsh CLI/Web) built from upstream git release tags.
-#
 # Copied from Mooling0602/nix-packages (pkgs/by-name/de/deepseek-harness-git)
 # by Mooling0602: https://github.com/Mooling0602/nix-packages
 { inputs, ... }:
@@ -77,8 +75,6 @@
         '';
       };
 
-      # Use importPnpmLock instead of fetchPnpmDeps; no need to maintain pnpmDepsHash.
-      # importPnpmLock parses dependencies directly from the integrity fields in pnpm-lock.yaml.
       mitmCache = importPnpmLock {
         inherit pname version;
         lockFile = ./pnpm-lock.yaml;
@@ -96,11 +92,6 @@
         + "    }\n"
         + "    return api.requireBuiltin(moduleId);";
 
-      # The dsh CLI (apps/cli) resolves its ~90 workspace dependencies through the
-      # relative symlinks pnpm created in node_modules, and its `dsh.configTrees`
-      # manifest reaches into ../../packages/preset/... — so the whole repository
-      # layout (source + built lib outputs + node_modules) is shipped as-is and
-      # the wrapper points straight at apps/cli/lib/bin.js.
     in
     {
       packages.deepseek-harness-git = stdenv.mkDerivation (finalAttrs: {
@@ -121,7 +112,6 @@
         env = {
           # Never let an interactive prompt block the sandbox (module purges).
           CI = "true";
-          # Mirrors upstream release CI.
           DSH_TELEMETRY_DISABLED = "1";
           # build.ts wants `git rev-parse HEAD`; the tarball has no .git, so pass
           # the pinned rev explicitly (sliced to 7 chars upstream).
@@ -131,9 +121,6 @@
         buildPhase = ''
           runHook preBuild
 
-          # pnpmConfigHook already ran `pnpm install --offline` in postConfigure.
-          # Full workspace build: tsc project build + tsdown bundles (lib) and the
-          # vite frontend (web), exactly like the upstream release workflow.
           pnpm run build:official
 
           runHook postBuild
@@ -143,7 +130,6 @@
           runHook preInstall
 
           mkdir -p "$out/lib/${pname}"
-          # cp -a preserves the pnpm symlink layout; every link inside is relative.
           cp -a -T . "$out/lib/${pname}"
 
           # pnpm leaves a few dangling links for optional platform binaries it did
@@ -206,9 +192,6 @@
           ];
           maintainers = [ ];
           mainProgram = "dsh";
-          # Only x86_64-linux has been verified; widen after testing elsewhere
-          # (node-pty ships prebuilds for linux/darwin x64+arm64, so the tree in
-          # principle works on those too).
           platforms = [ "x86_64-linux" ];
         };
       });

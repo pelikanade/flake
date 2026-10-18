@@ -1,13 +1,9 @@
 { lib, ... }:
 let
   /*
-    These lists intentionally omit the primary fonts selected in stylix.nix.
     Stylix inserts each primary into Fontconfig at order 600; `lib.mkAfter`
     assigns these entries order 1500, so they are consulted only after the
-    primary font lacks a glyph. The name `fallbackFonts` reflects that role.
-
-    Keep the entries ordered as CJK, Nerd Font symbols, then emoji. The same
-    fallback order is applied to both NixOS and Home Manager Fontconfig.
+    primary font lacks a glyph.
   */
   fallbackFonts = {
     serif = lib.mkAfter [
