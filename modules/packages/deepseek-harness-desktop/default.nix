@@ -116,10 +116,7 @@
 #     load it instead of the prebuilt library. It links glib dynamically, and the
 #     loader resolves libglib-2.0.so.0 to the copy Electron already loaded, which
 #     leaves one glib and one GObject type system in the process. The wrapper
-#     prepends the directory to LD_LIBRARY_PATH. Nothing in the build exercises
-#     that path, so re-check it by hand after an Electron, sharp or vips bump:
-#     under ELECTRON_RUN_AS_NODE=1 any sharp raster operation has to exit 0,
-#     where the prebuilt libvips exits 139.
+#     prepends the directory to LD_LIBRARY_PATH.
 #
 #     The addon's DT_NEEDED fixes the name this package has to provide, nothing
 #     about the library behind it, so the substitute is the vips this package
@@ -136,13 +133,6 @@
 #     nothing and does not move this package to a second, unstable-based vips
 #     closure. The prebuilt libvips stays in the tree, unreferenced, because it is
 #     part of the shared source package.
-#
-#     Two alternatives were tried and rejected. Localizing the prebuilt libvips'
-#     glib symbols removes the interposition but not the crash: the addon's own
-#     references then bind to Electron's glib and it still exits 139. The
-#     WebAssembly build is not installed by the offline pnpm install, sharp only
-#     falls back to it when the native addon fails to load, and it gives up
-#     native text rendering and tiled output.
 #
 #  6. The window menu bar is not drawn. This is the one deliberate deviation
 #     from upstream, and it changes drawing only: the application menu stays
@@ -203,9 +193,6 @@
       # libvips-cpp lives.
       vips = lib.getLib pkgs.vips;
 
-      # Reuse the sibling source package defined by deepseek-harness-git's module.
-      # self' resolves that same derivation for this system, so both packages share
-      # its single fetchFromGitHub and single pnpm install.
       dsh = self'.packages.deepseek-harness-git;
 
       # Read from the source package's own pin file: importing a manifest out of
@@ -269,10 +256,6 @@
         et_xmlfile = python312.pkgs.et-xmlfile.version;
       };
 
-      # The shell's production dependencies, listed explicitly rather than globbed
-      # so build-only tooling (typescript, vite, electron-builder, app-builder-lib,
-      # @electron, @types, pnpm) stays out of the runtime closure. The npm `electron`
-      # package is deliberately absent: main.js resolves 'electron' from the runtime.
       appModules = [
         "semver"
         "ws"
@@ -352,7 +335,6 @@
         '';
       };
 
-      # resources/app/node_modules, staged as a tree so the assembly can copy it.
       appModulesTree = stdenvNoCC.mkDerivation {
         pname = "deepseek-harness-desktop-app-modules";
         inherit version;
@@ -599,9 +581,6 @@
           resources="$out/resources"
           rm -f "$resources/default_app.asar"
 
-          # 2. The Electron shell at app.getAppPath(), plus its production modules.
-          #    lib comes from appLib, which has this package's one source change
-          #    already applied (note 6); everything else is upstream's own tree.
           app="$resources/app"
           mkdir -p "$app/lib"
           cp -a ${appLib}/. "$app/lib/"
@@ -685,7 +664,6 @@
           ${nodejs}/bin/node ${coverageScript} app "$app"
           ${nodejs}/bin/node ${coverageScript} host "$app/dsh" ${hostManifest}
 
-          # 4. Loosely-packed resources read through process.resourcesPath.
           cp ${appRoot}/resources/icon.png "$resources/icon.png"
 
           mkdir -p "$resources/runtime/bin"
@@ -708,11 +686,9 @@
             "$pr/dependencies/python/lib/python${pythonMajorMinor}/site-packages"
           cp ${builtins.toFile "runtime.json" runtimeManifest} "$pr/runtime.json"
 
-          # 5. Desktop-entry icon.
           install -Dm644 ${appRoot}/resources/icon.png \
             "$out/share/icons/hicolor/512x512/apps/deepseek-harness.png"
 
-          # 6. The launcher. See note 4.
           makeWrapper "$out/deepseek-harness" "$out/bin/deepseek-harness" \
             --set CHROME_DEVEL_SANDBOX "$out/chrome-sandbox" \
             --prefix LD_LIBRARY_PATH : "${runtimeLibraryPath}" \

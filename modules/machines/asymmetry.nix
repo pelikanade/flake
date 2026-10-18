@@ -55,7 +55,6 @@
           output = "desc:China Star Optoelectronics Technology Co. Ltd MNE007ZA3-4";
           mode = "2880x1800@120";
           position = "auto";
-          # 5/3 scaling gives a whole-pixel 1728x1080 logical desktop.
           scale = 1.666667;
           vrr = 3;
         }

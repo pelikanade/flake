@@ -119,7 +119,6 @@ let
       # and a Docker daemon; none of that is hermetic here.
       doCheck = false;
 
-      # The wrapped binary loading at all is what this sandbox can still prove.
       doInstallCheck = true;
       nativeInstallCheckInputs = [ versionCheckHook ];
       versionCheckProgramArg = "--version";

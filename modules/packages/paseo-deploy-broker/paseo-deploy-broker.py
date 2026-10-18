@@ -75,8 +75,6 @@ def take_lock() -> int | None:
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
-        # One switch at a time: concurrent ones race over the system profile
-        # and the activation that follows it.
         return report(BUSY, "another deployment is already running")
 
     return None

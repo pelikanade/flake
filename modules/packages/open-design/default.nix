@@ -1,8 +1,3 @@
-# OpenDesign (`od`) — local-first design-agent workspace, built from the
-# upstream release tag. Two packages come out of one source: the daemon, which
-# serves the statically exported web workspace and is the supported Linux
-# deployment, and the packaged Electron application, which is what upstream
-# ships to macOS and Windows.
 { inputs, ... }:
 {
   # The package resolves pnpm-lock.yaml integrity hashes through
@@ -23,7 +18,6 @@
       ...
     }:
     let
-      # pnpm-lock.yaml integrity hashes come from the importPnpmLock overlay.
       pnpmPkgs = pkgsUnstable.extend inputs.importPnpmLock.overlays.default;
       inherit (pnpmPkgs) iplConfigHook importPnpmLock;
       inherit (pkgsUnstable)
@@ -172,7 +166,6 @@
         env = {
           CI = "true";
           NEXT_TELEMETRY_DISABLED = "1";
-          # node-gyp compiles better-sqlite3 and node-pty against nixpkgs' Node.
           npm_config_nodedir = "${nodejs_24}";
           npm_config_build_from_source = "true";
         };
@@ -189,10 +182,6 @@
         buildPhase = ''
           runHook preBuild
 
-          # Build every workspace package the daemon and the web app import,
-          # then the Next.js static export the daemon serves as the web UI.
-          # `@open-design/dsh-runtime` is the bridge the daemon installs into an
-          # existing `dsh` CLI, packaged below into the resource root.
           pnpm -r --if-present \
             --filter '@open-design/daemon...' \
             --filter '@open-design/web...' \
@@ -429,12 +418,6 @@
         };
       });
 
-      # The packaged Electron application: the thin shell upstream ships to macOS
-      # and Windows, assembled here the way `tools-pack linux build --to dir`
-      # assembles it — the shell from apps/desktop and apps/packaged, a daemon
-      # sidecar and a Next.js server web sidecar, and the content trees under an
-      # unpacked Electron runtime.
-      #
       # electron-builder is not run: upstream's Linux config for a directory
       # target (asar:false, npmRebuild:false, nodeGypRebuild:false in
       # tools/pack/src/linux.ts) leaves exactly the pieces this install phase
@@ -483,8 +466,6 @@
         env = {
           CI = "true";
           NEXT_TELEMETRY_DISABLED = "1";
-          # node-gyp compiles better-sqlite3 and node-pty against nixpkgs' Node,
-          # which is the runtime the packaged sidecars use.
           npm_config_nodedir = "${nodejs_24}";
           npm_config_build_from_source = "true";
         };
@@ -630,10 +611,6 @@
           find "$onnxRuntime" -mindepth 1 -maxdepth 1 -type d \
             ! -name '${stdenv.hostPlatform.node.platform}' -exec rm -rf '{}' +
 
-          # The content trees the daemon reads, in the resource root the packaged
-          # config points at, plus the Node the sidecars run on. The trees come
-          # from the daemon package, which builds exactly the layout upstream's
-          # packaging step copies.
           mkdir -p "$resources/open-design/bin"
           cp -r ${self'.packages.open-design}/lib/${pname}/resources/. "$resources/open-design/"
           # A real copy, not a symlink: Node reports process.execPath from
@@ -663,7 +640,6 @@
           cp -a ${electron_42.dist}/. "$unpacked/"
           chmod -R u+w "$unpacked"
           mv "$unpacked/electron" "$unpacked/$executableName"
-          # Electron's placeholder app is replaced by the bundle below.
           rm -f "$unpacked/resources/default_app.asar"
 
           cp -a "$app" "$unpacked/resources/app"
@@ -675,8 +651,6 @@
 
           find "$unpacked" -xtype l -delete
 
-          # The icon the desktop entry names, from the same file upstream's
-          # AppImage step uses.
           install -Dm644 tools/pack/resources/linux/icon.png \
             "$out/share/icons/hicolor/512x512/apps/open-design.png"
 
@@ -760,8 +734,6 @@
 
           app="$out/lib/${pname}/linux-unpacked/resources/app"
 
-          # The bundle must resolve its own entry points, which is what the
-          # packaged runtime asks Node for at startup.
           ( cd "$app" && node --input-type=module -e '
               for (const entry of ["@open-design/packaged", "@open-design/desktop/main"]) {
                 await import.meta.resolve(entry);

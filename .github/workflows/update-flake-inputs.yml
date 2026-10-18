@@ -1,10 +1,7 @@
-# Keep the fast-moving agent tooling inputs current. Targets `omp` and
-# `llm-agents` only; every other input stays pinned as declared.
 name: Update flake inputs
 
 on:
   schedule:
-    # 05:00 UTC daily.
     - cron: "0 5 * * *"
   workflow_dispatch:
 

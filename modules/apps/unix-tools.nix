@@ -13,7 +13,7 @@
       devenv
       any-nix-shell
       fastfetch
-      nix-output-monitor # https://github.com/maralorn/nix-output-monitor
+      nix-output-monitor
       dust
       duf
       cachix
@@ -58,7 +58,6 @@
       };
     };
 
-    # Replace command-not-found with nix-index and comma
     programs.nix-index-database.comma.enable = true;
     programs.command-not-found.enable = false;
     programs.nix-index = {
@@ -66,7 +65,6 @@
       enableFishIntegration = true;
     };
 
-    # Modern unix series
     programs.eza = {
       enable = true;
       enableFishIntegration = true;

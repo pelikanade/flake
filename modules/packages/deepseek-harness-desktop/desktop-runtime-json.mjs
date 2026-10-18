@@ -1,20 +1,4 @@
 #!/usr/bin/env node
-/**
- * Write the Desktop runtime descriptor, filling in the two release facts that
- * are only knowable once the tree has been built.
- *
- * package.nix holds the descriptor skeleton. Two of its fields cannot be
- * written down there without going stale on an upstream bump:
- *
- *   release.nodeVersion          what the bundled Electron reports as
- *                                process.versions.node
- *   release.hostProtocolVersion  the generation the packaging scripts compiled
- *                                into lib/types/host-protocol.js
- *
- * Both are release metadata the shipped shell only type-checks, so a stale
- * copy fails silently instead of loudly. The caller reads the real values out
- * of the built tree and passes them here.
- */
 import { readFileSync, writeFileSync } from "node:fs"
 
 const [, , templatePath, outputPath, hostProtocolVersion, nodeVersion] = process.argv

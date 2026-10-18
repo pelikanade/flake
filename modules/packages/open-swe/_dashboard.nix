@@ -38,8 +38,6 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
   };
 
   postPatch = ''
-    # Keep upstream's bundle constants and JSON sidecar in agreement while
-    # deriving their timestamp from the reproducible build environment.
     substituteInPlace ui/vite.config.ts \
       --replace-fail 'const BUNDLE_BUILD_AT = new Date().toISOString()' \
         'const BUNDLE_BUILD_AT = new Date(Number(process.env.SOURCE_DATE_EPOCH) * 1000).toISOString()'

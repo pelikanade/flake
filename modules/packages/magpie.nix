@@ -107,7 +107,6 @@ let
       ];
       preCheck = ''
         export MAGPIE_BUN="${lib.getExe bun}"
-        # Keep upstream checks aligned with the profile-based desktop entry.
         substituteInPlace internal/gui/scheme_linux_test.go \
           --replace-fail 'exe, err := os.Executable()' '_, err := os.Executable()' \
           --replace-fail '"Exec="+exe+" %u\n"' '"Exec=magpie %u\n"'
@@ -146,7 +145,6 @@ let
           --replace-fail $'\t"os"\n' '''
         substituteInPlace internal/agent/zed_credential_secret_test.go \
           --replace-fail '"--session"' '"--config-file=${dbus}/share/dbus-1/session.conf"'
-        # These source-policy tests apply only to Magpie, not vendored libraries.
         substituteInPlace internal/proc/proc_test.go internal/sqlitedb/sqlitedb_test.go \
           --replace-fail 'd.Name() == "node_modules"' \
           'd.Name() == "node_modules" || d.Name() == "vendor"'
@@ -212,7 +210,6 @@ let
         mkdir -p "$HOME"
       '';
       postInstallCheck = ''
-        # Exercise the installed wrapper and plugin host without network or auth.
         unset MAGPIE_BUN
         cp internal/plugin/testdata/fake/index.js "$HOME/nix-test-plugin.js"
         $out/bin/magpie plugin add "$HOME/nix-test-plugin.js"

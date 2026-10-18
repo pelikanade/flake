@@ -1,7 +1,4 @@
 {
-  # The desktop side of the tailnet: what lets the maintainer's own session drive
-  # the daemon and shows its state. The service module owns the daemon itself, and
-  # a machine that only joins the tailnet — a server — imports that one alone.
   flake.modules.nixos.tailscale-desktop =
     { config, ... }:
     {
@@ -21,9 +18,6 @@
   flake.modules.homeManager.tailscale-desktop =
     { pkgs, ... }:
     {
-      # Trayscale, the GTK 4 frontend over the same LocalAPI socket the CLI talks
-      # to, so it needs the operator setting above and nothing else. It ships its
-      # own desktop entry and icon.
       home.packages = [ pkgs.trayscale ];
     };
 }

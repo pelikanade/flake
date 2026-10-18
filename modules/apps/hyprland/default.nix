@@ -83,8 +83,6 @@ _: {
               snap.enabled = true;
             };
             dwindle = {
-              # Like Sway autotiling, split the focused window along its
-              # longer dimension; pointer position does not choose the axis.
               smart_split = false;
               split_width_multiplier = 1.0;
               preserve_split = false;
@@ -114,8 +112,6 @@ _: {
             };
             cursor = {
               hide_on_key_press = true;
-              # Keyboard focus is independent of the pointer
-              # (input.follow_mouse = 2), so switching windows must not move it.
               no_warps = true;
             };
             binds = {
@@ -128,7 +124,6 @@ _: {
               force_default_wallpaper = 0;
               # Noctalia notification actions may raise their target window.
               focus_on_activate = true;
-              # Fullscreen and content-type video/game windows can use VRR.
               vrr = 3;
             };
             xwayland = {
@@ -184,10 +179,9 @@ _: {
             {
               leaf = "global";
               enabled = true;
-              speed = 8; # 800 ms, also matching the built-in fallback.
+              speed = 8;
               bezier = "default";
             }
-            # Opening, closing and movement share the same 300 ms curve.
             {
               leaf = "windows";
               enabled = true;
@@ -224,10 +218,6 @@ _: {
           ];
 
           window_rule = [
-            # Sway's smart_borders: a lone tiled window draws no border, so the
-            # workspace edge does not read as a window frame. The window-count
-            # filter matches exactly one visible tiled window; as soon as a
-            # second appears, both regain the 2 px border.
             {
               name = "smart-border";
               match = {
@@ -263,8 +253,6 @@ _: {
             {
               name = "meeting-idle-inhibit";
               match.class = "(?i)^(wemeet(app)?|com[.]tencent[.]wemeet)$";
-              # A focused meeting window inhibits idle; a background client
-              # alone must not prevent the laptop from suspending forever.
               idle_inhibit = "focus";
             }
             {

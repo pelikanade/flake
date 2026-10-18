@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# --- Optional GitHub authentication to avoid rate limiting ------------------
 # Export GITHUB_PAT (a GitHub personal access token) to authenticate GitHub
 # REST / raw requests and `git ls-remote`. GITHUB_TOKEN is honoured as fallback.
 gh_auth=()
@@ -18,16 +17,6 @@ fi
 # Update script for the `deepseek-harness-git` (dsh, built from git release
 # tags) package. Copied from Mooling0602/nix-packages (pkgs/by-name/de/
 # deepseek-harness-git) by Mooling0602: https://github.com/Mooling0602/nix-packages
-# The README version-syncing of the original has been dropped, since this
-# copy ships no README.
-#
-# Unlike the npm-tarball deepseek-harness package, the source of truth is the
-# upstream `dsh-v*` tag sequence (pre-releases such as 0.1.2-alpha.1 often
-# never reach npm). An update must:
-#   1. resolve the tag and its commit into `version` + `rev` in hashes.json
-#   2. recompute srcHash (the GitHub tag tarball hash)
-#   3. refresh the pinned pnpm when upstream bumps `packageManager`
-#   4. sync the vendored pnpm-lock.yaml from upstream
 
 usage() {
   echo "Usage: $(basename "$0") [version]" >&2
@@ -118,7 +107,6 @@ fi
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-# --- 1. resolve the tag's commit ---
 echo "Resolving tag dsh-v$version..."
 rev="$(resolve_tag "$version" || true)"
 if [ -z "$rev" ]; then
@@ -127,7 +115,6 @@ if [ -z "$rev" ]; then
 fi
 echo "rev: $rev"
 
-# --- 2. prefetch the tag tarball for srcHash ---
 echo "Prefetching source tarball hash..."
 # --unpack: package.nix fetches the source via fetchFromGitHub, which hashes the
 # UNPACKED source tree (a nar hash), not the raw tar.gz bytes. Without
@@ -140,7 +127,6 @@ if [ -z "$src_hash" ]; then
   exit 1
 fi
 
-# --- 3. refresh the pinned pnpm when upstream bumps packageManager ---
 pnpm_version="$(sed -n 's/.*"pnpmVersion": *"\([^"]*\)".*/\1/p' "$hashes_json")"
 upstream_pnpm="$(curl -fsSL "${gh_auth[@]}" "https://raw.githubusercontent.com/deepseek-ai/deepseek-harness/$rev/package.json" \
     | sed -n 's/.*"packageManager": *"pnpm@\([^"]*\)".*/\1/p')"
@@ -162,12 +148,10 @@ else
   pnpm_hash="$(sed -n 's/.*"pnpmHash": *"\([^"]*\)".*/\1/p' "$hashes_json")"
 fi
 
-# --- 4. sync pnpm-lock.yaml from upstream ---
 echo "Syncing pnpm-lock.yaml from upstream..."
 curl -fsSL "${gh_auth[@]}" "https://raw.githubusercontent.com/deepseek-ai/deepseek-harness/$rev/pnpm-lock.yaml" \
     > "$script_dir/pnpm-lock.yaml"
 
-# --- 5. write version/rev/hashes (no pnpmDepsHash needed) ---
 cat > "$hashes_json" <<EOF
 {
   "version": "$version",

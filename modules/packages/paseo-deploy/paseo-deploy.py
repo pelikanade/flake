@@ -50,8 +50,6 @@ def request() -> int | None:
     """Stream the deployment and return the status the broker reports."""
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
         connection.connect(SOCKET)
-        # The request is the connection itself; the broker already knows what
-        # to deploy, so saying nothing more is the whole message.
         connection.shutdown(socket.SHUT_WR)
         with connection.makefile(
             "r", encoding="utf-8", errors="replace"
@@ -66,9 +64,6 @@ def request() -> int | None:
 
 def main(argv: list[str]) -> int:
     if argv:
-        # Asking is the whole request, so anything else on the command line is
-        # a mistake this must not answer by deploying the machine. `--help`
-        # is the one argument that explains itself without doing anything.
         if argv in (["-h"], ["--help"]):
             print(USAGE, end="")
             return 0
@@ -86,8 +81,6 @@ def main(argv: list[str]) -> int:
     try:
         status = request()
     except BrokenPipeError:
-        # The reader went away — a pager, or a terminal Paseo closed. Keep the
-        # interpreter from complaining about the flush it cannot finish.
         os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
         return 1
     except KeyboardInterrupt:

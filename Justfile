@@ -3,8 +3,6 @@
 default:
     @just --list
 
-# --- Machine ----------------------------------------------------------------
-
 # Build this machine's system without activating it.
 [group('machine')]
 build:
@@ -35,8 +33,6 @@ rdeploy hostname target:
 elevate command:
     pkexec /run/current-system/sw/bin/bash -c {{ quote(command) }}
 
-# --- Provisioning -----------------------------------------------------------
-
 # A target that is not a NixOS installer is kexec'd, which discards /run, so an
 # encrypted layout needs its passphrase file passed as the third argument.
 #
@@ -49,9 +45,6 @@ install hostname target luks-key="":
       --disko-mode disko \
       {{ if luks-key == "" { "" } else { "--disk-encryption-keys /run/luks-password " + quote(luks-key) } }}
 
-# Print the age recipient and hardware facts needed to prepare a machine.
-#
-# Read-only, but the target must already be reachable over SSH.
 [group('provisioning')]
 [doc("Print the age recipient and hardware facts needed to prepare a machine.")]
 collect-machine-info target:
@@ -70,12 +63,6 @@ collect-machine-info target:
 build-installer-iso:
     nix build .#nixosConfigurations.installer.config.system.build.isoImage -L
 
-# --- Secrets ----------------------------------------------------------------
-
-# Create a machine's LUKS passphrase and store it in the vault.
-#
-# Prints the path of a fresh 0600 file to pass to `install`. Nothing is written
-# on the target.
 [group('secrets')]
 [doc("Create a machine's LUKS passphrase and store it in the vault.")]
 generate-luks-password machine vault="NixOS":
@@ -105,10 +92,6 @@ generate-luks-password machine vault="NixOS":
 
     echo "$dest"
 
-# Ask for a machine's LUKS passphrase in a graphical pinentry dialog.
-#
-# Prints the path of a fresh 0600 file to pass to `install`. `PINENTRY` picks
-# the dialog; the development shell provides one.
 [group('secrets')]
 [doc("Ask for a machine's LUKS passphrase in a graphical pinentry dialog.")]
 prompt-luks-password machine:
@@ -155,20 +138,6 @@ updatekeys:
     find modules/secrets -maxdepth 1 -type f \( -name '*.yaml' -o -name '*.json' -o -name '*.env' -o -name '*.ini' \) -print0 \
       | xargs -0 -r -n1 sops updatekeys -y
 
-# Re-key a secret document from a machine that already decrypts it.
-#
-# `updatekeys` cannot reach a document the maintainer is not a recipient of, so
-# a host that reads it does the work with its own SSH host key as the age
-# identity. Run this as yourself on that host; only the key read needs sudo.
-#
-#   just rewrap-secret deepseek.yaml --add-age age1...
-#   just rewrap-secret deepseek.yaml --add-age age1... --rm-age age1...
-#
-# The recipient check is a pre-flight check, not proof: sops also uses any other
-# identity on this machine, such as the maintainer key file.
-#
-# Run it from the repository: sops loads `.sops.yaml` and needs a creation rule
-# that matches the document.
 [group('secrets')]
 [doc("Re-key a secret document from a machine that already decrypts it.")]
 [positional-arguments]
@@ -208,8 +177,6 @@ rewrap-secret file +args:
     fi
     export SOPS_AGE_KEY="$identity"
 
-    # Keep the current ciphertext and write the replacement next to it, so a
-    # failed or interrupted run cannot truncate the only copy.
     backup=$(mktemp --tmpdir="${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}" "$(basename "$file").XXXXXXXX.bak")
     cp -a "$file" "$backup"
     tmp=$(mktemp --tmpdir="$(dirname "$file")" ".$(basename "$file").XXXXXXXX")
@@ -220,8 +187,6 @@ rewrap-secret file +args:
     echo "previous ciphertext kept at $backup"
     echo "recipients now:"
     grep -oE 'age1[0-9a-z]+' "$file" | sort -u
-
-# --- Repository -------------------------------------------------------------
 
 # Remove system generations older than a week and the store paths they kept.
 [group('repository')]

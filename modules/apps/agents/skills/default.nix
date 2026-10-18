@@ -48,9 +48,6 @@ let
     in
     if line == null then null else unquoted (lib.trim (lib.removePrefix "name:" line));
 
-  # Skills of one source, keyed by the name that agents look up. The name
-  # labels the link that agents read, so it must not carry the store path
-  # context of the directory it was derived from.
   skillsOf =
     source:
     if lib.pathIsDirectory source then
@@ -77,8 +74,6 @@ let
       in
       lib.optionalAttrs (name != null) { ${name} = source; };
 
-  # The Markdown files beside this module are the skills this repository adds
-  # itself; upstream sources are pinned per consumer.
   localSkills = lib.mapAttrsToList (name: _: ./. + "/${name}") (
     lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".md" name) (builtins.readDir ./.)
   );
@@ -91,7 +86,6 @@ in
 
       skillSources = lib.zipAttrs (map skillsOf cfg.install);
 
-      # Skill name to the source directory that holds it.
       skills = lib.mapAttrs (_: paths: lib.head paths) skillSources;
 
       duplicated = lib.attrNames (lib.filterAttrs (_: paths: builtins.length paths > 1) skillSources);
@@ -140,8 +134,6 @@ in
       };
 
       config = {
-        # Local skills are the Markdown files beside this module; every source
-        # an upstream publishes is pinned by revision and tree hash here.
         skills.install = localSkills;
 
         assertions = [

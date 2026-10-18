@@ -56,7 +56,6 @@
         "video=DP-3:2560x1440@60,rotate=90"
       ];
     };
-    # Workspace 1 stays on the Odyssey; the portrait side display starts at 10.
     homeModule = {
       wayland.windowManager.hyprland.settings = {
         config.cursor.default_monitor = "DP-1";
@@ -65,8 +64,6 @@
             output = "DP-1";
             mode = "3840x2160@120";
             position = "1440x416";
-            # 4/3 scaling: a 2880x1620 logical area, larger than 150%'s
-            # 2560x1440, at the cost of matching DP-3's 93 ppi.
             scale = 1.333333;
             vrr = 3;
           }

@@ -9,7 +9,6 @@ _: {
       programs.ghostty = {
         enable = true;
         settings = {
-          # Kitty's mouse_hide_wait = -1 never hides the pointer.
           mouse-hide-while-typing = false;
           cursor-style = "bar";
           cursor-style-blink = false;

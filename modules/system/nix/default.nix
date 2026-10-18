@@ -27,7 +27,6 @@
       # Suppress nix-shell channel errors on a flake system
       nixPath = [ "/etc/nix/path" ];
 
-      # do garbage collection weekly to keep disk usage low
       gc = {
         automatic = true;
         dates = "weekly";

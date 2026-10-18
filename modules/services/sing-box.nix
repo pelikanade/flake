@@ -21,9 +21,6 @@
       # secret reaches Nix evaluation, the store or git. The tailnet is not part
       # of this feature: it has its own module and its own key, and the tun keeps
       # out of its addresses.
-      # The proxy nodes this host dials. One table drives the encrypted secret
-      # names, the selector's tag list and the outbounds, so the three cannot
-      # drift apart.
       nodes = [
         {
           tag = "snemeow-vless-laxp";
@@ -181,7 +178,6 @@
               action = "predefined";
               answer = [ ];
             }
-            # At home, use the router's resolver before any public one.
             {
               wifi_ssid = [
                 "LoliHouse"
@@ -217,9 +213,6 @@
           }
         ];
 
-        # The tun is the only inbound: nothing points applications at a proxy
-        # environment variable, and auto_redirect routes their traffic anyway, so
-        # a local mixed proxy listener would only add another port.
         inbounds = [
           {
             type = "tun";

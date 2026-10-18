@@ -11,8 +11,6 @@
       apiClient = config.virtualisation.podman.runtimeApiClient;
     in
     {
-      # Several aspects compose this module — the machine and the Portainer
-      # aspect among them; keep one identity so it is applied once.
       key = "podman";
 
       options.virtualisation.podman.runtimeApiClient = lib.mkOption {
@@ -131,8 +129,6 @@
             after = [ "podman-user-wait-network-online.service" ];
           };
 
-          # Docker CLI for the API clients that call it; it needs no socket here.
-          #
           # `podman compose` is a wrapper that execs a provider, so a provider has
           # to be on PATH: `docker-compose` wins the wrapper's lookup over
           # `podman-compose`, and it drives these runtimes over the same

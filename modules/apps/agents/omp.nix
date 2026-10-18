@@ -24,7 +24,6 @@ in
   config = {
     flake-file.inputs.omp = {
       url = "github:can1357/oh-my-pi";
-      # oh-my-pi has no dedicated binary cache, so it follows the shared root.
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

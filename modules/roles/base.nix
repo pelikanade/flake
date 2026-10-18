@@ -19,13 +19,11 @@
       description = "Whether the base role module was imported.";
     };
 
-    # Default modules
     imports = [
       inputs.home-manager.nixosModules.home-manager
     ];
 
     config = {
-      # This is too slow
       documentation.man.cache.enable = false;
     };
   };

@@ -122,7 +122,6 @@
         doInstallCheck = true;
         installCheckPhase = ''
           runHook preInstallCheck
-          # The agent's interpreter must load Wasmtime and its bundled WASM.
           ${backend}/bin/python - <<'PY'
           from quickjs_rs import Runtime
           with Runtime() as runtime:

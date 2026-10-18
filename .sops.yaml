@@ -11,8 +11,6 @@ creation_rules:
   # editable. sops applies the first matching rule, so keep the patterns
   # disjoint; there is no catch-all, and a document that matches no rule cannot
   # be encrypted until one names exactly who decrypts it.
-  # Every host that runs sing-box reads the proxy credentials and endpoints, and
-  # the maintainer keeps the document editable.
   - path_regex: ^modules/secrets/sing-box\.yaml$
     key_groups:
       - age:
@@ -20,9 +18,6 @@ creation_rules:
           - *asymmetry
           - *neko-sphere
           - *parallax
-  # The tailnet belongs to the host rather than to sing-box: every host that
-  # joins it reads this key through the `tailscale` module, which is the only
-  # consumer. The maintainer keeps the document editable.
   - path_regex: ^modules/secrets/tailscale\.yaml$
     key_groups:
       - age:
@@ -30,8 +25,6 @@ creation_rules:
           - *asymmetry
           - *neko-sphere
           - *parallax
-  # Magpie's endpoint, browser UI sign-in key and gateway API key. The gateway
-  # and Paseo on neko-sphere, plus omp on both desktops, read this document.
   - path_regex: ^modules/secrets/magpie\.yaml$
     key_groups:
       - age:
@@ -39,16 +32,11 @@ creation_rules:
           - *neko-sphere
           - *asymmetry
           - *parallax
-  # The Paseo daemon password, read only by neko-sphere's daemon. The maintainer
-  # keeps the document editable.
   - path_regex: ^modules/secrets/paseo\.yaml$
     key_groups:
       - age:
           - *noa
           - *neko-sphere
-  # The NetBird endpoint and setup key of the userspace client. neko-sphere is
-  # the only host that runs it, so it is the only host that reads the document;
-  # the maintainer keeps it editable.
   - path_regex: ^modules/secrets/netbird-userspace\.yaml$
     key_groups:
       - age:
