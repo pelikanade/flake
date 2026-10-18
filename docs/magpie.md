@@ -17,7 +17,7 @@ desktop needed. Gateway mode is what a headless host wants: no Agents,
 Sessions or Library surface.
 
 Tailnet peers reach the OpenAI, OpenAI-Responses and Anthropic routes on
-`neko-sphere.leaffish-halfmoon.ts.net:3425`. Who may call it depends on how the
+`neko-sphere.dwelf-hoki.ts.net:3425`. Who may call it depends on how the
 request arrives, and the gateway decides that from the request itself: a direct
 caller — this host's own agents, and a peer dialling the gateway on this host's
 tailnet address, which arrives on `tailscale0` — needs no key, while a request that
@@ -25,14 +25,15 @@ carries a forwarding header such as `X-Forwarded-For` is answered as one from
 another machine and needs an enabled gateway key (`Authorization: Bearer <key>` or
 `x-api-key`; the key in [the encrypted document](../modules/secrets/magpie.yaml) is
 one). Settings → Share on local network is what lets another machine in at all.
-[The ingress](ingress.md) fronts the gateway and Caddy sends `X-Forwarded-For`, so
-every call that arrives through it carries that key. The tailnet's MagicDNS name
-is handed to the gateway in `MAGPIE_PUBLIC_URL`.
+[The Service ingress](ingress.md) fronts the gateway and Tailscale's layer-7
+handler sends `X-Forwarded-For`, so every call that arrives through it carries
+that key. The tailnet's MagicDNS name is handed to the gateway in
+`MAGPIE_PUBLIC_URL`.
 
-[The ingress](ingress.md) republishes both listeners under the host's own zone,
-with a trusted certificate and no port number: the page answers at
-`https://magpie.neko-sphere.nvirellia.im/` and the gateway at
-`https://magpie-api.neko-sphere.nvirellia.im/`, which is the base URL a client
+[The ingress](ingress.md) also publishes both listeners as one Tailscale Service,
+`svc:nsphere-magpie`, with the daemon's certificate: the page answers at
+`https://nsphere-magpie.dwelf-hoki.ts.net:3430/` and the gateway at
+`https://nsphere-magpie.dwelf-hoki.ts.net:3425/`, which is the base URL a client
 that wants HTTPS should carry. The gateway's own names and the key policy do not
 change with it.
 
@@ -76,15 +77,15 @@ After separately authorized deployment, from a tailnet peer:
 
 ```sh
 systemctl status magpie.service          # on neko-sphere
-curl --fail --silent http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/models | head
-curl --silent http://neko-sphere.leaffish-halfmoon.ts.net:3430/ -o /dev/null -w '%{http_code}\n'  # 401: the key guards every page
+curl --fail --silent http://neko-sphere.dwelf-hoki.ts.net:3425/v1/models | head
+curl --silent http://neko-sphere.dwelf-hoki.ts.net:3430/ -o /dev/null -w '%{http_code}\n'  # 401: the key guards every page
 ```
 
-Through the ingress, from a LAN client or a tailnet peer:
+Through the Tailscale Service, from a tailnet peer:
 
 ```sh
-curl --fail --silent https://magpie-api.neko-sphere.nvirellia.im/v1/models | head
-curl --silent https://magpie.neko-sphere.nvirellia.im/ -o /dev/null -w '%{http_code}\n'  # 401, same key
+curl --fail --silent https://nsphere-magpie.dwelf-hoki.ts.net:3425/v1/models | head
+curl --silent https://nsphere-magpie.dwelf-hoki.ts.net:3430/ -o /dev/null -w '%{http_code}\n'  # 401, same key
 ```
 
 `/v1/models` is the catalog the UI has configured — empty until the first
@@ -94,7 +95,7 @@ proves the key resolves and the upstream still answers:
 ```sh
 curl --fail --silent -X POST -H 'Authorization: Bearer magpie' \
   -H 'content-type: application/json' \
-  http://neko-sphere.leaffish-halfmoon.ts.net:3425/v1/chat/completions \
+  http://neko-sphere.dwelf-hoki.ts.net:3425/v1/chat/completions \
   -d '{"model":"<provider>/<model>","max_tokens":8,"messages":[{"role":"user","content":"ping"}]}'
 ```
 

@@ -1,172 +1,173 @@
-# HTTPS ingress
+# Tailscale Services ingress
 
-`modules/services/ingress.nix` gives neko-sphere's own services a browser-trusted
-HTTPS name each: one Caddy instance terminates TLS on 80 and 443 with a wildcard
-certificate for `*.neko-sphere.nvirellia.im`, and routes by host name to the
-service's loopback port. It replaces the per-service tailnet certificate route —
-self-signed warnings, one certificate per service, and a port number in every URL
-— for every client that has joined the tailnet, a home device included.
+`modules/services/ingress.nix` publishes neko-sphere's own services under stable
+Tailscale Services names. The daemon terminates the tailnet's HTTPS certificate
+and forwards each endpoint to a loopback port; there is no Caddy instance, no
+wildcard certificate, no ACME challenge and no Cloudflare token.
 
-The certificate comes from the ACME DNS-01 challenge, so the wildcard needs no
-inbound port 80 and no publicly reachable address. Reachability is a separate
-question, answered by the firewall below.
+A Tailscale Service is a named, virtual address in the tailnet rather than a
+node's address. Each one gets a MagicDNS name of its own, so clients use
+`https://nsphere-paseo.dwelf-hoki.ts.net:6767/` or
+`https://nsphere-magpie.dwelf-hoki.ts.net:3430/` even though every service runs
+on the same host, and a service keeps its name if it later moves to another
+host.
 
 ## What it publishes
 
-| Name | Upstream | Notes |
-| --- | --- | --- |
-| `magpie.neko-sphere.nvirellia.im` | `127.0.0.1:3430` | Magpie's browser page, guarded by `magpie_web_key` |
-| `magpie-api.neko-sphere.nvirellia.im` | `127.0.0.1:3425` | The model gateway, every route upstream serves. Caddy's forwarding header makes upstream treat the call as one from another machine, so it needs an enabled gateway key; Caddy flushes a streamed response immediately, so no buffering option is needed |
-| `portainer.neko-sphere.nvirellia.im` | `https://127.0.0.1:9443` | Portainer's own listener with its self-signed certificate, which the ingress cannot verify |
-| `paseo.neko-sphere.nvirellia.im` | `127.0.0.1:6767` | The Paseo daemon, HTTP and WebSocket. It refuses an unknown `Host` header, so the module declares this zone to it through `PASEO_HOSTNAMES` |
+| Service | Endpoint | Local target | Notes |
+| --- | --- | --- | --- |
+| `svc:nsphere-freezer` | `tcp:443` | `http://127.0.0.1:8080` | The freezer container; HTTPS is terminated here |
+| `svc:nsphere-magpie` | `tcp:3425` | `http://127.0.0.1:3425` | Magpie's gateway, every route upstream serves |
+| | `tcp:3430` | `http://127.0.0.1:3430` | Magpie's browser page, guarded by `magpie_web_key` |
+| `svc:nsphere-nvirellia-im` | `tcp:80` | `http://127.0.0.1:8081` | The personal site over HTTP |
+| | `tcp:443` | `http://127.0.0.1:8081` | The same backend over the tailnet certificate |
+| `svc:nsphere-portainer` | `tcp:443` | `https+insecure://127.0.0.1:9443` | Portainer's own HTTPS listener with its self-signed certificate |
+| `svc:nsphere-paseo` | `tcp:6767` | `http://127.0.0.1:6767` | The Paseo daemon, HTTP and WebSocket |
 
-Any other name in the zone answers 404. The gateway gets its own name rather than
-a path prefix, because only upstream knows its full route set; the page and the
-gateway are one process on two ports, and a client that needs a base URL needs it
-to cover every route.
+The tailnet answers `svc:<name>` at `<name>.<tailnetDnsName>`, so
+`svc:nsphere-magpie` is `nsphere-magpie.dwelf-hoki.ts.net`.
+`tailnetDnsName` is the constant in
+[modules/constants/tailnet.nix](../modules/constants/tailnet.nix).
 
-That list is the host's own publication table. It lives in the machine definition
-as `services.ingress.proxies` — one entry per service, keyed by the label it
-answers under — and the ingress module knows nothing about which services run
-beside it, only how to terminate TLS, route by name and admit what may reach it.
+A target whose scheme is `http` or `https` gets Tailscale's layer-7 handler: the
+daemon terminates TLS with a certificate for the service name and reverse-proxies
+the request, preserving the original `Host` header and adding the forwarding
+headers a web framework reads. A target with the `tcp` scheme would forward the
+connection unmodified, which is what a database or an upstream that terminates
+its own TLS needs. `https+insecure` is the layer-7 handler for an upstream that
+serves HTTPS with a certificate the daemon cannot verify, as Portainer does.
+TCP is the only transport a Service endpoint can advertise.
 
-The ingress adds no authentication of its own, and it changes what each upstream
-sees. Magpie's gateway reads a forwarding header as "not this machine" and then
-requires an enabled gateway key, so calls through the ingress carry one, exactly
-as a client of the shared gateway does; a caller that reaches the port directly on
-loopback needs none. The page beside it needs its own sign-in key, Portainer needs
-its login, and the Paseo daemon needs its password. Widening `lanSources`
-therefore widens access to all four, subject to those credentials.
+That table is the host's own publication table. It lives in the machine
+definition as `services.ingress.services`, keyed by service name, and each entry
+maps the endpoints defined in the tailnet to local targets. The module knows how
+to apply the configuration and advertise it; it does not define services, their
+ports or their access policy.
 
-The services keep advertising their own addresses: `MAGPIE_PUBLIC_URL` is still
-the MagicDNS name, and the omp endpoint in
-[modules/secrets/magpie.yaml](../modules/secrets/magpie.yaml) is still the
-gateway's port. The ingress adds names; it does not rename what the services tell
-their clients.
+## Tailnet setup
 
-## DNS
+Three things live in the tailnet's admin console rather than in this repository:
 
-The zone belongs to this host: the wildcard certificate covers `*.<domain>`, so
-every name in it must resolve to this host and nothing else may serve part of it.
-`services.ingress.domain` names the zone, and the machine definition sets it
-beside `networking.hostName`.
+1. **The Service definitions.** Each service needs its name, its endpoint set
+   (`tcp:443`, or `tcp:3425` and `tcp:3430`, exactly as in the table), and
+   optionally a tag.
+2. **A tagged node identity.** A Service host must authenticate with a tag, not a
+   user account. neko-sphere carries `tag:neko-sphere`, so it is eligible.
+3. **Approval.** A newly advertised host waits for an admin unless an
+   `autoApprovers.services` rule covers the service and the host's tag.
 
-One wildcard record makes the names reachable, and it points into the tailnet:
+The module fails visibly when the local configuration cannot be applied: a
+malformed endpoint or target makes `tailscale serve set-config` fail, and
+`systemctl status tailscale-serve` and its journal say which one. A service the
+tailnet does not define, or one whose endpoints do not match its definition, is
+accepted locally but never becomes `Connected` in the admin console; the
+`service-host` entry in `tailscale status --json` is where that shows.
 
-```dns
-*.neko-sphere.nvirellia.im      A       <the host's tailnet IPv4 address>
+## How it is applied
+
+`systemd.services.tailscale-serve` is a oneshot unit:
+
+```sh
+tailscale serve set-config --all <generated-json>
 ```
 
-The tailnet assigns that address to this node and keeps it; read it from the
-tailnet's admin console once the endpoint is enrolled, and add the record then. It
-routes only inside the tailnet, so a client that has joined resolves the zone to an
-address it can connect to, while a client that has not joined learns an address it
-cannot reach instead of a port that answers. There is no AAAA record beside it: a
-second address family would only add something for every client to race against,
-and the tailnet's IPv6 address reaches the same host.
+The generated file is Tailscale's Service configuration format (`version
+0.0.1`), one `svc:` entry per option, with the endpoints copied verbatim and
+`advertised` true. `set-config --all` replaces every service's handlers and the
+node's advertised-service list, so removing an entry from the machine definition
+removes both its forwarding rule and its advertisement on the next switch. The
+CLI's separate `advertise` subcommand is only needed when applying one service
+with `--service`. Node-level Serve and Funnel entries are stored elsewhere and
+are not touched.
 
-A device on the home network that is not on the tailnet reaches the names through
-the LAN instead, which needs a local answer rather than the public one: point the
-zone at `10.0.0.21` in the router's DNS or in that device's hosts file. The
-firewall admits the LAN subnet as a source for exactly that case. Without the
-override such a device resolves the public record, finds no route into
-`100.64.0.0/10`, and cannot connect.
+The unit starts after `tailscaled` and `tailscaled-autoconnect`, waits until the
+backend reports `Running`, then applies the configuration. `tailscaled.upholds`
+starts it again whenever the daemon restarts, because a restart drops the
+advertisements even though the configuration survives.
 
-Certificates for the zone need a Cloudflare API token with DNS edit rights on the
-zone that holds it — the delegated `neko-sphere.nvirellia.im` zone if you made
-one, otherwise `nvirellia.im`. That token is a secret and lives in the encrypted
-document described below.
+Retiring a service is declarative through the same command: the next switch
+stops advertising it and deletes its handlers. To let existing connections close
+gracefully first, drain it before the switch:
 
-## The certificate
+```sh
+tailscale serve drain svc:<name>
+```
 
-Caddy answers the DNS-01 challenge itself, using the Cloudflare provider compiled
-into its binary. `nixos-26.05` carries no Caddy with that plugin, so the ingress
-takes the unstable set's `caddy.withPlugins` with one plugin pinned by version and
-vendor hash; the package therefore builds a private Caddy rather than reusing the
-cached one.
+## Reachability and authentication
 
-That vendor hash covers the vendored dependency graph of the Caddy version beside
-it, so it is only as current as the `nixpkgs-unstable` pin: an input update that
-moves Caddy makes the build fail with `hash mismatch`, naming the hash to put
-back. A hash taken from that failure cannot quietly pick a different plugin: the
-package's install check reads Caddy's own `build-info` and requires
-`github.com/caddy-dns/cloudflare` at the pinned version.
+Only tailnet traffic reaches a Service. The virtual address belongs to the
+tailnet, the connection arrives through `tailscale0`, which
+[the tailnet module](tailscale.md) lists as a trusted interface, and there is no
+LAN listener and no firewall rule to widen. A device that has not joined the
+tailnet cannot resolve or reach any of these names.
 
-The token read is `cloudflare_api_token` in
-[modules/secrets/ingress.yaml](../modules/secrets/ingress.yaml), whose recipients
-are neko-sphere's host key and the maintainer. NixOS activation renders it into
-the variable `CLOUDFLARE_API_TOKEN` in a root-only environment file, which the
-Caddyfile reaches as `{env.CLOUDFLARE_API_TOKEN}`; Caddy reads it at start and
-Caddy's own storage holds the issued certificate under `/var/lib/caddy`.
+The ingress adds no authentication. Magpie's page needs its sign-in key, its
+gateway requires an enabled gateway key for calls that arrive through the proxy
+(as it does for any non-loopback caller), and the Paseo daemon needs its
+password. The tailnet's ACLs are the other bound: an `svc:` name is a grant
+destination, so a policy can admit one service without admitting the rest.
 
-A document that still holds its placeholder (`REPLACE_WITH_CLOUDFLARE_API_TOKEN`)
-is not a credential: Caddy starts, and every request fails TLS until it is filled
-from a checkout with `sops modules/secrets/ingress.yaml`. The zone's records must
-exist before the first issuance — the DNS-01 challenge waits for the TXT record it
-creates, but for nothing else. `journalctl -u caddy` names the failure: a token
-without DNS edit rights on that zone is refused there, and a staging run with a
-real token is the fastest way to see a certificate without burning production rate
-limits.
+The services keep advertising their own addresses. `MAGPIE_PUBLIC_URL` still uses
+the node's MagicDNS name and port, and the omp endpoint in
+[modules/secrets/magpie.yaml](../modules/secrets/magpie.yaml) is still the
+gateway's port. The ingress adds names; it does not rename what the services
+tell their clients.
 
-## Reachability
+## The personal site and Funnel
 
-The tailnet needs no firewall rule of its own: a peer reaches this host's tailnet
-address on `tailscale0`, which [the tailnet module](tailscale.md) adds to the
-firewall's trusted interfaces, and the connection enters the input chain there
-rather than through the ingress. The firewall's only job here is the LAN, and the
-host carries its LAN and its public addresses on one interface, so admitting the LAN
-by interface would also admit the internet: `services.ingress.lanSources` lists the
-IPv4 sources that may reach the ingress, and the module renders one
-`ip saddr <source> tcp dport { 80, 443 } accept` rule for each. The machine
-definition lists only its LAN subnet, which is what a device that overrides the
-zone locally needs; nothing is admitted on the host's public addresses.
+`nsphere-nvirellia-im` is the personal site. Its `tcp:443` endpoint is already a
+layer-7 HTTPS handler, so the backend does not need to know whether the request
+came from the tailnet or, later, from the public internet.
 
-Two things this does not do:
+Tailscale Funnel does not accept a `svc:` target: it publishes a port on the
+node's own MagicDNS name (`neko-sphere.dwelf-hoki.ts.net`). Public exposure is
+therefore a separate declaration, and `nvirellia.im` CNAMEs to the Funnel name
+Tailscale prints. The Service remains the tailnet-internal name; both paths can
+reach the same local target.
 
-- Port 443 is not open to the internet. The zone's record points into the tailnet,
-  so a request from outside cannot reach a listener anyway, and no rule admits one.
-  Making the ingress public is a separate decision that needs records, a firewall
-  rule and an honest look at the four upstreams' own authentication.
-- Nothing bounds a peer beyond the tailnet's ACLs and the upstreams' own
-  authentication: the trusted interface admits a peer's connection to any port this
-  host listens on, not only the ingress, exactly as the endpoint's loopback
-  delivery did while it forwarded. A host that wants the firewall to bound peer
-  access would have to drop the interface from `trustedInterfaces` and name every
-  port peers should reach, because the input chain drops the rest.
+Funnel works only over TLS and only on ports 443, 8443 and 10000. Port 443 on the
+node is free here: Services listen on their own virtual addresses, and nothing
+else on this host binds 443.
 
 ## Adding a service
 
-A new name in the zone costs one entry in the machine definition and no new
-certificate:
+1. Define the Service and its endpoints in the admin console.
+2. Add its local mapping to the machine definition:
 
 ```nix
-services.ingress.proxies.wiki = { upstream = "127.0.0.1:3000"; };
+services.ingress.services.nsphere-wiki.endpoints."tcp:443" =
+  "http://127.0.0.1:3000";
 ```
 
-The module renders one `handle` block per entry and keeps the catch-all 404 last,
-so entries need no ordering care. An upstream that serves its own self-signed
-certificate takes `upstreamInsecureTls = true` beside an `https://` address, as
-Portainer does. Add the DNS record only if the name must resolve; the certificate
-already covers it.
+The next switch writes the configuration and advertises the new host; approve it
+if no auto-approver matched. The name is available as
+`https://nsphere-wiki.dwelf-hoki.ts.net/` once the advertisement is active.
 
 ## Verifying
 
-Deployment is separate and authorized on its own; after a switch, from a tailnet
-peer, and from a LAN client that resolves the zone through the LAN:
+On the host:
 
 ```sh
-curl -sI https://magpie.neko-sphere.nvirellia.im/ | head -1        # 401 or 200
-curl -s -H "Authorization: Bearer $MAGPIE_KEY" \
-  https://magpie-api.neko-sphere.nvirellia.im/v1/models | head   # $MAGPIE_KEY: the gateway key from modules/secrets/magpie.yaml
-openssl s_client -connect magpie.neko-sphere.nvirellia.im:443 -servername magpie.neko-sphere.nvirellia.im \
-  </dev/null 2>/dev/null | openssl x509 -noout -subject -dates
-curl -sI https://portainer.neko-sphere.nvirellia.im/ | head -1     # Portainer's login page
-curl -si http://magpie.neko-sphere.nvirellia.im/ | head -1         # 308 to the https URL
+tailscale serve get-config --all       # every service and its endpoint mapping
+tailscale serve status                 # node-level Serve and Funnel entries
+systemctl status tailscale-serve
+tailscale status --json | jq '.Self.CapMap."service-host"'
 ```
 
-The certificate's subject must be `*.neko-sphere.nvirellia.im` and its issuer a
-public CA; a browser that still warns is reading another host's answer. A Paseo
-client proves the WebSocket path only by connecting: the daemon's own logs record
-the session. `journalctl -u caddy` holds issuance and routing failures, and
-`/var/log/caddy/access-neko-sphere.nvirellia.im.log` holds one line per request
-with the host name it carried.
+From another tailnet device:
+
+```sh
+curl -sI https://nsphere-freezer.dwelf-hoki.ts.net/ | head -1          # 443
+curl -sI https://nsphere-magpie.dwelf-hoki.ts.net:3430/ | head -1      # 401 or 200
+curl -s  https://nsphere-magpie.dwelf-hoki.ts.net:3425/v1/models | head
+curl -sI https://nsphere-nvirellia-im.dwelf-hoki.ts.net/ | head -1     # 443
+curl -sI http://nsphere-nvirellia-im.dwelf-hoki.ts.net/ | head -1      # 80
+curl -sI https://nsphere-portainer.dwelf-hoki.ts.net/ | head -1        # 443
+curl -sI https://nsphere-paseo.dwelf-hoki.ts.net:6767/ | head -1
+```
+
+A name that resolves but refuses the connection usually means the host is not
+approved for that service; a name that does not resolve means the Service is not
+defined in the tailnet. A 502 from a name whose endpoint exists means the local
+target is not listening. A Paseo client proves the WebSocket path only by
+connecting: the daemon's own logs record the session.

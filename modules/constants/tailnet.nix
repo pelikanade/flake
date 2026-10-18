@@ -20,7 +20,7 @@
         description = "Expand a peer's own name into its fully qualified MagicDNS name.";
       };
 
-      config.constants.tailnetDnsName = "leaffish-halfmoon.ts.net";
+      config.constants.tailnetDnsName = "dwelf-hoki.ts.net";
       config.constants.getTailnetFqdn = name: "${name}.${config.constants.tailnetDnsName}";
     };
 }

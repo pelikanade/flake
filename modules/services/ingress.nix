@@ -7,173 +7,106 @@
       ...
     }:
     let
-      domain = config.services.ingress.domain;
-      # The wildcard covers every name this host publishes, so one more service
-      # costs one entry in `services.ingress.proxies` and no new certificate or
-      # ACME order.
-      certName = "*.${domain}";
-      # Port 80 only moves browsers to HTTPS: the certificate comes from the
-      # DNS-01 challenge, so no ACME request reaches this host.
-      ports = [
-        80
-        443
-      ];
-      portList = lib.concatMapStringsSep ", " toString ports;
+      services = config.services.ingress.services;
+      tailscale = lib.getExe config.services.tailscale.package;
 
-      reverseProxy =
-        proxy:
-        if proxy.upstreamInsecureTls then
-          ''
-            reverse_proxy ${proxy.upstream} {
-              transport http {
-                tls_insecure_skip_verify
-              }
+      # The configuration file is the whole declaration for this host: `set-config
+      # --all` replaces every Service's endpoints, so an entry removed here stops
+      # being forwarded. Node-level Serve and Funnel entries live in a different
+      # part of the daemon's state and are left alone.
+      serviceConfig = pkgs.writeText "tailscale-services.json" (
+        builtins.toJSON {
+          version = "0.0.1";
+          services = lib.mapAttrs' (
+            name: service:
+            lib.nameValuePair "svc:${name}" {
+              inherit (service) endpoints;
+              advertised = true;
             }
-          ''
-        else
-          "reverse_proxy ${proxy.upstream}";
-
-      # One handle block per published name, matched on the host the client
-      # asked for. Caddy evaluates handle blocks in order and runs exactly one;
-      # the catch-all below answers what no name claims. Caddy flushes a
-      # response with an unknown length or an event-stream content type
-      # immediately, so an upstream that streams needs no option here.
-      renderProxy =
-        label: proxy:
-        let
-          matcher = "@" + lib.replaceStrings [ "-" "." ] [ "_" "_" ] label;
-        in
-        ''
-          ${matcher} host ${label}.${domain}
-          handle ${matcher} {
-            ${reverseProxy proxy}
-          }
-        '';
+          ) services;
+        }
+      );
     in
     {
-      options.services.ingress = {
-        domain = lib.mkOption {
-          type = lib.types.str;
-          example = "neko-sphere.nvirellia.im";
-          description = ''
-            The zone this host's services answer under. Each published name is
-            `<label>.<domain>`, the certificate covers `*.<domain>`, and the
-            zone's DNS records point at this host, so no other host may serve
-            part of it.
-          '';
-        };
-
-        proxies = lib.mkOption {
-          type = lib.types.attrsOf (
-            lib.types.submodule {
-              options = {
-                upstream = lib.mkOption {
-                  type = lib.types.str;
-                  example = "127.0.0.1:3000";
-                  description = ''
-                    The address Caddy proxies this name to, with a scheme when
-                    the upstream serves HTTPS.
-                  '';
-                };
-
-                upstreamInsecureTls = lib.mkOption {
-                  type = lib.types.bool;
-                  default = false;
-                  description = ''
-                    Accept the upstream's certificate without verifying it, for
-                    a listener that serves the self-signed certificate it
-                    generated itself.
-                  '';
-                };
+      options.services.ingress.services = lib.mkOption {
+        type = lib.types.attrsOf (
+          lib.types.submodule {
+            options.endpoints = lib.mkOption {
+              type = lib.types.attrsOf lib.types.str;
+              example = {
+                "tcp:443" = "http://127.0.0.1:8080";
               };
-            }
-          );
-          default = { };
-          description = ''
-            The names this host publishes, keyed by their label: `proxies.foo`
-            answers at `foo.<domain>`. The importing machine declares its own
-            services here; the ingress knows about TLS and reachability, not
-            about which services run beside it.
-          '';
-        };
+              description = ''
+                Incoming endpoint to local target, as Tailscale's Service
+                configuration file maps them. The key is `tcp:<port>` and must
+                match an endpoint the Service was defined with in the tailnet.
+                The value's scheme chooses the handler: `http` or `https` is an
+                HTTPS reverse proxy that terminates the tailnet certificate,
+                `https+insecure` does the same without verifying the upstream's
+                certificate, and `tcp` forwards the connection unmodified.
+              '';
+            };
+          }
+        );
+        default = { };
+        description = ''
+          The Tailscale Services this host advertises, keyed by name without the
+          `svc:` prefix: `services.foo` advertises `svc:foo`, which the tailnet
+          answers at `foo.<tailnetDnsName>`. The service names, their endpoints
+          and their tags are defined in the tailnet's admin console; this option
+          only says where each endpoint's traffic goes on this host.
 
-        lanSources = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
-          default = [ ];
-          example = [ "10.0.0.0/24" ];
-          description = ''
-            IPv4 sources that reach the ingress besides the tailnet. A host
-            whose LAN and public addresses share one interface cannot admit the
-            LAN by interface without also admitting the internet, so these are
-            matched as packet sources instead.
-          '';
-        };
+          A Service host must have a tagged, not user-owned, node identity, and
+          a new host advertisement needs approval unless an auto-approver covers
+          it.
+        '';
       };
 
-      config = {
-        sops.secrets."cloudflare-api-token" = {
-          format = "yaml";
-          key = "cloudflare_api_token";
-          sopsFile = config.constants.resources.getSecretPath "ingress.yaml";
-          owner = "root";
-          group = "root";
-          mode = "0400";
-          restartUnits = [ "caddy.service" ];
-        };
+      config = lib.mkIf (services != { }) {
+        systemd.services.tailscale-serve = {
+          description = "Advertise this host's Tailscale Services";
+          wantedBy = [ "multi-user.target" ];
+          wants = [ "tailscaled.service" ];
+          after = [
+            "network-online.target"
+            "tailscaled.service"
+            "tailscaled-autoconnect.service"
+          ];
 
-        # The DNS provider reads the token from its environment, and an
-        # environment file needs `NAME=value`: the secret's own file holds the
-        # bare value, so render the variable from its placeholder.
-        sops.templates."caddy-env" = {
-          content = "CLOUDFLARE_API_TOKEN=${config.sops.placeholder."cloudflare-api-token"}";
-          owner = "root";
-          group = "root";
-          mode = "0400";
-          restartUnits = [ "caddy.service" ];
-        };
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            TimeoutStartSec = 600;
 
-        services.caddy = {
-          enable = true;
+            # `set-config` needs a node that is logged in. The unit starts after
+            # the autoconnect helper, but the daemon's backend can still be
+            # settling on a slow boot, so wait for it rather than fail the
+            # advertisement until the next switch.
+            ExecStart = pkgs.writeShellScript "tailscale-serve" ''
+              set -euo pipefail
 
-          # nixos-26.05 carries no Caddy with the Cloudflare DNS plugin, and only
-          # the DNS-01 challenge can issue the wildcard certificate. Take the
-          # unstable set's builder and add that one provider. `withPlugins`
-          # vendors the plugin against the whole dependency graph, so this hash
-          # belongs to the unstable Caddy version beside it: an input bump that
-          # moves Caddy makes it stale, and a build then reports the hash to use.
-          package = pkgs.unstable.caddy.withPlugins {
-            plugins = [ "github.com/caddy-dns/cloudflare@v0.2.4" ];
-            hash = "sha256-xRJ5evsAJ2akg47j3Bt6YDXJOgX88B/rKNP50KSVyNY=";
-          };
+              tries=0
+              until ${tailscale} status --json 2>/dev/null \
+                | ${lib.getExe pkgs.jq} -e '.BackendState == "Running"' >/dev/null; do
+                tries=$((tries + 1))
+                if [ "$tries" -ge 60 ]; then
+                  echo "tailscaled is not Running; cannot advertise Services" >&2
+                  exit 1
+                fi
+                sleep 2
+              done
 
-          email = config.constants.nvirellia.email;
-          environmentFile = config.sops.templates."caddy-env".path;
-
-          virtualHosts.${certName} = {
-            # The wildcard site cannot separate its names by filename, so the
-            # whole zone shares one access log.
-            logFormat = "output file ${config.services.caddy.logDir}/access-${domain}.log";
-
-            extraConfig = ''
-              tls {
-                dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-              }
-
-              ${lib.concatStringsSep "\n" (lib.mapAttrsToList renderProxy config.services.ingress.proxies)}
-              # A name in the zone that no service claims still resolves, and it
-              # must answer rather than fall through to the first handle block.
-              handle {
-                respond "No service is published under this name." 404
-              }
+              # `--all` also replaces the node's advertised-service list with
+              # the entries marked `advertised` in this file, so a removed entry
+              # stops being advertised too.
+              ${tailscale} serve set-config --all ${serviceConfig}
             '';
           };
         };
 
-        networking.firewall = {
-          extraInputRules = lib.concatMapStrings (source: ''
-            ip saddr ${source} tcp dport { ${portList} } accept
-          '') config.services.ingress.lanSources;
-        };
+        # A daemon restart drops the host's advertisements even though its
+        # configuration survives, so start the advertisement again alongside it.
+        systemd.services.tailscaled.upholds = [ "tailscale-serve.service" ];
       };
     };
 }
