@@ -42,13 +42,10 @@
           # A container on 127.0.0.1:8080.
           nsphere-freezer.endpoints."tcp:443" = "http://127.0.0.1:8080";
 
-          # Magpie's browser page and gateway API are one process on two ports;
-          # each keeps its own endpoint so every route upstream serves stays
-          # reachable without a path prefix.
-          nsphere-magpie.endpoints = {
-            "tcp:3425" = "http://127.0.0.1:3425";
-            "tcp:3430" = "http://127.0.0.1:3430";
-          };
+          # Magpie's browser page and gateway API are one process on two ports,
+          # so each gets its own name; both Services answer on 443.
+          nsphere-magpie.endpoints."tcp:443" = "http://127.0.0.1:3430";
+          nsphere-magpie-api.endpoints."tcp:443" = "http://127.0.0.1:3425";
 
           # The personal site's container is published on 127.0.0.1:8081. The
           # HTTPS endpoint terminates the tailnet certificate here; a later
@@ -61,7 +58,7 @@
           nsphere-portainer.endpoints."tcp:443" = "https+insecure://127.0.0.1:9443";
 
           # The Paseo daemon serves HTTP and WebSocket on one port.
-          nsphere-paseo.endpoints."tcp:6767" = "http://127.0.0.1:6767";
+          nsphere-paseo.endpoints."tcp:443" = "http://127.0.0.1:6767";
         };
 
         networking = {

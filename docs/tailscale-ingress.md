@@ -7,21 +7,20 @@ wildcard certificate, no ACME challenge and no Cloudflare token.
 
 A Tailscale Service is a named, virtual address in the tailnet rather than a
 node's address. Each one gets a MagicDNS name of its own, so clients use
-`https://nsphere-paseo.dwelf-hoki.ts.net:6767/` or
-`https://nsphere-magpie.dwelf-hoki.ts.net:3430/` even though every service runs
-on the same host, and a service keeps its name if it later moves to another
-host.
+`https://nsphere-paseo.dwelf-hoki.ts.net/` or
+`https://nsphere-magpie.dwelf-hoki.ts.net/` even though every service runs on
+the same host, and a service keeps its name if it later moves to another host.
 
 ## What it publishes
 
 | Service | Endpoint | Local target | Notes |
 | --- | --- | --- | --- |
-| `svc:nsphere-freezer` | `tcp:443` | `http://127.0.0.1:8080` | The freezer container; HTTPS is terminated here |
-| `svc:nsphere-magpie` | `tcp:3425` | `http://127.0.0.1:3425` | Magpie's gateway, every route upstream serves |
-| | `tcp:3430` | `http://127.0.0.1:3430` | Magpie's browser page, guarded by `magpie_web_key` |
-| `svc:nsphere-nvirellia-im` | `tcp:443` | `http://127.0.0.1:8081` | The personal site over the tailnet certificate |
+| `svc:nsphere-freezer` | `tcp:443` | `http://127.0.0.1:8080` | The freezer container |
+| `svc:nsphere-magpie` | `tcp:443` | `http://127.0.0.1:3430` | Magpie's browser page, guarded by `magpie_web_key` |
+| `svc:nsphere-magpie-api` | `tcp:443` | `http://127.0.0.1:3425` | Magpie's gateway, every route upstream serves |
+| `svc:nsphere-nvirellia-im` | `tcp:443` | `http://127.0.0.1:8081` | The personal site |
 | `svc:nsphere-portainer` | `tcp:443` | `https+insecure://127.0.0.1:9443` | Portainer's own HTTPS listener with its self-signed certificate |
-| `svc:nsphere-paseo` | `tcp:6767` | `http://127.0.0.1:6767` | The Paseo daemon, HTTP and WebSocket |
+| `svc:nsphere-paseo` | `tcp:443` | `http://127.0.0.1:6767` | The Paseo daemon, HTTP and WebSocket |
 
 The tailnet answers `svc:<name>` at `<name>.<tailnetDnsName>`, so
 `svc:nsphere-magpie` is `nsphere-magpie.dwelf-hoki.ts.net`.
@@ -47,8 +46,7 @@ ports or their access policy.
 
 Three things live in the tailnet's admin console rather than in this repository:
 
-1. **The Service definitions.** Each service needs its name, its endpoint set
-   (`tcp:443`, or `tcp:3425` and `tcp:3430`, exactly as in the table), and
+1. **The Service definitions.** Each service needs its name, `tcp:443`, and
    optionally a tag.
 2. **A tagged node identity.** A Service host must authenticate with a tag, not a
    user account. neko-sphere carries `tag:neko-sphere`, so it is eligible.
@@ -156,12 +154,12 @@ tailscale status --json | jq '.Self.CapMap."service-host"'
 From another tailnet device:
 
 ```sh
-curl -sI https://nsphere-freezer.dwelf-hoki.ts.net/ | head -1          # 443
-curl -sI https://nsphere-magpie.dwelf-hoki.ts.net:3430/ | head -1      # 401 or 200
-curl -s  https://nsphere-magpie.dwelf-hoki.ts.net:3425/v1/models | head
+curl -sI https://nsphere-freezer.dwelf-hoki.ts.net/ | head -1
+curl -sI https://nsphere-magpie.dwelf-hoki.ts.net/ | head -1           # 401 or 200
+curl -s  https://nsphere-magpie-api.dwelf-hoki.ts.net/v1/models | head
 curl -sI https://nsphere-nvirellia-im.dwelf-hoki.ts.net/ | head -1
-curl -sI https://nsphere-portainer.dwelf-hoki.ts.net/ | head -1        # 443
-curl -sI https://nsphere-paseo.dwelf-hoki.ts.net:6767/ | head -1
+curl -sI https://nsphere-portainer.dwelf-hoki.ts.net/ | head -1
+curl -sI https://nsphere-paseo.dwelf-hoki.ts.net/ | head -1
 ```
 
 A name that resolves but refuses the connection usually means the host is not

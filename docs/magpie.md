@@ -30,12 +30,12 @@ handler sends `X-Forwarded-For`, so every call that arrives through it carries
 that key. The tailnet's MagicDNS name is handed to the gateway in
 `MAGPIE_PUBLIC_URL`.
 
-[The `tailscale-ingress` module](tailscale-ingress.md) also publishes both listeners as one Tailscale Service,
-`svc:nsphere-magpie`, with the daemon's certificate: the page answers at
-`https://nsphere-magpie.dwelf-hoki.ts.net:3430/` and the gateway at
-`https://nsphere-magpie.dwelf-hoki.ts.net:3425/`, which is the base URL a client
-that wants HTTPS should carry. The gateway's own names and the key policy do not
-change with it.
+[The `tailscale-ingress` module](tailscale-ingress.md) publishes the two
+listeners as separate Tailscale Services, both on 443 and with the daemon's
+certificate: the page answers at `https://nsphere-magpie.dwelf-hoki.ts.net/` and
+the gateway at `https://nsphere-magpie-api.dwelf-hoki.ts.net/`, which is the base
+URL a client that wants HTTPS should carry. The gateway's own names and the key
+policy do not change with it.
 
 The page signs in through the link the service prints into its journal on
 every start, which carries the sign-in key as `?k=`. `MAGPIE_WEB_KEY` pins
@@ -84,8 +84,8 @@ curl --silent http://neko-sphere.dwelf-hoki.ts.net:3430/ -o /dev/null -w '%{http
 Through the Tailscale Service, from a tailnet peer:
 
 ```sh
-curl --fail --silent https://nsphere-magpie.dwelf-hoki.ts.net:3425/v1/models | head
-curl --silent https://nsphere-magpie.dwelf-hoki.ts.net:3430/ -o /dev/null -w '%{http_code}\n'  # 401, same key
+curl --fail --silent https://nsphere-magpie-api.dwelf-hoki.ts.net/v1/models | head
+curl --silent https://nsphere-magpie.dwelf-hoki.ts.net/ -o /dev/null -w '%{http_code}\n'  # 401, same key
 ```
 
 `/v1/models` is the catalog the UI has configured — empty until the first

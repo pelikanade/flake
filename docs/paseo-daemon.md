@@ -341,7 +341,7 @@ Host header` (which a client shows as a transport that closed); its defaults all
 `localhost`, `*.localhost` and any IP literal. The module therefore passes the
 tailnet's MagicDNS zone through `PASEO_HOSTNAMES`, which covers both the node's
 own name and [the Tailscale Service](tailscale-ingress.md)
-`nsphere-paseo.dwelf-hoki.ts.net:6767` — a bare IP always is, which is the
+`nsphere-paseo.dwelf-hoki.ts.net` — a bare IP always is, which is the
 workaround if a client cannot be pointed at a name.
 
 Keep the daemon on loopback instead by setting
