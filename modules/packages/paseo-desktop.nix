@@ -35,6 +35,12 @@ let
         hash = "sha256-UhQVi9qq2WaUKGwyxfis4JN8qhMJH5i8EvvA58wO0IM=";
       };
 
+      # The desktop window is transparent on Linux, with one translucent tint
+      # painted by the renderer over Hyprland's blurred wallpaper. Inner
+      # structural surfaces are cleared so they do not stack into an opaque
+      # window. See the patch for the window options and the surface changes.
+      patches = [ ./paseo-desktop-transparency.patch ];
+
       nodejs = nodejs_22;
 
       npmDepsFetcherVersion = 2;
