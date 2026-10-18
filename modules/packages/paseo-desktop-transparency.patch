@@ -2505,10 +2505,50 @@ index 3648bf5..f06861e 100644
    },
    logScroll: {
      maxHeight: 400,
+diff --git a/packages/app/src/plugins/settings/index.tsx b/packages/app/src/plugins/settings/index.tsx
+index 0fda205..69a7a21 100644
+--- a/packages/app/src/plugins/settings/index.tsx
++++ b/packages/app/src/plugins/settings/index.tsx
+@@ -14,7 +14,7 @@ import type { Theme } from "@/styles/theme";
+ import { useInstalledPlugin } from "../registry";
+ import { PluginInstallationProvider } from "../installation-provider";
+ import { SurfaceErrorBoundary } from "../surface-error-boundary";
+-import { toPluginTheme } from "../theme";
++import { toPluginGlassTheme } from "../theme";
+ import { buildPluginSettingsRoute } from "./routes";
+ 
+ interface SettingsIdentity {
+@@ -128,7 +128,7 @@ function SettingsContent({
+ }
+ const ThemedSettingsContent = withUnistyles(SettingsContent);
+ // Settings routes carry no screen params.
+-const themeMapping = (theme: Theme) => ({ theme: toPluginTheme(theme) });
++const themeMapping = (theme: Theme) => ({ theme: toPluginGlassTheme(theme) });
+ export function PluginSettingsContent({
+   onBackToPlugins,
+   showBackToPlugins,
 diff --git a/packages/app/src/plugins/surface-screen.tsx b/packages/app/src/plugins/surface-screen.tsx
-index f2f9997..cd63b17 100644
+index f2f9997..e99fef3 100644
 --- a/packages/app/src/plugins/surface-screen.tsx
 +++ b/packages/app/src/plugins/surface-screen.tsx
+@@ -16,7 +16,7 @@ import type { Theme } from "@/styles/theme";
+ import type { ShortcutKey } from "@/utils/format-shortcut";
+ import { usePluginHostNavigation } from "./host-navigation";
+ import { resolvePluginIcon } from "./icons";
+-import { toPluginTheme } from "./theme";
++import { toPluginGlassTheme } from "./theme";
+ import { useInstalledPlugin, usePluginInstallations } from "./registry";
+ import { buildPluginSurfaceRoute, pluginScreenParamsFromRoute } from "./routes";
+ import {
+@@ -37,7 +37,7 @@ import { resolvePluginPlatform } from "./platform";
+ const EMPTY_SHORTCUT_KEYS: ShortcutKey[] = [];
+ const mutedColorMapping = (theme: Theme) => ({ color: theme.colors.foregroundMuted });
+ const pluginThemeMapping = (theme: Theme) => ({
+-  theme: toPluginTheme(theme),
++  theme: toPluginGlassTheme(theme),
+ });
+ const ThemedX = withUnistyles(X);
+ 
 @@ -246,7 +246,7 @@ export function PluginSurfaceScreen() {
  const styles = StyleSheet.create((theme) => ({
    screen: {
@@ -2518,6 +2558,52 @@ index f2f9997..cd63b17 100644
    },
    body: {
      flex: 1,
+diff --git a/packages/app/src/plugins/theme.ts b/packages/app/src/plugins/theme.ts
+index ebbe5ff..ea750e1 100644
+--- a/packages/app/src/plugins/theme.ts
++++ b/packages/app/src/plugins/theme.ts
+@@ -18,3 +18,19 @@ export function toPluginTheme(theme: Theme): PluginTheme {
+     },
+   };
+ }
++
++/**
++ * Plugin surfaces paint their own roots from `surface0`. Hand them the glass
++ * roles instead of the opaque palette so a plugin page does not become a plate
++ * inside the transparent window.
++ */
++export function toPluginGlassTheme(theme: Theme): PluginTheme {
++  return {
++    colors: {
++      ...toPluginTheme(theme).colors,
++      surface0: "transparent",
++      surface1: theme.colors.surfaceCard,
++      surface2: theme.colors.surfaceRowHover,
++    },
++  };
++}
+diff --git a/packages/app/src/plugins/workspace-panels/panel.tsx b/packages/app/src/plugins/workspace-panels/panel.tsx
+index 998f7e9..38869c2 100644
+--- a/packages/app/src/plugins/workspace-panels/panel.tsx
++++ b/packages/app/src/plugins/workspace-panels/panel.tsx
+@@ -16,7 +16,7 @@ import type { Theme } from "@/styles/theme";
+ import { normalizeWorkspaceOpaqueId } from "@/utils/workspace-identity";
+ import { usePluginHostNavigation } from "../host-navigation";
+ import { createPluginClientStateSource } from "../client-state/source";
+-import { toPluginTheme } from "../theme";
++import { toPluginGlassTheme } from "../theme";
+ import { resolvePluginIcon } from "../icons";
+ import { useInstalledPlugin } from "../registry";
+ import { PluginInstallationProvider } from "../installation-provider";
+@@ -25,7 +25,7 @@ import { resolvePluginWorkspacePanel } from "./resolution";
+ import { resolvePluginPlatform } from "../platform";
+ 
+ const pluginThemeMapping = (theme: Theme) => ({
+-  theme: toPluginTheme(theme),
++  theme: toPluginGlassTheme(theme),
+ });
+ 
+ function PluginPanelBody({ theme }: { theme: PluginTheme }) {
 diff --git a/packages/app/src/review/surface.tsx b/packages/app/src/review/surface.tsx
 index 43b6af9..4c8441c 100644
 --- a/packages/app/src/review/surface.tsx

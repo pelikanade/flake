@@ -97,6 +97,9 @@ The patch is organised by intent, not by file count:
   summaries, code surfaces, front matter cells, startup logs.
 - **Floating UI**: toasts, download progress, pane find, command center,
   workspace/plugin hover cards, zoom controls, dialogs and sheets.
+- **Plugin pages**: `toPluginGlassTheme` hands plugin settings, surfaces and
+  workspace panels a transparent `surface0` and translucent `surface1/2`.
+  Plugin buttons, sidebar items and timeline UI keep the regular theme.
 - **Workspace gate**: the loading/unavailable/recovery shell uses
   `containerWorkspaceBackground`, not the opaque `container`, so a freshly
   created or temporarily unavailable workspace stays glass.
