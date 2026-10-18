@@ -73,8 +73,12 @@ The patch is organised by intent, not by file count:
 
 - **Window and chrome**: `packages/desktop/src/main.ts`,
   `packages/desktop/src/window/window-manager.ts`.
-- **Structural dividers**: pane resize handles, sidebar/tab/header rails and
-  settings/sidebar edges use `borderGlass`, not the opaque `border` colour.
+- **Borders and dividers**: every rendered border, one-pixel divider and
+  markdown rule uses `borderGlass`, not the opaque `border` colour. Expanded
+  thinking/tool-call cards, markdown fences and tables, menus, inputs and
+  settings rows all share the same faint highlight. `border` remains only for
+  non-border semantics such as the inactive status dot and disabled glyph;
+  `borderAccent` stays for focus and selection.
 - **Root and navigation**: `packages/app/public/index.html`,
   `packages/app/react-native-web.d.ts`, `packages/app/src/app/_layout.tsx`,
   `packages/app/src/navigation/themed-stack.tsx`.
