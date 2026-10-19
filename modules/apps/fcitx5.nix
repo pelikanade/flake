@@ -22,6 +22,7 @@ _: {
           "Groups/0/Items/0".Name = "keyboard-us";
           "Groups/0/Items/1".Name = "rime";
         };
+        settings.addons.rime.globalSection.SwitchInputMethodBehavior = "CommitRawInput";
       };
     };
 
