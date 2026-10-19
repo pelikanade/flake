@@ -62,6 +62,10 @@
       url = "github:langchain-ai/open-swe/7755cc730c860c2d6803d8c01d550981c4263977";
       flake = false;
     };
+    paseo = {
+      url = "github:pelikanade/paseo";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     pyproject-build-systems = {
       url = "github:pyproject-nix/build-system-pkgs";
       inputs = {
