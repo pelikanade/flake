@@ -775,6 +775,26 @@
         "type": "github"
       }
     },
+    "paseo": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792399491,
+        "narHash": "sha256-hPkBnI+MqvhXj4v/McXq5NppHepFvalIgzygISqaHF8=",
+        "owner": "pelikanade",
+        "repo": "paseo",
+        "rev": "5a6bec6022ef25d5c1230a9a6220e8072c9254e3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pelikanade",
+        "repo": "paseo",
+        "type": "github"
+      }
+    },
     "pre-commit": {
       "inputs": {
         "flake-compat": "flake-compat_2",
@@ -864,6 +884,7 @@
         "noctalia": "noctalia",
         "omp": "omp",
         "open-swe": "open-swe",
+        "paseo": "paseo",
         "pyproject-build-systems": "pyproject-build-systems",
         "pyproject-nix": "pyproject-nix",
         "sops-nix": "sops-nix",
