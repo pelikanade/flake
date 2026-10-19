@@ -112,11 +112,14 @@ commit_changes() {
   if ! $commit; then
     return 0
   fi
-  git add -- "$@"
+  git add -- "$@" || return 1
   if git diff --cached --quiet; then
     return 0
   fi
-  git commit -m "$message"
+  if ! git commit -m "$message"; then
+    echo "error: could not commit: $message" >&2
+    return 1
+  fi
   updated+=("$message")
 }
 
@@ -124,13 +127,13 @@ update_flake_inputs() {
   local inputs=("$@") message
   say "flake inputs: ${inputs[*]}"
   require_clean flake.lock || return 1
-  nix flake update "${inputs[@]}"
+  nix flake update "${inputs[@]}" || return 1
   if git diff --quiet -- flake.lock; then
     echo "already current"
     return 0
   fi
   message="flake: update ${inputs[*]}"
-  commit_changes "$message" flake.lock
+  commit_changes "$message" flake.lock || return 1
   $commit || echo "updated flake.lock (not committed)"
 }
 
@@ -139,7 +142,7 @@ update_dsh() {
   require_clean "$dir/hashes.json" "$dir/pnpm-lock.yaml" || return 1
   old="$(current_json_version "$dir/hashes.json")"
   say "dsh ($old)"
-  bash "$dir/update.sh"
+  bash "$dir/update.sh" || return 1
   if git diff --quiet -- "$dir/hashes.json" "$dir/pnpm-lock.yaml"; then
     echo "already current"
     return 0
@@ -150,7 +153,7 @@ update_dsh() {
     restore "$dir/hashes.json" "$dir/pnpm-lock.yaml"
     return 1
   fi
-  commit_changes "dsh: update $old -> $new" "$dir/hashes.json" "$dir/pnpm-lock.yaml"
+  commit_changes "dsh: update $old -> $new" "$dir/hashes.json" "$dir/pnpm-lock.yaml" || return 1
   $commit || echo "updated dsh to $new (not committed)"
 }
 
@@ -178,7 +181,7 @@ update_magpie() {
     return 0
   fi
   new="$(current_version "$file")"
-  commit_changes "magpie: update $old -> $new" "$file"
+  commit_changes "magpie: update $old -> $new" "$file" || return 1
   $commit || echo "updated magpie to $new (not committed)"
 }
 
@@ -225,7 +228,7 @@ update_rev_package() {
       return 1
     }
   fi
-  commit_changes "$attr: update $old -> $new" "$file"
+  commit_changes "$attr: update $old -> $new" "$file" || return 1
   $commit || echo "updated $attr to $new (not committed)"
 }
 
