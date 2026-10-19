@@ -13,7 +13,8 @@ Packages: dsh, magpie, strata, herdr-reviewr, paseo, omp, llm-agents, noctalia
 
 Without package arguments every package is updated.
 
-  --build   Build each locally packaged tool after updating it.
+  --build   Build each locally packaged tool after updating it, and evaluate
+            every machine after updating flake inputs.
   --commit  Commit each successful update with a conventional message.
 EOF
 }
@@ -131,6 +132,17 @@ update_flake_inputs() {
   if git diff --quiet -- flake.lock; then
     echo "already current"
     return 0
+  fi
+  if $build; then
+    # A lock update is cheap to commit but expensive to discover broken at the
+    # next deploy. Force every machine's toplevel through evaluation first.
+    # shellcheck disable=SC2016 # the Nix expression must stay unexpanded
+    if ! nix eval --raw .#nixosConfigurations --apply \
+      'cs: builtins.concatStringsSep "\n" (map (n: cs.${n}.config.system.build.toplevel.drvPath) (builtins.attrNames cs))' >/dev/null; then
+      echo "error: updated flake inputs do not evaluate; reverting" >&2
+      restore flake.lock
+      return 1
+    fi
   fi
   message="flake: update ${inputs[*]}"
   commit_changes "$message" flake.lock || return 1
