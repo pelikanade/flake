@@ -320,7 +320,7 @@ _: {
           builtins.replaceStrings
             [ "@terminal@" "@ipc@" "@logout@" "@reload@" ]
             [
-              (toLua "${uwsm} app -- ${lib.getExe pkgs.ghostty}")
+              (toLua "${lib.getExe pkgs.ghostty} +new-window")
               (toLua "${lib.getExe osConfig.programs.noctalia.package} msg ")
               (toLua (lib.getExe confirmLogout))
               (toLua "${lib.getExe' osConfig.programs.hyprland.package "hyprctl"} reload config-only")
