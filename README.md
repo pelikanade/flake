@@ -31,20 +31,15 @@ nix build .#nixosConfigurations.MACHINE.config.system.build.toplevel
 
 On an already managed host, `just build` builds the local system and `just deploy` switches to it. A build alone does not verify runtime behavior on the target hardware.
 
-## Open SWE for local development
+## Automated updates
 
-The `open-swe` package provides the native backend and bundled web dashboard, pinned together to an upstream revision. Build it or inspect its launch options with:
+A scheduled workflow updates the locally packaged tools (`dsh`, `magpie`, `strata`, `herdr-reviewr`) and the flake inputs `paseo`, `omp`, `llm-agents`, and `noctalia` daily. Each locally packaged tool is built before its update is committed; a failed update is reverted and reported.
+
+Run the same updater from `nix develop`; it leaves changes uncommitted for review:
 
 ```sh
-nix build .#open-swe
-nix run .#open-swe -- --help
+just update-packages --build
 ```
-
-Follow the upstream [local development setup](https://github.com/langchain-ai/open-swe/blob/7755cc730c860c2d6803d8c01d550981c4263977/docs/DEVELOPMENT.md) for PostgreSQL, GitHub login, model credentials, and sandbox configuration. Export these settings before running `nix run .#open-swe`; the launcher reads the process environment rather than a checkout's `.env`. It requires `POSTGRES_URI` and a login allowlist (`ALLOWED_GITHUB_USERS` or `ALLOWED_GITHUB_ORGS`), and includes `gh` for upstream's local login flow. Startup applies Open SWE's migrations to the selected database.
-
-The dashboard is served at `http://127.0.0.1:2024/` by default; `--port` changes the listener, and `LANGGRAPH_URL` should match it. For persistent state, launch from a dedicated writable directory with `nix run /absolute/path/to/flake#open-swe`; LangGraph writes `.langgraph_api` there. The package includes the default LangSmith and local sandbox providers; the optional third-party provider extras are not installed.
-
-This uses LangGraph's Elastic-2.0 development runtime: keep it local, since the LangGraph API has no authentication. Production deployments use upstream's separately licensed container runtime. Building this package does not enable a NixOS service.
 
 ## Install a new host
 

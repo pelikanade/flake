@@ -31,6 +31,7 @@
           nixfmt
           just
           nh
+          nix-update
           sops
           age
           ssh-to-age
