@@ -6,7 +6,8 @@ let
   # omp brings its own tools, shell, native code and browser; add the
   # interpreter its eval cells use, the system tools its calls reach for, and
   # the Chromium its browser tool finds on PATH (upstream's managed download
-  # does not run on NixOS).
+  # does not run on NixOS). agent-browser supplies the automation runtime that
+  # tool drives.
   ompPackages =
     pkgs:
     (with pkgs; [
@@ -18,7 +19,8 @@ let
       openssh
       python3
       ripgrep
-    ]);
+    ])
+    ++ [ inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.agent-browser ];
 in
 {
   config = {
