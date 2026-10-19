@@ -40,7 +40,6 @@ in
         inter
 
         fira-code
-        maple-mono.NF-CN
         nerd-fonts.fira-code
 
         nerd-fonts.symbols-only
