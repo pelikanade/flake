@@ -24,17 +24,6 @@
 
       services.flatpak = {
         enable = true;
-        packages = [
-          "com.slack.Slack"
-          "io.github.kolunmi.Bazaar"
-          "org.telegram.desktop"
-          "org.localsend.localsend_app"
-          "io.missioncenter.MissionCenter"
-          "io.github.pwr_solaar.solaar"
-          "com.qq.QQ"
-          "com.tencent.WeChat"
-          "com.tencent.wemeet"
-        ];
 
         # Flatpak names the sandbox's timezone by matching TZDIR against the
         # target of /etc/localtime. nixpkgs gives PAM sessions
