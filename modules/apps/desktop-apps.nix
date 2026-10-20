@@ -9,11 +9,8 @@ _: {
   flake.modules.homeManager.desktop-apps =
     { pkgs, ... }:
     {
-      home.packages = with pkgs; [
-        bazaar
+      home.packages = with pkgs.unstable; [
         localsend
-        mission-center
-        qq
         slack
         solaar
         telegram-desktop
