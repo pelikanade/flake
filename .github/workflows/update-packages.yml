@@ -2,7 +2,9 @@ name: Update packages
 
 on:
   schedule:
-    - cron: "0 5 * * *"
+    # 02:00 in Asia/Shanghai. The run must push its commits before neko-sphere's
+    # 05:00 automatic upgrade follows the flake, and GitHub cron is UTC.
+    - cron: "0 18 * * *"
   workflow_dispatch:
 
 permissions:
