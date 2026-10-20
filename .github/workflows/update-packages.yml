@@ -1,0 +1,32 @@
+name: Update packages
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-packages
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        id: checkout
+      - uses: cachix/install-nix-action@v31
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Update packages
+        run: >-
+          nix shell nixpkgs#nix-update nixpkgs#nixfmt-rfc-style
+          -c ./scripts/update-packages.sh --build --commit
+      - name: Push updates
+        if: always() && steps.checkout.outcome == 'success'
+        run: git push

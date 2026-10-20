@@ -7,16 +7,16 @@ _: {
     {
       packages.herdr-reviewr = pkgs.rustPlatform.buildRustPackage (finalAttrs: {
         pname = "herdr-reviewr";
-        version = "0.36.0";
+        version = "0.48.0";
 
         src = pkgs.fetchFromGitHub {
           owner = "persiyanov";
           repo = "herdr-reviewr";
-          rev = "d172ea257ea39bc0eddc9608df1c405744c19e56";
-          hash = "sha256-S9IsjUr2RZqVXX38QchcsknpXL7yOSlAkwGG4lJ3ol4=";
+          rev = "a253b1bfe4b34182af3204b7fcc42ccfed1b87d9";
+          hash = "sha256-Y1AJHvXiIoIkjC3eU9rIBvBl99lvsQ2RIusNXONu2tY=";
         };
 
-        cargoHash = "sha256-Ef+jPqPCBt1f4XzT+2rTF2oGKd6jWJ6VHf5GRhuBR0g=";
+        cargoHash = "sha256-6+GnGBWRwfFMPXoim3p8Q8zoj3MdtK2smxkg7133xMg=";
 
         nativeBuildInputs = with pkgs; [
           makeWrapper
@@ -37,20 +37,6 @@ _: {
         # Upstream's integration tests exercise Herdr pane behavior and are too
         # heavyweight for this local plugin package.
         doCheck = false;
-
-        postPatch = ''
-          substituteInPlace herdr/pane.sh \
-            --replace-fail 'export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:''${PATH:-}"' \
-            'export PATH="${
-              pkgs.lib.makeBinPath (
-                with pkgs;
-                [
-                  git
-                  jq
-                ]
-              )
-            }:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:''${PATH:-}"'
-        '';
 
         postInstall = ''
           wrapProgram $out/bin/herdr-reviewr \

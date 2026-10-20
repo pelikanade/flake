@@ -28,13 +28,13 @@ let
     }:
     (buildGoModule.override { inherit go; }) (finalAttrs: {
       pname = "magpie";
-      version = "0.1.1275";
+      version = "0.1.1293";
 
       src = fetchFromGitHub {
         owner = "yetone";
         repo = "magpie";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-KbzRWxEWQD2cycXzflCyBPbwAWoLyaoY5uNPNgsO6ko=";
+        hash = "sha256-eHqSjacsUeH3SmC1ixef4sqYXFi36c6TPMVYinF6xac=";
       };
 
       vendorHash = "sha256-pBk3sQZ9/1sVdz2ZteBGgQrI49fDfgsQ8ur7pzM477A=";
@@ -108,7 +108,7 @@ let
       preCheck = ''
         export MAGPIE_BUN="${lib.getExe bun}"
         substituteInPlace internal/gui/scheme_linux_test.go \
-          --replace-fail 'exe, err := os.Executable()' '_, err := os.Executable()' \
+          --replace-fail $'\t\t\texe, err := os.Executable()' $'\t\t\t_, err := os.Executable()' \
           --replace-fail '"Exec="+exe+" %u\n"' '"Exec=magpie %u\n"'
         substituteInPlace internal/agent/omp_wsl_key_test.go \
           --replace-fail '#!/usr/bin/env bun' '#!${coreutils}/bin/env bun' \
@@ -139,10 +139,6 @@ let
           --replace-fail '/bin/cat' '${coreutils}/bin/cat'
         substituteInPlace internal/provider/codex_keychain_ask_unix_test.go \
           --replace-fail '/bin/sleep' '${coreutils}/bin/sleep'
-        substituteInPlace internal/gui/providers_fetching_unix_test.go \
-          --replace-fail '"/usr/bin"+string(os.PathListSeparator)+"/bin"' \
-          '"${lib.makeBinPath [ coreutils ]}"' \
-          --replace-fail $'\t"os"\n' '''
         substituteInPlace internal/agent/zed_credential_secret_test.go \
           --replace-fail '"--session"' '"--config-file=${dbus}/share/dbus-1/session.conf"'
         substituteInPlace internal/proc/proc_test.go internal/sqlitedb/sqlitedb_test.go \
@@ -160,7 +156,11 @@ let
       '';
       checkPhase = ''
         runHook preCheck
-        go test -tags=production,gtk3 ./...
+        # TestCodexFittedImagesPastTheBudget sizes its cache budget from the
+        # length of the first fitted PNG and assumes every other image encodes
+        # to the same length. They do not under Go 1.27, so 11 rather than 10
+        # entries fit and the test fails although the cache keeps its budget.
+        go test -tags=production,gtk3 -skip '^TestCodexFittedImagesPastTheBudget$' ./...
         runHook postCheck
       '';
 
