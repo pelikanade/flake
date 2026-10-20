@@ -1,4 +1,9 @@
-{ inputs, ... }: {
+{ inputs, ... }:
+let
+  # The deploy broker and the daily updater both follow this ref.
+  flakeRef = "github:pelikanade/flake";
+in
+{
   machines.neko-sphere = {
     system = "x86_64-linux";
     imports = with inputs.self.modules.aspects; [
@@ -19,6 +24,7 @@
       gh
       tailscale-ingress
       zswap
+      auto-upgrade
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;
     hardware =
@@ -101,7 +107,12 @@
 
       # The deploy broker switches this host to the newest revision of this ref,
       # so it follows the published repository rather than any local checkout.
-      services.paseo-deploy.flake = "github:pelikanade/flake";
+      services.paseo-deploy.flake = flakeRef;
+
+      # The daily updater follows the same ref, so a manual deploy and the
+      # automatic one never diverge. Its 05:00 local run comes after the 02:00
+      # Asia/Shanghai push from the update-packages workflow.
+      system.autoUpgrade.flake = flakeRef;
     };
   };
 }
