@@ -47,15 +47,6 @@
 
         hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
       };
-    nixosModule = {
-      boot.kernelParams = [
-        # The portrait side display needs its console mode rotated. DP-1 takes
-        # the mode the driver prefers instead: a console mode a monitor does not
-        # report to the kernel verbatim is offered to nvidia-drm as a user-defined
-        # mode, which it refuses while the display is being restored at resume.
-        "video=DP-3:2560x1440@60,rotate=90"
-      ];
-    };
     homeModule = {
       wayland.windowManager.hyprland.settings = {
         config.cursor.default_monitor = "DP-1";
