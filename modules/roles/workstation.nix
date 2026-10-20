@@ -47,10 +47,5 @@
     nvirellia
   ];
 
-  flake.modules.nixos.workstation =
-    { pkgs, ... }:
-    {
-      boot.kernelPackages = pkgs.linuxPackages_7_2;
-      boot.loader.systemd-boot.configurationLimit = 5;
-    };
+  flake.modules.nixos.workstation.boot.loader.systemd-boot.configurationLimit = 5;
 }

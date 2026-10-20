@@ -2,10 +2,10 @@
   flake.modules.nixos.nvidia =
     { config, ... }:
     let
-      # Linux 7.2 removed strncpy() from the kernel API, and the 595.71.05
-      # open modules shipped in nixpkgs 26.05 still call it. Pin the current
-      # upstream release until the release branch carries a driver that
-      # builds against this kernel.
+      # Nixpkgs 26.05 still ships 595.71.05. Pin the 615 branch so the
+      # suspend path stays on the driver release the workstation kernel is
+      # validated against, instead of mixing it with the channel's older
+      # modules.
       nvidiaPackage = config.boot.kernelPackages.nvidiaPackages.mkDriver {
         version = "615.71.09";
         sha256_64bit = "sha256-zc7tIrvrYSSNGm3qvCWWZz46ZQFpjucayNL9wo87cP4=";
