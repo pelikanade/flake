@@ -37,9 +37,9 @@
         default families inside the sandbox instead.
 
         The sandbox only receives the host paths named in the overrides, not
-        the Nix store. A Home Manager file under `~/.config` is a symlink to
-        the store, so mounting its directory leaves a dangling link and
-        Fontconfig fails to load: applications then render every glyph as
+        the Nix store. A Home Manager file under `~/.config` would be a
+        symlink to the store, so mounting its directory leaves a dangling link
+        and Fontconfig fails to load: applications then render every glyph as
         .notdef. Bind the store path of the generated file itself and point
         FONTCONFIG_FILE at it.
       */
@@ -70,8 +70,6 @@
     in
     {
       imports = [ inputs.nix-flatpak.homeManagerModules.nix-flatpak ];
-
-      xdg.configFile."flatpak-fontconfig/fonts.conf".source = fontConfig;
 
       services.flatpak = {
         enable = true;
