@@ -353,6 +353,26 @@
         "type": "github"
       }
     },
+    "freezer": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792639003,
+        "narHash": "sha256-ZT28lQXWH/4ExLBLZENz3eKwypS0f0arpGy+IEOrtag=",
+        "owner": "pelikanade",
+        "repo": "freezer",
+        "rev": "93e921ee3c4b727f1d0dfed168dac7c5be1e5715",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pelikanade",
+        "repo": "freezer",
+        "type": "github"
+      }
+    },
     "fromYaml": {
       "flake": false,
       "locked": {
@@ -807,6 +827,7 @@
         "disko": "disko",
         "flake-file": "flake-file",
         "flake-parts": "flake-parts",
+        "freezer": "freezer",
         "git-hooks": "git-hooks",
         "home-manager": "home-manager",
         "import-tree": "import-tree",

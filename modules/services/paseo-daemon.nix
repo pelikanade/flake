@@ -17,10 +17,9 @@
     in
     {
       # The account can run containers, so the host publishes its runtime's API on
-      # a fixed socket. The socket stays this account's, and a client that claims
-      # it with `virtualisation.podman.runtimeApis.paseo.client` reaches it as the
-      # socket's group instead of taking the owner bits: agents need that socket,
-      # and Portainer's container mounts the same one.
+      # a fixed socket outside the account's private runtime directory. Agents
+      # need that socket, and they run as this account inside the daemon's
+      # sandbox, so they reach it through the owner bits.
       virtualisation.podman.runtimeApis.paseo = { };
 
       users.groups.paseo = { };

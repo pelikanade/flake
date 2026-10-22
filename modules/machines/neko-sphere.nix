@@ -14,8 +14,8 @@
       netbird-userspace
       obsidian-headless
       podman
-      portainer
       paseo-daemon
+      freezer
       gh
       tailscale-ingress
       zswap
@@ -45,11 +45,6 @@
           nsphere-magpie-api.endpoints."tcp:80" = "http://127.0.0.1:3425";
 
           nsphere-nvirellia-im.endpoints."tcp:80" = "http://127.0.0.1:8081";
-
-          # Portainer serves its own HTTPS listener with a self-signed
-          # certificate, so the layer-7 handler terminates the service's
-          # trusted certificate and skips verification of the upstream one.
-          nsphere-portainer.endpoints."tcp:80" = "https+insecure://127.0.0.1:9443";
 
           nsphere-paseo.endpoints."tcp:80" = "http://127.0.0.1:6767";
         };
