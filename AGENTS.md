@@ -18,7 +18,7 @@ A **host** is a physical or virtual machine; a **machine** is the repository com
 - Importing a project module should normally enable its feature. Add a project-level `enable` option only when the module genuinely needs to be imported while inactive. Let `import-tree` discover top-level modules; do not duplicate its work with manual import lists.
 - Never introduce `specialArgs` or `extraSpecialArgs`. Declare shared values as top-level options and consume them through module configuration or `inputs.self`.
 - Define machines through `machines.<name>`. Every machine must import `base`; preserve the `nixos-configurations-import-base` check. Limit machine definitions to identity, hardware facts, disk selection, and role/aspect composition; reserve `nixosModule` and `homeModule` for manual interventions. Keep host-specific details out of reusable aspects.
-- Put packages in `modules/packages/`, follow the [nixpkgs packaging guidelines](https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md), and use [nix-init](https://github.com/nix-community/nix-init) for an initial expression when applicable. Adapt it to local conventions. Consume these packages through `pkgs.selfPackages.<package>` in NixOS and Home Manager modules.
+- Put packages in `modules/packages/`, follow the [nixpkgs packaging guidelines](https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md), and use [nix-init](https://github.com/nix-community/nix-init) for an initial expression when applicable. Adapt it to local conventions. Consume these packages through `pkgs.selfPackages.<package>` in NixOS and Home Manager modules. Give a package that pins an upstream version and hash `passthru.update` metadata so the package updater discovers it; a package that follows a flake input needs none.
 - Use the `nixos` MCP as the primary reference for NixOS and Home Manager options, packages, and documentation. Consult upstream documentation when the MCP does not cover the capability or repository guidance requires it.
 
 ## Secrets
@@ -41,4 +41,4 @@ A **host** is a physical or virtual machine; a **machine** is the repository com
 - Format changed Nix files with `nixfmt`. Keep formatting and lint rules in `nixfmt` and `statix`; encode objective repository-wide invariants as flake checks when practical.
 - Choose checks proportionate to the change. Documentation-only work needs document and skill validation. Report the checks actually performed, affected machines where relevant, and outstanding manual or hardware verification; do not treat past test records as new results.
 
-Last updated at: `aecc22771234f637947b5fc330583404413abe20`.
+Last updated at: `b484238ed1864d86e1728a2a77db8ec54fd8f0f6`.

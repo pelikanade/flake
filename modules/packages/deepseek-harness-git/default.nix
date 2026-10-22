@@ -180,6 +180,17 @@
         ];
         versionCheckProgramArg = "--version";
 
+        passthru.update = {
+          kind = "script";
+          label = "dsh";
+          script = "modules/packages/deepseek-harness-git/update.sh";
+          files = [
+            "modules/packages/deepseek-harness-git/hashes.json"
+            "modules/packages/deepseek-harness-git/pnpm-lock.yaml"
+          ];
+          versionFile = "modules/packages/deepseek-harness-git/hashes.json";
+        };
+
         meta = {
           description = "Open-source agent harness and CLI developed by DeepSeek AI (built from git release tags)";
           homepage = "https://github.com/deepseek-ai/deepseek-harness";

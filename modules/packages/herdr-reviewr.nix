@@ -45,6 +45,12 @@ _: {
           cp -R herdr herdr-plugin.toml README.md LICENSE $out/
         '';
 
+        passthru.update = {
+          kind = "rev";
+          file = "modules/packages/herdr-reviewr.nix";
+          repo = "persiyanov/herdr-reviewr";
+        };
+
         meta = {
           description = "Code-review pane for Herdr";
           homepage = "https://github.com/persiyanov/herdr-reviewr";

@@ -219,6 +219,11 @@ let
       '';
       versionCheckProgramArg = "--version";
 
+      passthru.update = {
+        kind = "nix-update";
+        file = "modules/packages/magpie.nix";
+      };
+
       meta = {
         description = "Desktop and terminal interface for managing AI agents' models and providers";
         homepage = "https://github.com/yetone/magpie";
