@@ -73,71 +73,48 @@
         email = "suzume@neko-sphere.lotus.local";
       };
 
-      # Another network's HTTP endpoint, served here on loopback. Neither the
-      # endpoint's address nor the network it belongs to is public: the client's
-      # management URL and setup key come from its own encrypted document.
       services.netbird-userspace.tunnels.techinteaching = {
         localPort = 18083;
         address = "172.0.161.24";
         port = 8083;
       };
 
-      # Every listener here is bound to loopback, so each check exercises the
-      # same path a local client uses. Gatus' default interval is 60 seconds.
       services.gatus.settings.endpoints = [
         {
           name = "Freezer";
           group = "neko-sphere";
-          url = "http://127.0.0.1:8080/";
+          url = "http://nsphere-freezer.dwelf-hoki.ts.net/";
           conditions = [ "[STATUS] == 200" ];
         }
         {
           name = "Magpie gateway";
           group = "neko-sphere";
-          url = "http://127.0.0.1:3425/v1/models";
+          url = "http://nsphere-magpie-api.dwelf-hoki.ts.net/v1/models";
           conditions = [ "[STATUS] == 200" ];
         }
         {
           name = "Magpie UI";
           group = "neko-sphere";
-          url = "http://127.0.0.1:3430/";
+          url = "http://nsphere-magpie.dwelf-hoki.ts.net/";
           conditions = [ "[STATUS] == 401" ];
         }
         {
           name = "nvirellia.im";
           group = "neko-sphere";
-          url = "http://127.0.0.1:8081/";
+          url = "https://nvirellia.im/";
           conditions = [ "[STATUS] == 200" ];
         }
         {
           name = "Paseo daemon";
           group = "neko-sphere";
-          url = "http://127.0.0.1:6767/api/health";
+          url = "http://nsphere-paseo.dwelf-hoki.ts.net/api/health";
           conditions = [ "[STATUS] == 200" ];
         }
         {
-          name = "sing-box";
-          group = "neko-sphere";
-          url = "http://127.0.0.1:9990/version";
-          conditions = [ "[STATUS] == 200" ];
-        }
-        {
-          name = "NetBird tunnel";
+          name = "ATME NetBird tunnel";
           group = "neko-sphere";
           url = "tcp://127.0.0.1:18083";
           conditions = [ "[CONNECTED] == true" ];
-        }
-        {
-          name = "SSH";
-          group = "neko-sphere";
-          url = "tcp://127.0.0.1:22";
-          conditions = [ "[CONNECTED] == true" ];
-        }
-        {
-          name = "Gatus";
-          group = "neko-sphere";
-          url = "http://127.0.0.1:3001/";
-          conditions = [ "[STATUS] == 200" ];
         }
       ];
 
