@@ -192,21 +192,15 @@ to front one shared daemon, so every account gets its own runtime. The `docker`
 group is gone, and with it the ability of a process holding it to control every
 container on the host.
 
-The account's runtime is published for two parties.
-`virtualisation.podman.runtimeApis.paseo` declares the fixed socket; its owner is
-the runtime's own account — `paseo`, the account that serves the API — so agent
-processes inside the daemon's sandbox open it through the owner bits; and its
-group is the account whose containers drive the runtime, named once in
-`virtualisation.podman.runtimeApiClient`, so that client's container opens the
-same socket through the group bits. [Portainer](portainer.md) is that client, and
-mounts the socket without being able to read `paseo`'s private runtime directory.
-No other account matches either class.
+The account's runtime is published for its own sandboxed processes.
+`virtualisation.podman.runtimeApis.paseo` declares the fixed socket outside the
+account's private runtime directory; it is owned by `paseo`, the account that
+serves the API, so agent processes inside the daemon's sandbox open it through
+the owner bits. No other account can.
 
 A project that starts its own workload — a sandbox server, for instance — owns
 that workload's runtime configuration. Bind its control API to loopback and keep
-its key in a private runtime file. [Portainer](portainer.md) manages these
-runtimes; on hosts that import it, the agents' runtime is one of its
-environments.
+its key in a private runtime file.
 
 Services agents leave running come back after a reboot the way their own restart
 policy asks. A rootless runtime has no boot path of its own: the policy tells
@@ -216,8 +210,8 @@ therefore enables upstream's `podman-restart.service` in every user manager,
 which starts each container whose policy is `always`, or `unless-stopped` and not
 stopped by hand, once the host's `network-online.target` is reached. A container
 created without a policy — what `podman run` and `docker run` default to — stays
-exited until something starts it; a compose file's `restart:` or the policy
-chosen in Portainer is what brings one back. The want is recorded in
+exited until something starts it; a compose file's `restart:` or an explicit
+`--restart` is what brings one back. The want is recorded in
 `/etc/systemd/user/default.target.wants`, so a manager that is already past
 `default.target` reaches it at its next start; `systemctl --user start
 podman-restart.service` as that account starts its containers before then.
@@ -257,8 +251,8 @@ the already-authorized private key or a forwarded SSH agent and a verified host
 key; they do not require changing sudo, polkit, or the Paseo service sandbox.
 
 After the switch, check `systemctl status paseo-daemon.service podman-api-paseo.service`
-and that `/run/podman-api-paseo/podman.sock` is owned by `paseo` with `portainer` as
-its group. Then, from an agent terminal — the environment under test — run
+and that `/run/podman-api-paseo/podman.sock` is owned by `paseo:paseo`. Then, from
+an agent terminal — the environment under test — run
 `podman info` and `docker info` and put the runtime through a create, execute, and
 delete cycle. Running `podman` as `paseo` outside the service proves nothing about
 the agents: that process is not in the sandbox whose two restrictions the API

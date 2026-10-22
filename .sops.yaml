@@ -32,6 +32,11 @@ creation_rules:
           - *neko-sphere
           - *asymmetry
           - *parallax
+  - path_regex: ^modules/secrets/freezer\.yaml$
+    key_groups:
+      - age:
+          - *noa
+          - *neko-sphere
   - path_regex: ^modules/secrets/paseo\.yaml$
     key_groups:
       - age:

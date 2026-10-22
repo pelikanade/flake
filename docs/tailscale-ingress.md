@@ -15,11 +15,10 @@ the same host, and a service keeps its name if it later moves to another host.
 
 | Service | Endpoint | Local target | Notes |
 | --- | --- | --- | --- |
-| `svc:nsphere-freezer` | `tcp:443` | `http://127.0.0.1:8080` | The freezer container |
+| `svc:nsphere-freezer` | `tcp:443` | `http://127.0.0.1:8080` | Freezer, the flake build service |
 | `svc:nsphere-magpie` | `tcp:443` | `http://127.0.0.1:3430` | Magpie's browser page, guarded by `magpie_web_key` |
 | `svc:nsphere-magpie-api` | `tcp:443` | `http://127.0.0.1:3425` | Magpie's gateway, every route upstream serves |
 | `svc:nsphere-nvirellia-im` | `tcp:443` | `http://127.0.0.1:8081` | The personal site |
-| `svc:nsphere-portainer` | `tcp:443` | `https+insecure://127.0.0.1:9443` | Portainer's own HTTPS listener with its self-signed certificate |
 | `svc:nsphere-paseo` | `tcp:443` | `http://127.0.0.1:6767` | The Paseo daemon, HTTP and WebSocket |
 
 The tailnet answers `svc:<name>` at `<name>.<tailnetDnsName>`, so
@@ -33,8 +32,8 @@ the request, preserving the original `Host` header and adding the forwarding
 headers a web framework reads. A target with the `tcp` scheme would forward the
 connection unmodified, which is what a database or an upstream that terminates
 its own TLS needs. `https+insecure` is the layer-7 handler for an upstream that
-serves HTTPS with a certificate the daemon cannot verify, as Portainer does.
-TCP is the only transport a Service endpoint can advertise.
+serves HTTPS with a certificate the daemon cannot verify. TCP is the only
+transport a Service endpoint can advertise.
 
 That table is the host's own publication table. It lives in the machine
 definition as `services.tailscale-ingress.services`, keyed by service name, and each entry
@@ -158,7 +157,6 @@ curl -sI https://nsphere-freezer.dwelf-hoki.ts.net/ | head -1
 curl -sI https://nsphere-magpie.dwelf-hoki.ts.net/ | head -1           # 401 or 200
 curl -s  https://nsphere-magpie-api.dwelf-hoki.ts.net/v1/models | head
 curl -sI https://nsphere-nvirellia-im.dwelf-hoki.ts.net/ | head -1
-curl -sI https://nsphere-portainer.dwelf-hoki.ts.net/ | head -1
 curl -sI https://nsphere-paseo.dwelf-hoki.ts.net/ | head -1
 ```
 

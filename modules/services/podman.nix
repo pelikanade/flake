@@ -8,23 +8,9 @@
     }:
     let
       runtimeApis = config.virtualisation.podman.runtimeApis;
-      apiClient = config.virtualisation.podman.runtimeApiClient;
     in
     {
       key = "podman";
-
-      options.virtualisation.podman.runtimeApiClient = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = ''
-          Account whose containers drive every published runtime in
-          `runtimeApis`. Systemd gives each published socket that account as its
-          group, which is then the only account other than the runtime's own that
-          can open it; a runtime can still name a different client of its own. The
-          null default leaves every client at its runtime's own account, so a
-          published socket admits that account alone.
-        '';
-      };
 
       options.virtualisation.podman.runtimeApis = lib.mkOption {
         default = { };
@@ -32,39 +18,20 @@
           Rootless Podman runtimes on this host whose Docker-compatible API is
           published on a fixed socket, keyed by the account that owns the runtime.
 
-          A runtime cannot publish that socket itself. Its own API socket lives in
-          its private runtime directory, and inside a rootless user namespace
-          neither that socket's owner nor its group maps, so another account's
-          container could only be authorized by the "other" permission bits —
-          which would hand the runtime to every local process. Systemd holds the
-          published socket for two parties instead, and `0660` is what leaves room
-          for both: its owner is the runtime's own account — the account that
-          serves the API — so that account's host processes reach it through the
-          owner bits, including a process inside another service's sandbox, which
-          has no other way to run a container; its group is the client, whose gid
-          maps into that account's own container as container gid 0, so the
-          client's container reaches it through the group bits. Every other
-          account matches neither.
+          A runtime's own API socket lives in its private runtime directory, which
+          a process inside another service's sandbox may not be able to reach. The
+          published socket lives outside that directory and is owned by the
+          runtime's own account, so that account's processes reach it through the
+          owner bits, including from inside a sandbox. Mode `0660` with the same
+          account as its group leaves no other account able to open it.
 
-          The runtime's own module declares the entry; the account that drives it
-          names itself in `runtimeApiClient`.
+          The runtime's own module declares the entry.
         '';
         type = lib.types.attrsOf (
           lib.types.submodule (
             { name, ... }:
             {
               options = {
-                client = lib.mkOption {
-                  type = lib.types.str;
-                  default = if apiClient != null then apiClient else name;
-                  defaultText = "the account named in `runtimeApiClient`, or the runtime's own";
-                  description = ''
-                    Account whose containers connect to this runtime's API. The
-                    published socket's group is this account, so the client's
-                    container matches those bits and no account outside it does.
-                  '';
-                };
-
                 socketPath = lib.mkOption {
                   type = lib.types.str;
                   readOnly = true;
@@ -97,7 +64,7 @@
           # and reaches its Docker-compatible API on that user's own socket under
           # `/run/user/<uid>/podman`. Every user gets their own runtime, and no
           # user can drive another's; the published sockets below are the
-          # deliberate exception, and each names the client it admits.
+          # deliberate exception, and each admits only its own account.
           virtualisation.podman = {
             enable = true;
             defaultNetwork.settings.dns_enabled = true;
@@ -156,15 +123,14 @@
                 # inside the daemon's sandbox, say — have no other way to run a
                 # container.
                 SocketUser = name;
-                # The client's container runs as the client account, whose gid
-                # maps into it as container gid 0, so the group bits admit the
-                # container without admitting any host account but this one.
-                SocketGroup = api.client;
+                # The same account is the group, so a process matching either
+                # bit reaches the socket and no other account does.
+                SocketGroup = name;
               };
             }
           ) runtimeApis;
 
-          # Socket activation keeps the API server unstarted until the client
+          # Socket activation keeps the API server unstarted until a client
           # connects, and Podman answers on the descriptor systemd hands it, so
           # the runtime's account never creates the socket at all.
           systemd.services = lib.mapAttrs' (
@@ -174,9 +140,9 @@
               requires = [ api.socketUnit ];
               after = [
                 api.socketUnit
-                # Both parties run rootless, and a lingering user manager is what
-                # lets Podman keep containers in that user's cgroups; it falls
-                # back to cgroupfs until one is up.
+                # The API server runs rootless, and a lingering user manager is
+                # what lets Podman keep containers in that user's cgroups; it
+                # falls back to cgroupfs until one is up.
                 "linger-users.service"
               ];
               serviceConfig = {
@@ -193,10 +159,10 @@
             }
           ) runtimeApis;
 
-          # The directory follows the socket: the runtime's account owns it, the
-          # client reaches through the group, and no third account traverses it.
+          # The directory follows the socket: the runtime's account owns it, and
+          # no other account traverses it.
           systemd.tmpfiles.rules = lib.mapAttrsToList (
-            name: api: "d ${builtins.dirOf api.socketPath} 0750 ${name} ${api.client} -"
+            name: api: "d ${builtins.dirOf api.socketPath} 0750 ${name} ${name} -"
           ) runtimeApis;
         })
       ];
