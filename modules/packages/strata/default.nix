@@ -28,7 +28,7 @@ let
     }:
     rustPlatform.buildRustPackage (finalAttrs: {
       pname = "strata";
-      version = "1.0.0";
+      version = "1.1.0";
 
       # The v1.0.0 tag. `src.rev` is the commit the About dialog names, so it is
       # set from the pinned revision rather than left to build.rs, which finds
@@ -36,8 +36,8 @@ let
       src = fetchFromGitHub {
         owner = "lgse";
         repo = "strata";
-        rev = "0a086aa3bdb251842a1e8413e2a6b35970d0b409";
-        hash = "sha256-dFNsFCnkeZs0VwmYRyu+6Jh8XxJzv+agUlP70Fdxa5Q=";
+        rev = "4b9a6ace71017888b3a2124d7d911c5c664cc767";
+        hash = "sha256-FoYYsjvWY+1SuZtvxancdVR6h7iFmnbtHXW2eTlVCJI=";
       };
 
       # Two Nix-specific integrations, neither of which upstream's AUR packages
@@ -48,7 +48,7 @@ let
       # helper lookup accepts the closure's bubblewrap.
       patches = [ ./nix-integration.patch ];
 
-      cargoHash = "sha256-vuhHierqb4WsMdg890NpkaztYnfsnck2FxMz5cPMwCQ=";
+      cargoHash = "sha256-U52ypUksrz/2G8apmyh7x9c+47ZBStT1lHIWso7KfU4=";
 
       nativeBuildInputs = [
         pkg-config
