@@ -4,7 +4,7 @@ This repository manages personal NixOS workstations and servers, including their
 
 The desktop retains the Rose Pine Moon theme and uses Sway-style window controls. See [desktop bindings and migration notes](docs/hyprland.md).
 
-Desktop hosts run [omp](docs/omp.md) with per-host Codex and Cursor logins and a preloaded Magpie gateway provider. Fill the encrypted Magpie endpoint and API-key placeholders before deployment. Machines can also host coding agents for remote desktop and phone clients with the standalone [Paseo daemon](docs/paseo-daemon.md), which uses the same packaged provider with credentials owned by its service account. A host that runs that daemon can give its account a [deployment broker](docs/paseo-deploy.md): the daemon's sandbox leaves setuid helpers, `sudo`, and polkit unusable, so a root service fetches the published flake's newest revision and switches to it on request instead of an interactive login.
+Desktop hosts run [omp](docs/omp.md) with per-host Codex and Cursor logins and a preloaded Magpie gateway provider. Fill the encrypted Magpie endpoint and API-key placeholders before deployment. Machines can also host coding agents for remote desktop and phone clients with the standalone [Paseo daemon](docs/paseo-daemon.md), which uses the same packaged provider with credentials owned by its service account.
 
 Asymmetry, Parallax and neko-sphere each join the tailnet through [the tailnet module](docs/tailscale.md), which runs `tailscaled` beside the proxy rather than inside it, so the daemon's own interface, CLI and `serve` all work. NetBird's desktop UI and its local daemon remain for workplace login.
 

@@ -16,7 +16,6 @@
       podman
       portainer
       paseo-daemon
-      paseo-deploy
       gh
       tailscale-ingress
       zswap
@@ -99,11 +98,6 @@
       # Hibernating to a swapfile needs a resume device and offset this machine
       # does not have, so only suspend is available.
       systemd.sleep.settings.Sleep.AllowHibernation = false;
-
-      # The deploy broker switches this host to the newest revision of the
-      # published repository rather than any local checkout. The automatic
-      # upgrade in the base role follows the same ref.
-      services.paseo-deploy.flake = "github:pelikanade/flake";
     };
   };
 }
