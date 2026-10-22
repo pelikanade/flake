@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Update the tools this repository packages itself and the flake inputs that
 # track upstream projects. The scheduled GitHub Actions workflow runs this with
-# --build --commit; interactively, run it from `nix develop`, inspect the diff,
-# and commit selectively. The `flake` target updates every input in the lock
-# graph, not only the inputs that track upstream projects.
+# --commit and does not build; interactively, run it from `nix develop`, add
+# --build to build each tool and evaluate every machine, inspect the diff, and
+# commit selectively. The `flake` target updates every input in the lock graph,
+# not only the inputs that track upstream projects.
 set -euo pipefail
 
 usage() {

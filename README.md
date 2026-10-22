@@ -33,7 +33,7 @@ On an already managed host, `just build` builds the local system and `just deplo
 
 ## Automated updates
 
-A scheduled workflow runs `nix flake update` daily, evaluates every machine against the new lock, and commits it. It then updates the locally packaged tools (`dsh`, `magpie`, `strata`, `herdr-reviewr`); each tool is built before its update is committed, and a failed tool update is reverted and reported without blocking the flake update or the remaining tools.
+A scheduled workflow runs `nix flake update` daily and commits the new lock. It then updates the locally packaged tools (`dsh`, `magpie`, `strata`, `herdr-reviewr`); a failed tool update is reverted and reported without failing the workflow or blocking the remaining tools. The workflow commits updates without building them.
 
 Every installed machine switches to the newest revision of the published flake daily at 05:00. The run never reboots on its own, so a kernel update waits for a reboot the operator chooses.
 
@@ -57,4 +57,4 @@ Boot the target from the resulting ISO and connect it to the network with `nmtui
 
 Follow [machine preparation](.agents/skills/init-machine/SKILL.md), then the [installation procedure](.agents/skills/install-machine/SKILL.md). Preparation records hardware facts, selects the disk layout, and enrolls secret recipients when needed. Installation erases the selected disk; confirm the target and device before proceeding. The procedure also covers encrypted disks and Secure Boot.
 
-Last updated at: `a5c9c7040e3a73bd07809ef35dea935aaa995bd7`.
+Last updated at: `ca79af014456e127653420cab0912ab5488c9aff`.
