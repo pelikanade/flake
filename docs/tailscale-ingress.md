@@ -20,6 +20,7 @@ the same host, and a service keeps its name if it later moves to another host.
 | `svc:nsphere-magpie-api` | `tcp:443` | `http://127.0.0.1:3425` | Magpie's gateway, every route upstream serves |
 | `svc:nsphere-nvirellia-im` | `tcp:443` | `http://127.0.0.1:8081` | The personal site |
 | `svc:nsphere-paseo` | `tcp:443` | `http://127.0.0.1:6767` | The Paseo daemon, HTTP and WebSocket |
+| `svc:nsphere-gatus` | `tcp:443` | `http://127.0.0.1:3001` | The Gatus status page |
 
 The tailnet answers `svc:<name>` at `<name>.<tailnetDnsName>`, so
 `svc:nsphere-magpie` is `nsphere-magpie.dwelf-hoki.ts.net`.
