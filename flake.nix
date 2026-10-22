@@ -4,6 +4,10 @@
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 
   inputs = {
+    anime-games-launcher = {
+      url = "github:an-anime-team/anime-games-launcher";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     delta = {
       url = "github:zed-industries/delta-nix";
       inputs.nixpkgs.follows = "nixpkgs";
