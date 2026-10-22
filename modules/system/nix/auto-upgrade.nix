@@ -1,7 +1,8 @@
 {
-  # Every machine follows the newest revision of the published repository every
-  # day at 05:00. The run switches the running system but never reboots on its
-  # own, so a kernel update waits for a reboot the operator chooses.
+  # Every installed machine follows the newest revision of the published
+  # repository every day at 05:00. The run switches the running system but never
+  # reboots on its own, so a kernel update waits for a reboot the operator
+  # chooses.
   flake.modules.nixos.auto-upgrade = {
     system.autoUpgrade = {
       enable = true;

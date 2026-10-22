@@ -35,7 +35,7 @@ On an already managed host, `just build` builds the local system and `just deplo
 
 A scheduled workflow updates the locally packaged tools (`dsh`, `magpie`, `strata`, `herdr-reviewr`) and the flake inputs `paseo`, `omp`, `llm-agents`, and `noctalia` daily. Each locally packaged tool is built before its update is committed; a failed update is reverted and reported.
 
-Every machine switches to the newest revision of the published flake daily at 05:00. The run never reboots on its own, so a kernel update waits for a reboot the operator chooses.
+Every installed machine switches to the newest revision of the published flake daily at 05:00. The run never reboots on its own, so a kernel update waits for a reboot the operator chooses.
 
 Run the same updater from `nix develop`; it leaves changes uncommitted for review:
 
