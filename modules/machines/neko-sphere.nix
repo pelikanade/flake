@@ -49,7 +49,7 @@
 
           nsphere-paseo.endpoints."tcp:80" = "http://127.0.0.1:6767";
 
-          nsphere-gatus.endpoints."tcp:443" = "http://127.0.0.1:3001";
+          nsphere-gatus.endpoints."tcp:80" = "http://127.0.0.1:3001";
         };
 
         networking = {
