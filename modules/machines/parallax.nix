@@ -7,6 +7,7 @@
       workstation
       efi
       nvidia
+      anime-games-launcher
       hmcl
       steam
       i18n
