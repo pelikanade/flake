@@ -157,8 +157,7 @@
 #     screenshotting the built package under Xvfb with an isolated home: the
 #     unmodified build draws the bar on its welcome window and this assembly does
 #     not, while F12 still toggles devtools in both, so the menu itself survived.
-{ inputs, ... }:
-{
+_: {
   perSystem =
     {
       pkgs,

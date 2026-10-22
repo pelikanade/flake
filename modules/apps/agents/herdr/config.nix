@@ -1,5 +1,4 @@
-{ inputs, ... }:
-{
+_: {
   flake.modules.homeManager.herdr.programs.herdr = {
     enable = true;
     reviewr.enable = true;

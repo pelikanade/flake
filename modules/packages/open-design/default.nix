@@ -164,7 +164,7 @@
       };
     in
     {
-      packages.open-design = stdenv.mkDerivation (finalAttrs: {
+      packages.open-design = stdenv.mkDerivation {
         inherit
           pname
           version
@@ -452,14 +452,14 @@
           maintainers = [ lib.maintainers.asterismono ];
           platforms = [ "x86_64-linux" ];
         };
-      });
+      };
 
       # electron-builder is not run: upstream's Linux config for a directory
       # target (asar:false, npmRebuild:false, nodeGypRebuild:false in
       # tools/pack/src/linux.ts) leaves exactly the pieces this install phase
       # places, and copying them needs neither electron-builder's Electron
       # download nor a cache the sandbox cannot fill.
-      packages.open-design-desktop = stdenv.mkDerivation (finalAttrs: {
+      packages.open-design-desktop = stdenv.mkDerivation {
         pname = "open-design-desktop";
         inherit
           version
@@ -836,6 +836,6 @@
           maintainers = [ lib.maintainers.asterismono ];
           platforms = [ "x86_64-linux" ];
         };
-      });
+      };
     };
 }

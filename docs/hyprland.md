@@ -1,6 +1,6 @@
 # Hyprland desktop
 
-The workstation role and `stylix-test` use the Hyprland package from the locked NixOS release. Home Manager generates its Lua configuration from [the desktop aspect](../modules/apps/hyprland/default.nix) and [bindings](../modules/apps/hyprland/bindings.lua). UWSM manages the session; the display-manager entry is **Hyprland (uwsm-managed)**.
+The workstation role uses the Hyprland package from the locked NixOS release. Home Manager generates its Lua configuration from [the desktop aspect](../modules/apps/hyprland/default.nix) and [bindings](../modules/apps/hyprland/bindings.lua). UWSM manages the session; the display-manager entry is **Hyprland (uwsm-managed)**.
 
 Bindings use the familiar Sway window controls from before commit `b0903cf`, with the later Noctalia adaptations. Hyprland's [dwindle layout](https://wiki.hypr.land/0.55.0/Configuring/Layouts/Dwindle-Layout/) replaces Sway's automatic splits: a wider focused window splits left/right, a taller one splits top/bottom, and existing splits can change direction as their geometry changes (`preserve_split = false`). New windows open to the right or below. Stylix supplies Rose Pine Moon colours, fonts and the cursor; Noctalia owns the wallpaper and shell. Window corners are 8 px, borders 2 px, outer gaps 12 px and shared inner gaps 12 px. Shadows are enabled with Hyprland's default geometry and the Stylix theme colour. Transparent windows and Noctalia surfaces use background blur.
 

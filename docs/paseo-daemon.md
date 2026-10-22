@@ -237,8 +237,6 @@ nix develop -c just deploy
 polkit authentication. Neither recipe can elevate a terminal inherited from
 `paseo-daemon`: the service retains `NoNewPrivileges=true`, which disables setuid
 helpers and `sudo` with it, and no deployment polkit rule is granted to `paseo`.
-A host that imports [the deploy broker](paseo-deploy.md) gives that account its
-own route to a switch instead.
 
 The server role already authorizes the maintainer's SSH key for root, and SSH
 permits key-based root login on the tailnet. From a separate administrator's
