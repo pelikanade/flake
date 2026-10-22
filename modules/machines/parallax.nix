@@ -7,9 +7,8 @@
       workstation
       efi
       nvidia
-      anime-games-launcher
+      games
       hmcl
-      steam
       i18n
       substituter-cn
     ];
