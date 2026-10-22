@@ -94,7 +94,7 @@
 
     in
     {
-      packages.deepseek-harness-git = stdenv.mkDerivation (finalAttrs: {
+      packages.deepseek-harness-git = stdenv.mkDerivation {
         inherit
           pname
           version
@@ -194,6 +194,6 @@
           mainProgram = "dsh";
           platforms = [ "x86_64-linux" ];
         };
-      });
+      };
     };
 }
