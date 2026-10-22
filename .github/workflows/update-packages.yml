@@ -25,7 +25,16 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Update flake inputs
+        run: >-
+          nix shell nixpkgs#nix-update nixpkgs#nixfmt-rfc-style
+          -c ./scripts/update-packages.sh --build --commit flake
+      # An upstream release can fail to hash or build. Keep the flake update
+      # and every package that did succeed; report the failure without failing
+      # the workflow.
       - name: Update packages
+        if: always() && steps.checkout.outcome == 'success'
+        continue-on-error: true
         run: >-
           nix shell nixpkgs#nix-update nixpkgs#nixfmt-rfc-style
           -c ./scripts/update-packages.sh --build --commit

@@ -2,16 +2,19 @@
 # Update the tools this repository packages itself and the flake inputs that
 # track upstream projects. The scheduled GitHub Actions workflow runs this with
 # --build --commit; interactively, run it from `nix develop`, inspect the diff,
-# and commit selectively.
+# and commit selectively. The `flake` target updates every input in the lock
+# graph, not only the inputs that track upstream projects.
 set -euo pipefail
 
 usage() {
   cat >&2 <<'EOF'
-Usage: scripts/update-packages.sh [--build] [--commit] [package...]
+Usage: scripts/update-packages.sh [--build] [--commit] [target...]
 
-Packages: dsh, magpie, strata, herdr-reviewr, paseo, omp, llm-agents, noctalia
+Targets: dsh, magpie, strata, herdr-reviewr, paseo, omp, llm-agents, noctalia,
+         flake
 
-Without package arguments every package is updated.
+Without targets every tracked input and package is updated. `flake` updates
+every input in the lock graph, including nixpkgs and home-manager.
 
   --build   Build each locally packaged tool after updating it, and evaluate
             every machine after updating flake inputs.
@@ -126,7 +129,11 @@ commit_changes() {
 
 update_flake_inputs() {
   local inputs=("$@") message
-  say "flake inputs: ${inputs[*]}"
+  if ((${#inputs[@]})); then
+    say "flake inputs: ${inputs[*]}"
+  else
+    say "flake inputs: all"
+  fi
   require_clean flake.lock || return 1
   nix flake update "${inputs[@]}" || return 1
   if git diff --quiet -- flake.lock; then
@@ -144,7 +151,11 @@ update_flake_inputs() {
       return 1
     fi
   fi
-  message="flake: update ${inputs[*]}"
+  if ((${#inputs[@]})); then
+    message="flake: update ${inputs[*]}"
+  else
+    message="flake: update"
+  fi
   commit_changes "$message" flake.lock || return 1
   $commit || echo "updated flake.lock (not committed)"
 }
@@ -253,8 +264,10 @@ run_update() {
 }
 
 flake_inputs=()
+update_all_inputs=false
 for package in "${requested[@]}"; do
   case "$package" in
+    flake) update_all_inputs=true ;;
     paseo | omp | llm-agents | noctalia) flake_inputs+=("$package") ;;
     dsh) run_update dsh update_dsh ;;
     magpie) run_update magpie update_magpie ;;
@@ -267,7 +280,9 @@ for package in "${requested[@]}"; do
       ;;
   esac
 done
-if ((${#flake_inputs[@]})); then
+if $update_all_inputs; then
+  run_update "flake inputs" update_flake_inputs
+elif ((${#flake_inputs[@]})); then
   run_update "flake inputs" update_flake_inputs "${flake_inputs[@]}"
 fi
 
