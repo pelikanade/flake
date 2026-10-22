@@ -82,39 +82,45 @@
       services.gatus.settings.endpoints = [
         {
           name = "Freezer";
-          group = "neko-sphere";
+          group = "Neko Sphere";
           url = "http://nsphere-freezer.dwelf-hoki.ts.net/";
           conditions = [ "[STATUS] == 200" ];
         }
         {
           name = "Magpie gateway";
-          group = "neko-sphere";
+          group = "Neko Sphere";
           url = "http://nsphere-magpie-api.dwelf-hoki.ts.net/v1/models";
-          conditions = [ "[STATUS] == 200" ];
+          conditions = [ "[STATUS] == 401" ];
         }
         {
           name = "Magpie UI";
-          group = "neko-sphere";
+          group = "Neko Sphere";
           url = "http://nsphere-magpie.dwelf-hoki.ts.net/";
           conditions = [ "[STATUS] == 401" ];
         }
         {
-          name = "nvirellia.im";
-          group = "neko-sphere";
-          url = "https://nvirellia.im/";
-          conditions = [ "[STATUS] == 200" ];
-        }
-        {
           name = "Paseo daemon";
-          group = "neko-sphere";
+          group = "Neko Sphere";
           url = "http://nsphere-paseo.dwelf-hoki.ts.net/api/health";
           conditions = [ "[STATUS] == 200" ];
         }
         {
           name = "ATME NetBird tunnel";
-          group = "neko-sphere";
+          group = "Neko Sphere";
           url = "tcp://127.0.0.1:18083";
           conditions = [ "[CONNECTED] == true" ];
+        }
+        {
+          name = "nvirellia.im";
+          group = "Noa's IVs";
+          url = "https://nvirellia.im/";
+          conditions = [ "[STATUS] == 200" ];
+        }
+        {
+          name = "nuts.nvirellia.im";
+          group = "Noa's IVs";
+          url = "https://nuts.nvirellia.im/";
+          conditions = [ "[STATUS] == 200" ];
         }
       ];
 
