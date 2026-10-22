@@ -188,10 +188,10 @@ rewrap-secret file +args:
     echo "recipients now:"
     grep -oE 'age1[0-9a-z]+' "$file" | sort -u
 
-# Update flake inputs and locally packaged tools; pass --build or --commit.
+# Update discovered packages, or every flake input with `flake`; pass --build or --commit.
 [group('repository')]
 update-packages *args:
-    ./scripts/update-packages.sh {{ args }}
+    ./scripts/update-packages.py {{ args }}
 
 # Remove system generations older than a week and the store paths they kept.
 [group('repository')]

@@ -33,7 +33,7 @@ On an already managed host, `just build` builds the local system and `just deplo
 
 ## Automated updates
 
-A scheduled workflow runs `nix flake update` daily and commits the new lock. It then updates the locally packaged tools (`dsh`, `magpie`, `strata`, `herdr-reviewr`); a failed tool update is reverted and reported without failing the workflow or blocking the remaining tools. The workflow commits updates without building them.
+A scheduled workflow runs `nix flake update` daily and commits the new lock. It then discovers the exported packages that declare `passthru.update` metadata, updates each version and hash, and commits it; a failed package update is reverted and reported without failing the workflow or blocking the remaining packages. The workflow commits updates without building them.
 
 Every installed machine switches to the newest revision of the published flake daily at 05:00. The run never reboots on its own, so a kernel update waits for a reboot the operator chooses.
 
@@ -43,7 +43,7 @@ Run the same updater from `nix develop`; it leaves changes uncommitted for revie
 just update-packages --build
 ```
 
-Pass `flake` to update every input, or name individual tools and tracked inputs.
+`just update-packages --build` updates every discovered package. Pass `flake` to update every flake input instead, or name packages to update a subset.
 
 ## Install a new host
 
@@ -57,4 +57,4 @@ Boot the target from the resulting ISO and connect it to the network with `nmtui
 
 Follow [machine preparation](.agents/skills/init-machine/SKILL.md), then the [installation procedure](.agents/skills/install-machine/SKILL.md). Preparation records hardware facts, selects the disk layout, and enrolls secret recipients when needed. Installation erases the selected disk; confirm the target and device before proceeding. The procedure also covers encrypted disks and Secure Boot.
 
-Last updated at: `ca79af014456e127653420cab0912ab5488c9aff`.
+Last updated at: `b484238ed1864d86e1728a2a77db8ec54fd8f0f6`.

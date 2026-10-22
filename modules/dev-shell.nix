@@ -38,6 +38,7 @@
           nixos-rebuild-ng
           nixos-anywhere
           uv
+          python3
           sshpass
           pinentry-gnome3
         ];

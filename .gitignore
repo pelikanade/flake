@@ -2,3 +2,5 @@ result
 .pre-commit-config.yaml
 .direnv
 *.qcow2
+__pycache__/
+*.pyc

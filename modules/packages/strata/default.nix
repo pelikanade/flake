@@ -123,6 +123,12 @@ let
       nativeInstallCheckInputs = [ versionCheckHook ];
       versionCheckProgramArg = "--version";
 
+      passthru.update = {
+        kind = "rev";
+        file = "modules/packages/strata/default.nix";
+        repo = "lgse/strata";
+      };
+
       meta = {
         description = "Fast, keyboard-first file manager for Linux";
         longDescription = ''
