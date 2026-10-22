@@ -2,19 +2,18 @@
   flake.modules.nixos.nvidia =
     { config, ... }:
     let
-      # Nixpkgs 26.05 still ships 595.71.05. Pin the 615 branch so the
-      # suspend path stays on the driver release the workstation kernel is
-      # validated against, instead of mixing it with the channel's older
-      # modules. 615.71.09 loses the DisplayPort link state across S3 and
-      # leaves the resumed output disabled; 615.78.08 carries the fix
-      # (open-gpu-kernel-modules#1380).
+      # Nixpkgs 26.05 still ships 595.71.05. The 615 branch never wakes a
+      # DisplayPort monitor that entered DPMS sleep, and loses the link on S3
+      # resume; neither 615.71.09 nor 615.78.08 is usable. NVIDIA fixed it in
+      # the Windows 617.14 driver, which has no Linux release yet, so stay on
+      # the last known-good 610 branch. Linux 7.2 needed 615 to build, but the
+      # workstation is back on 6.18 LTS (open-gpu-kernel-modules#1380).
       nvidiaPackage = config.boot.kernelPackages.nvidiaPackages.mkDriver {
-        version = "615.78.08";
-        sha256_64bit = "sha256-Pj9t3cLudnoIGFMAr3vjyyhuznZpjS3eNSRZl4LQf/4=";
-        sha256_aarch64 = "sha256-UHYBE1AYHoGgMfD9AS/jX+S+N8eCDWUft6qolK9Eejc=";
-        openSha256 = "sha256-HBINiOjL0ZJLIAJeNIBYHBnwgUXtNwPPtnFpAI1YwF4=";
-        settingsSha256 = "sha256-inDRpG02sdDgHmlqgu/DsgK8OFdOt1fZIYyXdhlGC/c=";
-        persistencedSha256 = "sha256-RzeR6Ldct6MUxjnXRyThdh5Y3jjMehTVg85MtwuWNX4=";
+        version = "610.57.04";
+        sha256_64bit = "sha256-suk1xmuDuwDAyFe8jg7g/VLekoa0DJzB7sKafOfrEW0=";
+        openSha256 = "sha256-rQHOOOY4KL92Ww3KDwh+j4eGU7oNAH8LutZC5wmFnPo=";
+        settingsSha256 = "sha256-ZEMo8I8Zc2Tq6RVDNYpAH+f094dUaZiBqO+5f6lIjRI=";
+        persistencedSha256 = "sha256-aXmD2VY1RLlgAnlHhOUMWzvMyhI6JTClcFLm4imF/mA=";
       };
     in
     {
