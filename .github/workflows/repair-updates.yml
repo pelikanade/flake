@@ -1,0 +1,169 @@
+name: Repair package updates
+
+# Reusable from `Update packages` when a package build failed, or dispatched by
+# hand against a pending branch. Manual runs need the update run id so the
+# failure report and logs can be downloaded from that run's artifacts.
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: Pending branch with the failed pin changes
+        required: true
+        type: string
+      run_id:
+        description: Run that uploaded the update-agent artifact
+        required: false
+        type: string
+        default: ""
+    secrets:
+      DEEPSEEK_API_KEY:
+        required: false
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pending branch with the failed pin changes
+        required: true
+        type: string
+      run_id:
+        description: Run that uploaded the update-agent artifact
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: repair-updates-${{ inputs.branch }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.branch }}
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: update-agent
+          path: .update-agent
+          run-id: ${{ inputs.run_id || github.run_id }}
+          github-token: ${{ github.token }}
+
+      # The repair agent changes patches and substitutions and rebuilds every
+      # failed package. The PR's own build job re-verifies from the merged
+      # revision; this step only keeps the agent from opening a known-broken PR.
+      - name: Repair failed updates with omp
+        id: repair
+        env:
+          OMP_MODEL: ${{ vars.OMP_MODEL }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          omp=$(nix build --no-link --print-out-paths .#omp)
+          python3 scripts/repair-updates.py \
+            --log-dir .update-agent \
+            --omp "$omp/bin/omp"
+
+      - name: Publish repair branch
+        id: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          report=.update-agent/report.json
+          if [ ! -f "$report" ]; then
+            echo "::error::the repair agent produced no report"
+            exit 1
+          fi
+          if [ "$(jq -r '.agent.ran' "$report")" != "true" ]; then
+            echo "::error::the repair agent did not run: $(jq -r '.agent.reason' "$report")"
+            exit 1
+          fi
+          if [ "$(jq '.unresolved | length' "$report")" -gt 0 ]; then
+            echo "::error::the repair agent still cannot build every package; no PR opened"
+            jq -r '.unresolved[] | "- \(.label) \(.old) -> \(.new) (\(.afterLog // .log))"' "$report"
+            exit 1
+          fi
+
+          outside=$(git status --porcelain -- . \
+            ':(exclude)modules/packages' ':(exclude).update-agent')
+          if [ -n "$outside" ]; then
+            echo "::error::the agent changed files outside modules/packages"
+            printf '%s\n' "$outside"
+            exit 1
+          fi
+
+          if [ -n "$(git status --porcelain -- modules/packages)" ]; then
+            labels=$(jq -r '[.repaired[].label] | unique | join(", ")' "$report")
+            git add -A -- modules/packages
+            git commit -m "packages: adapt updates ($labels)"
+          fi
+
+          branch="${{ inputs.branch }}"
+          git remote set-url origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "HEAD:${branch}"
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+
+          existing=$(gh pr list --head "$branch" --state open \
+            --json url --jq '.[0].url // empty')
+          if [ -n "$existing" ]; then
+            echo "pr_url=$existing" >> "$GITHUB_OUTPUT"
+          else
+            url=$(gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "packages: adapt updates ($(date -u +%F))" \
+              --body-file .update-agent/pr-body.md)
+            echo "pr_url=$url" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload repair report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repair-report
+          path: .update-agent/
+          if-no-files-found: ignore
+          overwrite: true
+          retention-days: 14
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "## Repair workflow"
+            echo
+            if [ -f .update-agent/pr-body.md ]; then
+              cat .update-agent/pr-body.md
+            else
+              echo "No repair report was produced."
+            fi
+            if [ -n "${{ steps.publish.outputs.pr_url }}" ]; then
+              echo
+              echo "Pull request: ${{ steps.publish.outputs.pr_url }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ ! -f .update-agent/report.json ]; then
+            echo "::error::the repair agent produced no report"
+            exit 1
+          fi
+          if [ "$(jq -r '.agent.ran' .update-agent/report.json)" != "true" ]; then
+            echo "::error::the repair agent did not run"
+            exit 1
+          fi
+          if [ "$(jq '.unresolved | length' .update-agent/report.json)" -gt 0 ]; then
+            echo "::error::the repair agent still cannot build every package"
+            exit 1
+          fi

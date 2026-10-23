@@ -185,10 +185,18 @@
           label = "dsh";
           script = "modules/packages/deepseek-harness-git/update.sh";
           files = [
+            "modules/packages/deepseek-harness-git/default.nix"
             "modules/packages/deepseek-harness-git/hashes.json"
             "modules/packages/deepseek-harness-git/pnpm-lock.yaml"
+            "modules/packages/deepseek-harness-desktop/default.nix"
+            "modules/packages/deepseek-harness-desktop/hide-menu-bar.patch"
           ];
           versionFile = "modules/packages/deepseek-harness-git/hashes.json";
+
+          # The desktop assembly consumes this package's built tree, so its own
+          # build is part of a dsh update. A failure here belongs to the same
+          # repair handoff.
+          verify = [ "deepseek-harness-desktop" ];
         };
 
         meta = {

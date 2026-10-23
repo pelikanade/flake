@@ -24,6 +24,15 @@ let
 in
 {
   config = {
+    # The update workflow builds the repair agent from this output, so CI runs
+    # the same locked omp the machines install. Keeping it out of the
+    # development shell avoids rebuilding its large closure for every shell.
+    perSystem =
+      { system, ... }:
+      {
+        packages.omp = inputs.omp.packages.${system}.omp;
+      };
+
     flake-file.inputs.omp = {
       url = "github:can1357/oh-my-pi";
       inputs.nixpkgs.follows = "nixpkgs";

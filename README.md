@@ -33,7 +33,9 @@ On an already managed host, `just build` builds the local system and `just deplo
 
 ## Automated updates
 
-A scheduled workflow runs `nix flake update` daily and commits the new lock. It then discovers the exported packages that declare `passthru.update` metadata, updates each version and hash, and commits it; a failed package update is reverted and reported without failing the workflow or blocking the remaining packages. The workflow commits updates without building them.
+A scheduled workflow updates the flake lock and every exported package that declares `passthru.update` metadata. A package is committed to `main` only after it builds. A package that fails is handed to the reusable repair workflow: an omp agent adapts the local patches and substitutions, verifies the build, and opens a pull request. The PR workflow builds the changed packages again, a second omp agent reviews the diff, and the PR merges only when both pass. See [updates](docs/updates.md).
+
+The agents use omp's built-in DeepSeek model. Set the `DEEPSEEK_API_KEY` repository secret as described in that document; without it, a failed build stays on a pending branch and the run fails.
 
 Every installed machine switches to the newest revision of the published flake daily at 05:00. The run never reboots on its own, so a kernel update waits for a reboot the operator chooses.
 
@@ -43,7 +45,7 @@ Run the same updater from `nix develop`; it leaves changes uncommitted for revie
 just update-packages --build
 ```
 
-`just update-packages --build` updates every discovered package. Pass `flake` to update every flake input instead, or name packages to update a subset.
+`just update-packages --build` updates every discovered package. Pass `flake` to update every flake input instead, or name packages to update a subset. Add `--keep-failed` to leave a failed pin and its log for the repair script.
 
 ## Install a new host
 
@@ -57,4 +59,4 @@ Boot the target from the resulting ISO and connect it to the network with `nmtui
 
 Follow [machine preparation](.agents/skills/init-machine/SKILL.md), then the [installation procedure](.agents/skills/install-machine/SKILL.md). Preparation records hardware facts, selects the disk layout, and enrolls secret recipients when needed. Installation erases the selected disk; confirm the target and device before proceeding. The procedure also covers encrypted disks and Secure Boot.
 
-Last updated at: `b484238ed1864d86e1728a2a77db8ec54fd8f0f6`.
+Last updated at: `baeb03adbbd5bd7353d3082a86a004ebd700cd80`.

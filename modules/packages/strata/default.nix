@@ -125,6 +125,10 @@ let
         kind = "rev";
         file = "modules/packages/strata/default.nix";
         repo = "lgse/strata";
+        files = [
+          "modules/packages/strata/default.nix"
+          "modules/packages/strata/nix-integration.patch"
+        ];
       };
 
       meta = {

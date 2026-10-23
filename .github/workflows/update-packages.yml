@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
+  actions: read
 
 concurrency:
   group: update-packages
@@ -17,25 +19,137 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 240
+    outputs:
+      failed: ${{ steps.defer.outputs.failed }}
+      branch: ${{ steps.defer.outputs.branch }}
     steps:
       - uses: actions/checkout@v7
         id: checkout
+        with:
+          # The repair workflow runs in its own job. This job never hands a
+          # live token to it.
+          persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # A lock update is cheap to commit but expensive to discover broken at
+      # the next deploy. --build evaluates every machine's toplevel before the
+      # lock is committed; a failure stops the run before packages are touched.
       - name: Update flake inputs
-        run: ./scripts/update-packages.py --commit flake
-      # An upstream release can fail to fetch or hash. Keep the flake update and
-      # every package that did succeed; report the failure without failing the
-      # workflow.
+        run: ./scripts/update-packages.py --build --commit flake
+
+      # Packages are built before they are committed. A failed build is left in
+      # the working tree, not reverted: the pending branch below carries the pin
+      # and the repair workflow receives its log. `--keep-failed` exits
+      # successfully when only package builds are deferred.
       - name: Update packages
-        if: always() && steps.checkout.outcome == 'success'
+        id: packages
         continue-on-error: true
         run: >-
           nix shell nixpkgs#nix-update nixpkgs#nixfmt-rfc-style
-          -c ./scripts/update-packages.py --commit
-      - name: Push updates
-        if: always() && steps.checkout.outcome == 'success'
-        run: git push
+          -c ./scripts/update-packages.py --build --commit --keep-failed
+          --log-dir=.update-agent
+
+      # A fatal updater failure (discovery, missing tool) never reaches the
+      # repair workflow: there is no well-defined failure report to hand over.
+      - name: Stop on a fatal updater failure
+        if: steps.packages.outcome == 'failure'
+        run: |
+          echo "::error::the updater failed before it could defer package repairs"
+          exit 1
+
+      # Every commit at this point has a successful build. This is the only
+      # path that changes main; the repair workflow can only add a PR branch.
+      - name: Push verified updates
+        if: steps.packages.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git remote set-url origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if [ "$(git rev-list --count origin/main..HEAD)" -eq 0 ]; then
+            echo "nothing to push"
+          else
+            git push origin HEAD:main
+          fi
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+
+      # Publish the pin changes that need adaptation on their own branch. The
+      # repair workflow checks that branch out, so it never needs the failed
+      # changes to be reproducible from main.
+      - name: Defer failed updates
+        id: defer
+        if: steps.packages.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "failed=false" >> "$GITHUB_OUTPUT"
+          if [ ! -f .update-agent/failures.json ]; then
+            echo "no failed package updates"
+            exit 0
+          fi
+          if [ -z "$(git status --porcelain -- modules/packages)" ]; then
+            echo "::error::failed updates produced no package changes; see .update-agent/failures.json"
+            exit 1
+          fi
+
+          branch="update/pending-${GITHUB_RUN_ID}"
+          git switch -c "$branch"
+          git add -A -- modules/packages
+          labels=$(jq -r '[.[].label] | unique | join(", ")' .update-agent/failures.json)
+          git commit -m "packages: pending updates ($labels)"
+
+          git remote set-url origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "$branch"
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "failed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Upload failure report
+        if: >-
+          always() &&
+          hashFiles('.update-agent/failures.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-agent
+          path: .update-agent/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 14
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "## Update workflow"
+            echo
+            if [ -f .update-agent/failures.json ]; then
+              echo "These package updates built with errors and were left for the"
+              echo "repair workflow:"
+              echo
+              jq -r '.[] | "- `\(.label)` \(.old) -> \(.new) (\(.phase))"' \
+                .update-agent/failures.json
+            else
+              echo "Every package update built and was pushed."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # The repair logic is a separate, reusable workflow so it can also be
+  # dispatched by hand against a pending branch.
+  repair:
+    needs: update
+    if: needs.update.outputs.failed == 'true'
+    uses: ./.github/workflows/repair-updates.yml
+    with:
+      branch: ${{ needs.update.outputs.branch }}
+      run_id: ${{ github.run_id }}
+    secrets:
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}

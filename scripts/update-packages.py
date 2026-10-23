@@ -36,8 +36,11 @@ from pathlib import Path
 
 build = False
 commit = False
+keep_failed = False
+log_dir = ".update-agent"
 updated: list[str] = []
 failed: list[str] = []
+failures: list[dict] = []
 
 DISCOVERY_EXPRESSION = (
     "pkgs: builtins.mapAttrs (name: pkg: pkg.passthru.update or null) pkgs"
@@ -50,7 +53,8 @@ class UpdateError(Exception):
 
 def usage() -> None:
     print(
-        """Usage: scripts/update-packages.py [--build] [--commit] [target...]
+        """Usage: scripts/update-packages.py [--build] [--commit]
+                                    [--keep-failed] [--log-dir=DIR] [target...]
 
 Targets: flake, or the name of any exported package that declares
          passthru.update metadata.
@@ -58,9 +62,14 @@ Targets: flake, or the name of any exported package that declares
 Without targets every discovered package is updated. `flake` runs `nix flake
 update` for every input, including nixpkgs and home-manager.
 
-  --build   Build each discovered tool after updating it, and evaluate every
-            machine after updating flake inputs.
-  --commit  Commit each successful update with a conventional message.""",
+  --build         Build each discovered tool after updating it, and evaluate
+                  every machine after updating flake inputs.
+  --commit        Commit each successful update with a conventional message.
+  --keep-failed   Leave a failed update in the working tree instead of
+                  reverting it, and write its log to --log-dir. The failures
+                  report is written to DIR/failures.json for the repair agent.
+  --log-dir=DIR   Directory for build logs and the failures report
+                  (default: .update-agent).""",
         file=sys.stderr,
     )
 
@@ -71,6 +80,83 @@ def error(message: str) -> None:
 
 def say(message: str) -> None:
     print(f"\n==> {message}")
+
+
+def log_path(name: str) -> Path:
+    path = Path(log_dir) / "logs" / f"{name}.log"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def run_logged(command: list[str], path: Path, timeout: int = 3600) -> int:
+    """Run a command with its output in `path`, then show the tail."""
+    with path.open("wb") as handle:
+        try:
+            code = subprocess.run(
+                command,
+                stdout=handle,
+                stderr=subprocess.STDOUT,
+                timeout=timeout,
+            ).returncode
+        except subprocess.TimeoutExpired:
+            handle.write(f"\nupdate-packages: timed out after {timeout}s\n".encode())
+            code = 124
+    print(f"log: {path}")
+    lines = path.read_text(errors="replace").splitlines()
+    for line in lines[-80:]:
+        print(line)
+    return code
+
+
+def record_failure(
+    name: str,
+    label: str,
+    old: str,
+    new: str,
+    files: tuple[str, ...],
+    path: Path,
+    phase: str,
+    target: str | None = None,
+) -> None:
+    failures.append(
+        {
+            "name": name,
+            "label": label,
+            "old": old,
+            "new": new,
+            "files": list(files),
+            "log": str(path),
+            "phase": phase,
+            "target": target,
+        }
+    )
+
+
+def verify_targets(
+    name: str,
+    label: str,
+    old: str,
+    new: str,
+    files: tuple[str, ...],
+    metadata: dict,
+) -> None:
+    """Build packages that consume the updated package.
+
+    A package can build while a dependent that shares its source tree does not.
+    The repair agent needs that failure attached to the same update.
+    """
+    if not build:
+        return
+    for target in metadata.get("verify", []):
+        say(f"{label}: verifying {target}")
+        path = log_path(f"{name}-{target}")
+        if run_logged(["nix", "build", "--no-link", f".#{target}"], path) != 0:
+            record_failure(name, label, old, new, files, path, "verify", target)
+            if not keep_failed:
+                restore(*files)
+            error(f"{label}: {target} failed to build")
+            raise UpdateError("")
+        path.unlink(missing_ok=True)
 
 
 def run_update(name: str, function, *args) -> None:
@@ -245,8 +331,10 @@ def update_flake_inputs() -> None:
         print("updated flake.lock (not committed)")
 
 
-def update_nix_update(name: str, label: str, path: str) -> None:
-    require_clean(path)
+def update_nix_update(name: str, label: str, metadata: dict) -> None:
+    path = metadata["file"]
+    files = tuple(metadata.get("files", [path]))
+    require_clean(*files)
     require_nix_update()
     old = current_version(path)
     say(f"{label} ({old})")
@@ -254,30 +342,37 @@ def update_nix_update(name: str, label: str, path: str) -> None:
     if build:
         command.append("--build")
     command.append(name)
-    if subprocess.run(command).returncode != 0:
-        if build:
-            error(f"{label} update or build failed; reverting")
-        else:
-            error(f"{label} update failed; reverting")
-        restore(path)
+    log = log_path(name)
+    if run_logged(command, log) != 0:
+        new = current_version(path) or old
+        record_failure(name, label, old, new, files, log, "update")
+        action = "kept for repair" if keep_failed else "reverting"
+        error(f"{label} update or build failed; {action}")
+        if not keep_failed:
+            restore(*files)
         raise UpdateError("")
-    if unchanged(path):
+    log.unlink(missing_ok=True)
+    if unchanged(*files):
         print("already current")
         return
     new = current_version(path)
-    commit_changes(f"{label}: update {old} -> {new}", path)
+    verify_targets(name, label, old, new, files, metadata)
+    commit_changes(f"{label}: update {old} -> {new}", *files)
     if not commit:
         print(f"updated {label} to {new} (not committed)")
 
 
-def update_rev_package(name: str, label: str, path: str, repo: str) -> None:
+def update_rev_package(name: str, label: str, metadata: dict) -> None:
     """Update an upstream that pins `src.rev` to a commit.
 
     nix-update alone would change `version` while leaving the old revision in
     place. Resolve the release tag to a commit first, then let nix-update
     recompute the source and dependency hashes from that revision.
     """
-    require_clean(path)
+    path = metadata["file"]
+    repo = metadata["repo"]
+    files = tuple(metadata.get("files", [path]))
+    require_clean(*files)
     require_nix_update()
     old = current_version(path)
     say(f"{label} ({old})")
@@ -315,14 +410,18 @@ def update_rev_package(name: str, label: str, path: str, repo: str) -> None:
     if build:
         command.append("--build")
     command.append(name)
-    if subprocess.run(command).returncode != 0:
-        if build:
-            error(f"{label} {new} failed to update or build; reverting")
-        else:
-            error(f"{label} {new} failed to update; reverting")
-        restore(path)
+    log = log_path(name)
+    if run_logged(command, log) != 0:
+        record_failure(name, label, old, new, files, log, "update")
+        action = "kept for repair" if keep_failed else "reverting"
+        error(f"{label} {new} failed to update or build; {action}")
+        if not keep_failed:
+            restore(*files)
         raise UpdateError("")
-    commit_changes(f"{label}: update {old} -> {new}", path)
+    log.unlink(missing_ok=True)
+    new = current_version(path)
+    verify_targets(name, label, old, new, files, metadata)
+    commit_changes(f"{label}: update {old} -> {new}", *files)
     if not commit:
         print(f"updated {label} to {new} (not committed)")
 
@@ -334,19 +433,31 @@ def update_script(name: str, label: str, metadata: dict) -> None:
     require_clean(*files)
     old = current_json_version(version_file)
     say(f"{label} ({old})")
-    if subprocess.run(["bash", script]).returncode != 0:
+    log = log_path(f"{name}-update")
+    if run_logged(["bash", script], log) != 0:
+        new = current_json_version(version_file) or old
+        record_failure(name, label, old, new, files, log, "update")
+        action = "kept for repair" if keep_failed else "reverting"
+        error(f"{label} update failed; {action}")
+        if not keep_failed:
+            restore(*files)
         raise UpdateError("")
+    log.unlink(missing_ok=True)
     if unchanged(*files):
         print("already current")
         return
     new = current_json_version(version_file)
-    if (
-        build
-        and subprocess.run(["nix", "build", f".#{name}", "--no-link"]).returncode != 0
-    ):
-        error(f"{label} {new} failed to build; reverting")
-        restore(*files)
-        raise UpdateError("")
+    if build:
+        build_log = log_path(f"{name}-build")
+        if run_logged(["nix", "build", "--no-link", f".#{name}"], build_log) != 0:
+            record_failure(name, label, old, new, files, build_log, "build")
+            action = "kept for repair" if keep_failed else "reverting"
+            error(f"{label} {new} failed to build; {action}")
+            if not keep_failed:
+                restore(*files)
+            raise UpdateError("")
+        build_log.unlink(missing_ok=True)
+    verify_targets(name, label, old, new, files, metadata)
     commit_changes(f"{label}: update {old} -> {new}", *files)
     if not commit:
         print(f"updated {label} to {new} (not committed)")
@@ -357,9 +468,9 @@ def update_package(name: str, metadata: dict) -> None:
     label = metadata.get("label", name)
     try:
         if kind == "nix-update":
-            update_nix_update(name, label, metadata["file"])
+            update_nix_update(name, label, metadata)
         elif kind == "rev":
-            update_rev_package(name, label, metadata["file"], metadata["repo"])
+            update_rev_package(name, label, metadata)
         elif kind == "script":
             update_script(name, label, metadata)
         else:
@@ -371,7 +482,7 @@ def update_package(name: str, metadata: dict) -> None:
 
 
 def main(argv: list[str]) -> int:
-    global build, commit
+    global build, commit, keep_failed, log_dir
 
     requested: list[str] = []
     for arg in argv:
@@ -379,6 +490,13 @@ def main(argv: list[str]) -> int:
             build = True
         elif arg == "--commit":
             commit = True
+        elif arg == "--keep-failed":
+            keep_failed = True
+        elif arg.startswith("--log-dir="):
+            log_dir = arg.split("=", 1)[1]
+            if not log_dir:
+                error("--log-dir must name a directory")
+                return 2
         elif arg in ("-h", "--help"):
             usage()
             return 0
@@ -426,17 +544,39 @@ def main(argv: list[str]) -> int:
     if "flake" in requested:
         run_update("flake inputs", update_flake_inputs)
 
+    if keep_failed:
+        report = Path(log_dir) / "failures.json"
+        if failures:
+            report.parent.mkdir(parents=True, exist_ok=True)
+            report.write_text(json.dumps(failures, indent=2) + "\n")
+            print(f"\nDeferred {len(failures)} failed package update(s): {report}")
+        elif report.exists():
+            report.unlink()
+
     if updated:
         print("\nUpdated:")
         for message in updated:
             print(f"  {message}")
+    if failures:
+        print("\nDeferred for repair:", file=sys.stderr)
+        for failure in failures:
+            suffix = f" ({failure['target']})" if failure["target"] else ""
+            print(f"  {failure['name']}{suffix}", file=sys.stderr)
     if not commit:
         print("\nUpdates were left uncommitted; pass --commit to create commits.")
-    if failed:
+    deferred = {failure["name"] for failure in failures}
+    blocking = [name for name in failed if name not in deferred]
+    if blocking:
         print("\nFailed:", file=sys.stderr)
-        for name in failed:
+        for name in blocking:
             print(f"  {name}", file=sys.stderr)
-        return 1
+        if not (keep_failed and failures):
+            return 1
+        print(
+            "\nContinuing with the deferred build failures; the non-build "
+            "failures above have no repair report.",
+            file=sys.stderr,
+        )
     return 0
 
 

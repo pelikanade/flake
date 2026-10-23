@@ -4,3 +4,6 @@ result
 *.qcow2
 __pycache__/
 *.pyc
+.update-agent/
+.ci/
+.review/

@@ -49,6 +49,7 @@ _: {
           kind = "rev";
           file = "modules/packages/herdr-reviewr.nix";
           repo = "persiyanov/herdr-reviewr";
+          files = [ "modules/packages/herdr-reviewr.nix" ];
         };
 
         meta = {
