@@ -1,63 +1,84 @@
 # Updates
 
-Three workflows keep packaged tools current without putting an unverified pin
-on `main`.
+One workflow, `Update packages`, runs daily at 02:00 Asia/Shanghai. It updates
+the flake lock, updates every locally packaged tool, builds them, repairs
+failures with an omp agent, reviews the repairs with a second omp agent, and
+then commits. There is no separate repair workflow and no pull request.
 
-## 1. Update packages
+## Sequence
 
-`Update packages` runs daily. It updates the flake lock, then discovers every
-exported package that declares `passthru.update` and updates its version and
-hashes. Each package is built before its commit:
+1. **Flake inputs.** `nix flake update` runs for every input, then every
+   machine's `system.build.toplevel.drvPath` is evaluated. The lock is
+   committed as `flake: update`; a failed evaluation reverts it and stops.
+2. **Package updates.** Every exported package with `passthru.update` metadata
+   is updated. Nothing is committed yet. An update command that fails before
+   changing the version is treated as a blocking update failure.
+3. **Build.** Every updated package is built, with its
+   `passthru.update.verify` targets. A build failure is recorded in
+   `failures.json` and marks the pin in `updates.json`.
+4. **Clean update commits.** Each package that built is committed separately:
 
-- A package that builds is committed and pushed to `main`.
-- A package that fails is left in the working tree. The updater writes
-  `.update-agent/failures.json` and a log per failure, commits the failed pins
-  to a pending branch `update/pending-<run-id>`, and uploads the failure report
-  as the `update-agent` artifact.
+   ```
+   strata: update 1.0.0 -> 1.1.0
+   ```
 
-The flake lock itself is only committed after every machine's toplevel
-evaluates. The scheduled run never builds a package that did not change.
+   The commit after those is recorded as `clean-tip`.
+5. **Failed pins.** The version/hash changes for packages that need repair are
+   committed separately on top of `clean-tip`, with the same
+   `<label>: update <old> -> <new>` message.
+6. **Repair.** The first omp agent reads the failure logs and package
+   expressions, adapts the local patches and substitutions, and rebuilds every
+   failed package. It has no git credentials and cannot commit.
+7. **Final build.** Every updated package is built again from the final
+   working tree, including its verify targets. The result is written to
+   `.ci/build-summary.json`.
+8. **Review.** If the repair changed files, a second, independent omp agent
+   reviews the repair diff, the update manifest, the repair report, and the
+   final build. It writes `.review/verdict.json` with:
 
-## 2. Repair package updates
+   ```json
+   {
+     "approve": true,
+     "summary": "...",
+     "security_findings": []
+   }
+   ```
 
-`Repair package updates` is a separate workflow with `workflow_call` and
-`workflow_dispatch` triggers. The update workflow calls it only when a package
-build failed; it can also be dispatched by hand against a pending branch (pass
-the branch and the update run id that uploaded the artifact).
+   Any security finding forces a rejection. The workflow also checks the
+   verdict and rejects a non-empty `security_findings` before committing.
+9. **Repair commit.** The repair is committed separately:
 
-The workflow checks out the pending branch, downloads the failure report, and
-starts an omp agent. The agent reads the failing package expressions and their
-patches, adapts the local patches and substitutions to the new upstream
-revision, and runs the package build again. It cannot commit, push, or open a
-pull request; the workflow does that after every failed package builds.
+   ```
+   packages: adapt updates (strata)
+   ```
+10. **Publish.** All commits are pushed to `main`.
 
-If the agent cannot make every package build, no pull request is opened. The
-pending branch and the `repair-report` artifact remain for a human.
+If the initial build does not complete, an update command fails, or any of the
+repair, final build, review, or commit steps fails, the workflow resets to
+`clean-tip`. The failed pins and repair changes are dropped, the clean update
+commits still land, and the run fails. A package that cannot be repaired
+therefore keeps its previous version on `main`.
 
-## 3. Package PR
+## Commit separation
 
-`Package PR` runs on pull requests whose head branch starts with `update/`.
+The history contains three kinds of commits:
 
-1. `scripts/verify-packages.py` selects the packages whose declared files
-   changed, plus each package's `verify` targets, and builds them.
-2. After that job passes, a second omp agent reviews the diff, the package
-   comments, and the build summary. It writes an approval or rejection, a
-   review comment, and a `security_findings` list. Any security finding --
-   secrets, new downloads, weakened sandboxing, privilege escalation, unsafe
-   shell execution, untrusted sources, or CI/permission changes -- blocks the
-   merge even if the build passed.
-3. The workflow posts the review. It merges the PR only when the review
-   approves with no security findings; otherwise the PR stays open for a
-   human.
+| Commit | Contents |
+| --- | --- |
+| `flake: update` | `flake.lock` |
+| `<label>: update <old> -> <new>` | version, source hash, dependency hash |
+| `packages: adapt updates (<labels>)` | patch and substitution changes |
 
-The merge is queued with auto-merge when the repository allows it, so this
-workflow's own check can finish first.
+The update commits are created before the repair; the repair commit is created
+only after the review approves. A failed-pin commit may not build on its own.
+It is pushed only together with the repair commit, or after the final build
+confirms that the pin now builds without a repair.
 
 ## Credentials
 
 Both agents use omp's built-in DeepSeek provider and the model named
 "DeepSeek V4.1 Flash 1017", selected as `deepseek/deepseek-flash`. omp reads
-the key from `DEEPSEEK_API_KEY`; the workflows map the repository secret of
+the key from `DEEPSEEK_API_KEY`; the workflow maps the repository secret of
 that name to it.
 
 Create the secret once, either in the repository UI under **Settings >
@@ -87,9 +108,17 @@ overriding the repair and review models; both default to
 `deepseek/deepseek-flash`. Do not store the key in a variable: variables are
 plaintext.
 
-The agents receive no git credentials. The workflows perform every push and PR
-operation after the agent exits. Both workflows run only for branches in this
-repository, never for fork pull requests.
+Neither agent receives a git token. The workflow pushes only after both agents
+have exited.
+
+## Coverage
+
+- The flake lock is evaluated, not fully built. A nixpkgs change that
+  evaluates but fails to build an unchanged package can still reach `main`.
+- The build gate covers every package in the update manifest, not every
+  machine toplevel.
+- Packages that arrive through flake inputs are not individually built by this
+  workflow.
 
 ## Local use
 
@@ -98,13 +127,20 @@ just update-packages --build
 ```
 
 Add `--keep-failed` to leave a failed pin in the working tree and write
-`.update-agent/failures.json`. Then run the repair script with the packaged
-agent and the same key in the environment:
+`.update-agent/updates.json` and `.update-agent/failures.json`. Then:
 
 ```sh
+python3 scripts/commit-updates.py --phase clean --report .update-agent/updates.json
+git rev-parse HEAD > .update-agent/clean-tip
+python3 scripts/commit-updates.py --phase failed --report .update-agent/updates.json
+
 omp=$(nix build --no-link --print-out-paths .#omp)
 DEEPSEEK_API_KEY=... python3 scripts/repair-updates.py --omp "$omp/bin/omp"
+python3 scripts/verify-packages.py --updates .update-agent/updates.json --log-dir .ci
+python3 scripts/review-updates.py \
+  --base "$(cat .update-agent/clean-tip)" --log-dir .review --omp "$omp/bin/omp"
+python3 scripts/commit-updates.py --phase repair --report .update-agent/updates.json
 ```
 
-`--dry-run` writes the prompt and prints the command without calling the
-agent.
+`repair-updates.py` and `review-updates.py` support `--dry-run`, which writes
+the prompt and prints the command without calling the agent.

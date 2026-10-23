@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Review an update PR with a second omp agent.
+"""Review the repair changes of a unified package update with a second agent.
 
-The PR workflow has already built every changed package. This agent reads the
-diff, the package expressions, and that build summary, then writes:
+The workflow commits the clean update pins, then the pins that need repair,
+then leaves the agent's repair changes uncommitted. This reviewer reads the
+working-tree repair diff, the update manifest, the repair report, and the
+final build summary. It writes:
 
-  .review/verdict.json   {"approve": bool, "summary": "..."}
-  .review/review.md      the review posted to the PR
+  .review/verdict.json   {"approve": bool, "summary": "...",
+                          "security_findings": [...]}
+  .review/review.md      the review shown in the workflow summary
 
-It does not edit the repository and does not merge. The workflow posts the
-review and merges only when the verdict approves.
+It does not edit, commit, or push. Any security finding forces a rejection.
 """
 
 from __future__ import annotations
@@ -25,36 +27,48 @@ import omp_agent
 
 
 def write_prompt(
-    log_dir: Path, base: str, head: str, build_summary: Path
+    log_dir: Path,
+    *,
+    base: str,
+    updates: Path,
+    repair: Path,
+    build_summary: Path,
 ) -> Path:
     lines = [
-        "# Review a package update repair",
+        "# Review package update repairs",
         "",
-        "You are the second reviewer of a pull request that adapts local package",
-        "patches and substitutions to a new upstream version. The repair agent",
-        "has already committed its work. The PR workflow has already built every",
-        "changed package; the result is below.",
+        "You are the second reviewer of a unified package update. The workflow",
+        "committed the clean update pins, committed the pins whose first build",
+        "failed, and left the repair agent's changes uncommitted. The final build",
+        "of every updated package has already run.",
         "",
-        f"- Diff command: `git diff {base} {head}`",
-        f"- Build summary: `{build_summary}`",
+        f"- Failed pins and repair: `git diff {base}`",
+        "- Repair only: `git diff HEAD`",
+        "- Untracked repair files: `git status --porcelain`",
+        f"- Update manifest: `{updates}`",
+        f"- Repair report: `{repair}`",
+        f"- Final build summary: `{build_summary}`",
         f"- Build logs: `{build_summary.parent / 'logs'}`",
         "",
-        "Read `AGENTS.md`, the full diff, and every package expression the diff",
-        "touches. Do not edit any file.",
+        "Read `AGENTS.md`, the repair diff, every package expression it touches,",
+        "and the update manifest. Do not edit repository files; only write the",
+        "two output files named below.",
         "",
         "Check all of the following:",
         "",
-        "1. The build summary says every target passed. If it does not, reject.",
-        "2. The patch or substitution preserves the Nix-specific behavior the",
-        "   package comments describe. A workaround removed because upstream",
-        "   made it unnecessary is fine only if the diff and comments agree.",
-        "3. The version and source hashes are consistent with each other and",
-        "   with the upstream revision named in the expression.",
-        "4. There are no unrelated changes, no weakened checks, and no disabled",
+        "1. The final build summary says every target passed. If it does not,",
+        "   reject.",
+        "2. The repair preserves the Nix-specific behavior the package comments",
+        "   describe. A workaround removed because upstream made it unnecessary",
+        "   is fine only if the diff and comments agree.",
+        "3. The version and source hashes in the update manifest are consistent",
+        "   with each other and with the upstream revision named in the",
+        "   expression.",
+        "4. The repair touches only the failing packages and their patches. It",
+        "   must not contain unrelated changes, weakened checks, or disabled",
         "   tests.",
-        "5. The diff contains only package expressions and their patches.",
         "",
-        "6. Security. Inspect the diff, the added patch lines, and the build",
+        "5. Security. Inspect the diff, the added patch lines, and the build",
         "   logs for any of these, and record every one in `security_findings`:",
         "",
         "   - secrets, tokens, private keys, credentials, or unredacted logs;",
@@ -85,7 +99,7 @@ def write_prompt(
         f"Write `{log_dir / 'review.md'}` with the review in Markdown: what changed,",
         "what you verified, a **Security** section that says either \"no findings\"",
         "or lists each finding, and any risk the merger should know. Be specific",
-        "and conservative. Approve only when you would merge it yourself.",
+        "and conservative. Approve only when you would commit it yourself.",
         "",
     ]
     path = log_dir / "prompt.md"
@@ -103,8 +117,10 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument("--model", default=os.environ.get("OMP_REVIEW_MODEL"))
     parser.add_argument("--api-key", default=None)
-    parser.add_argument("--base", default="origin/main")
-    parser.add_argument("--head", default="HEAD")
+    parser.add_argument("--base", required=True)
+    parser.add_argument("--updates", default=".update-agent/updates.json")
+    parser.add_argument("--repair", default=".update-agent/report.json")
+    parser.add_argument("--build-summary", default=".ci/build-summary.json")
     parser.add_argument("--max-time", default="20m")
     parser.add_argument("--timeout", type=int, default=1800)
     parser.add_argument("--dry-run", action="store_true")
@@ -113,9 +129,17 @@ def main(argv: list[str]) -> int:
     repo = Path(__file__).resolve().parent.parent
     log_dir = (repo / args.log_dir).resolve()
     log_dir.mkdir(parents=True, exist_ok=True)
-    build_summary = repo / ".ci" / "build-summary.json"
+    updates = (repo / args.updates).resolve()
+    repair = (repo / args.repair).resolve()
+    build_summary = (repo / args.build_summary).resolve()
 
-    prompt = write_prompt(log_dir, args.base, args.head, build_summary)
+    prompt = write_prompt(
+        log_dir,
+        base=args.base,
+        updates=updates,
+        repair=repair,
+        build_summary=build_summary,
+    )
 
     try:
         model, api_key = omp_agent.configure(args.model, args.api_key)
@@ -197,8 +221,6 @@ def main(argv: list[str]) -> int:
         print(f"error: the review agent did not write {review}", file=sys.stderr)
         return 1
     if not approve:
-        # A rejection still gets a human-readable comment; fall back to the
-        # summary and findings when the agent wrote no review file.
         if not review.is_file():
             body = summary
             if findings:

@@ -2,15 +2,13 @@ name: Update packages
 
 on:
   schedule:
-    # 02:00 in Asia/Shanghai. The run must push its commits before the machines'
-    # 05:00 automatic upgrade follows the flake, and GitHub cron is UTC.
+    # 02:00 in Asia/Shanghai. The run must finish before the machines' 05:00
+    # automatic upgrade follows main, and GitHub cron is UTC.
     - cron: "0 18 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
-  pull-requests: write
-  actions: read
 
 concurrency:
   group: update-packages
@@ -19,16 +17,11 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
-    outputs:
-      failed: ${{ steps.defer.outputs.failed }}
-      branch: ${{ steps.defer.outputs.branch }}
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v7
-        id: checkout
         with:
-          # The repair workflow runs in its own job. This job never hands a
-          # live token to it.
+          # The agents run before the final push and have no git credentials.
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - name: Configure git
@@ -36,92 +29,295 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      # A lock update is cheap to commit but expensive to discover broken at
-      # the next deploy. --build evaluates every machine's toplevel before the
-      # lock is committed; a failure stops the run before packages are touched.
+      # 1. Flake inputs. This evaluates every machine toplevel; it does not
+      # build them.
       - name: Update flake inputs
         run: ./scripts/update-packages.py --build --commit flake
 
-      # Packages are built before they are committed. A failed build is left in
-      # the working tree, not reverted: the pending branch below carries the pin
-      # and the repair workflow receives its log. `--keep-failed` exits
-      # successfully when only package builds are deferred.
+      # 2. Package updates. Every package is updated and built before a pin is
+      # eligible to commit. `--keep-failed` leaves the pins that fail in the
+      # working tree and writes updates.json/failures.json; without --commit
+      # nothing is committed yet.
       - name: Update packages
         id: packages
         continue-on-error: true
         run: >-
           nix shell nixpkgs#nix-update nixpkgs#nixfmt-rfc-style
-          -c ./scripts/update-packages.py --build --commit --keep-failed
+          -c ./scripts/update-packages.py --keep-failed
           --log-dir=.update-agent
 
-      # A fatal updater failure (discovery, missing tool) never reaches the
-      # repair workflow: there is no well-defined failure report to hand over.
       - name: Stop on a fatal updater failure
         if: steps.packages.outcome == 'failure'
         run: |
           echo "::error::the updater failed before it could defer package repairs"
           exit 1
 
-      # Every commit at this point has a successful build. This is the only
-      # path that changes main; the repair workflow can only add a PR branch.
-      - name: Push verified updates
+      # 3. Build every updated package. This is the single build phase; a
+      # package build failure is written to failures.json and updates.json.
+      - name: Build updated packages
+        id: build
         if: steps.packages.outcome == 'success'
-        env:
-          GH_TOKEN: ${{ github.token }}
+        continue-on-error: true
         run: |
-          set -euo pipefail
-          git remote set-url origin \
-            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          if [ "$(git rev-list --count origin/main..HEAD)" -eq 0 ]; then
-            echo "nothing to push"
-          else
-            git push origin HEAD:main
-          fi
-          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
-
-      # Publish the pin changes that need adaptation on their own branch. The
-      # repair workflow checks that branch out, so it never needs the failed
-      # changes to be reproducible from main.
-      - name: Defer failed updates
-        id: defer
-        if: steps.packages.outcome == 'success'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          echo "failed=false" >> "$GITHUB_OUTPUT"
-          if [ ! -f .update-agent/failures.json ]; then
-            echo "no failed package updates"
+          if [ ! -f .update-agent/updates.json ]; then
+            echo "no package updates to build"
             exit 0
           fi
-          if [ -z "$(git status --porcelain -- modules/packages)" ]; then
-            echo "::error::failed updates produced no package changes; see .update-agent/failures.json"
+          python3 scripts/verify-packages.py \
+            --updates .update-agent/updates.json \
+            --log-dir .ci
+
+      # The clean pins become separate commits first. clean-tip is the commit
+      # we return to if repair or review does not pass. Nothing is committed if
+      # the build phase did not complete (for example, a discovery error).
+      - name: Commit clean updates
+        if: steps.packages.outcome == 'success'
+        run: |
+          set -euo pipefail
+          if [ -f .update-agent/failures.json ] &&
+            [ ! -f .update-agent/updates.json ]; then
+            echo "::error::failed updates have no update manifest"
+            echo repair > .update-agent/gate
+            git rev-parse HEAD > .update-agent/clean-tip
+            exit 0
+          fi
+          if [ -f .update-agent/updates.json ] &&
+            [ ! -f .ci/build-summary.json ]; then
+            echo "::error::the build phase did not complete"
+            echo build > .update-agent/gate
+            git rev-parse HEAD > .update-agent/clean-tip
+            exit 0
+          fi
+          update_failures=0
+          if [ -f .update-agent/failures.json ]; then
+            update_failures=$(jq \
+              '[.[] | select(.phase == "update")] | length' \
+              .update-agent/failures.json)
+            if [ "$update_failures" -gt 0 ]; then
+              echo "::error::$update_failures update command(s) failed; dropping their pins"
+              echo update > .update-agent/gate
+            fi
+          fi
+          blocking=0
+          if [ -f .update-agent/blocking.json ]; then
+            blocking=$(jq 'length' .update-agent/blocking.json)
+            if [ "$blocking" -gt 0 ]; then
+              echo "::error::$blocking package(s) could not be updated"
+              echo update > .update-agent/gate
+            fi
+          fi
+          if [ -f .update-agent/updates.json ]; then
+            python3 scripts/commit-updates.py --phase clean \
+              --report .update-agent/updates.json
+          fi
+          git rev-parse HEAD > .update-agent/clean-tip
+          if [ "$update_failures" -eq 0 ] &&
+            [ "$blocking" -eq 0 ] &&
+            [ ! -f .update-agent/failures.json ]; then
+            touch .update-agent/ok
+          fi
+
+      # The failing pins are committed separately. They stay local until the
+      # repair and review gates pass; a failure resets to clean-tip.
+      - name: Commit pins needing repair
+        if: >-
+          steps.packages.outcome == 'success' &&
+          hashFiles('.update-agent/failures.json') != '' &&
+          hashFiles('.update-agent/gate') == ''
+        run: |
+          python3 scripts/commit-updates.py --phase failed \
+            --report .update-agent/updates.json
+
+      # 4. If a package failed to build, one agent adapts the local patches.
+      - name: Repair failed updates
+        id: repair
+        if: >-
+          steps.packages.outcome == 'success' &&
+          hashFiles('.update-agent/failures.json') != '' &&
+          hashFiles('.update-agent/gate') == ''
+        continue-on-error: true
+        env:
+          OMP_MODEL: ${{ vars.OMP_MODEL }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          omp=$(nix build --no-link --print-out-paths .#omp)
+          python3 scripts/repair-updates.py \
+            --log-dir .update-agent \
+            --omp "$omp/bin/omp"
+
+      - name: Check repair
+        if: >-
+          always() && steps.packages.outcome == 'success' &&
+          hashFiles('.update-agent/failures.json') != '' &&
+          hashFiles('.update-agent/gate') == ''
+        run: |
+          trap 'echo repair > .update-agent/gate' ERR
+          set -euo pipefail
+          gate=ok
+          if [ ! -f .update-agent/report.json ] ||
+            [ "$(jq -r '.agent.ran' .update-agent/report.json)" != "true" ] ||
+            [ "$(jq '.unresolved | length' .update-agent/report.json)" -gt 0 ]; then
+            gate=repair
+          fi
+          outside=$(git status --porcelain -- . \
+            ':(exclude)modules/packages' ':(exclude).update-agent' \
+            ':(exclude).ci' ':(exclude).review')
+          if [ -n "$outside" ]; then
+            echo "::error::the repair agent changed files outside modules/packages"
+            printf '%s\n' "$outside"
+            gate=outside
+          fi
+          if [ "$gate" != ok ]; then
+            echo "$gate" > .update-agent/gate
+          fi
+
+      # 4. Rebuild every updated package from the final working tree. This is
+      # the build gate the review reads.
+      - name: Build all updated packages
+        id: final-build
+        if: >-
+          always() && steps.packages.outcome == 'success' &&
+          hashFiles('.update-agent/failures.json') != '' &&
+          hashFiles('.update-agent/gate') == ''
+        continue-on-error: true
+        run: |
+          python3 scripts/verify-packages.py \
+            --updates .update-agent/updates.json \
+            --log-dir .ci
+
+      - name: Check final build
+        if: always() && steps.final-build.outcome == 'failure'
+        run: echo build > .update-agent/gate
+
+      - name: Detect repair changes
+        id: changes
+        if: >-
+          always() && steps.packages.outcome == 'success' &&
+          hashFiles('.update-agent/failures.json') != '' &&
+          hashFiles('.update-agent/gate') == ''
+        run: |
+          if [ -n "$(git status --porcelain -- modules/packages)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Record repair diff
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          { git diff HEAD --binary; git status --porcelain --untracked-files=all; } |
+            sha256sum | cut -d' ' -f1 > .update-agent/repair.sha
+
+      # 5. A second, independent agent reviews the repair before the repair
+      # commit is created. Any security finding blocks the commit.
+      - name: Review repairs
+        id: review
+        if: steps.changes.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          OMP_REVIEW_MODEL: ${{ vars.OMP_REVIEW_MODEL }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          omp=$(nix build --no-link --print-out-paths .#omp)
+          python3 scripts/review-updates.py \
+            --base "$(cat .update-agent/clean-tip)" \
+            --log-dir .review \
+            --omp "$omp/bin/omp"
+
+      - name: Check review
+        if: always() && steps.changes.outputs.changed == 'true'
+        run: |
+          trap 'echo review > .update-agent/gate' ERR
+          set -euo pipefail
+          gate=ok
+          if [ "${{ steps.review.outcome }}" != "success" ] ||
+            [ ! -f .review/verdict.json ] ||
+            [ "$(jq -r '.approve' .review/verdict.json)" != "true" ] ||
+            [ "$(jq '.security_findings // [] | length' .review/verdict.json)" -ne 0 ]; then
+            gate=review
+          fi
+          outside=$(git status --porcelain -- . \
+            ':(exclude)modules/packages' ':(exclude).update-agent' \
+            ':(exclude).ci' ':(exclude).review')
+          if [ -n "$outside" ]; then
+            echo "::error::the review agent changed files outside modules/packages"
+            printf '%s\n' "$outside"
+            gate=review
+          fi
+          after=$(
+            { git diff HEAD --binary; git status --porcelain --untracked-files=all; } |
+              sha256sum | cut -d' ' -f1
+          )
+          if [ "$after" != "$(cat .update-agent/repair.sha)" ]; then
+            echo "::error::the review agent changed the working tree"
+            gate=review
+          fi
+          if [ "$gate" != ok ]; then
+            echo "$gate" > .update-agent/gate
+          fi
+
+      - name: Commit repairs
+        id: commit-repairs
+        if: >-
+          always() && steps.changes.outputs.changed == 'true' &&
+          hashFiles('.update-agent/gate') == ''
+        continue-on-error: true
+        run: |
+          python3 scripts/commit-updates.py --phase repair \
+            --report .update-agent/updates.json
+
+      - name: Check repair commit
+        if: always() && steps.commit-repairs.outcome == 'failure'
+        run: echo repair > .update-agent/gate
+
+      - name: Mark verified
+        if: >-
+          always() && steps.packages.outcome == 'success' &&
+          hashFiles('.update-agent/failures.json') != '' &&
+          hashFiles('.update-agent/gate') == ''
+        run: touch .update-agent/ok
+
+      # 6. Publish. Without the ok marker, reset to clean-tip: the failed pins
+      # and repairs are dropped, but the clean update commits still land.
+      - name: Push updates
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ ! -f .update-agent/clean-tip ]; then
+            echo "::error::the update did not reach the commit phase"
             exit 1
           fi
 
-          branch="update/pending-${GITHUB_RUN_ID}"
-          git switch -c "$branch"
-          git add -A -- modules/packages
-          labels=$(jq -r '[.[].label] | unique | join(", ")' .update-agent/failures.json)
-          git commit -m "packages: pending updates ($labels)"
+          clean_tip=$(cat .update-agent/clean-tip)
+          if [ ! -f .update-agent/ok ]; then
+            gate=$(cat .update-agent/gate 2>/dev/null || echo unverified)
+            echo "::error::verification did not finish ($gate); dropping unverified pins"
+            git reset --hard "$clean_tip"
+          fi
 
           git remote set-url origin \
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push origin "$branch"
+          if [ "$(git rev-list --count origin/main..HEAD)" -gt 0 ]; then
+            git push origin HEAD:main
+          else
+            echo "nothing to push"
+          fi
           git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
 
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
-          echo "failed=true" >> "$GITHUB_OUTPUT"
+          if [ ! -f .update-agent/ok ]; then
+            exit 1
+          fi
 
-      - name: Upload failure report
-        if: >-
-          always() &&
-          hashFiles('.update-agent/failures.json') != ''
+      - name: Upload update artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: update-agent
-          path: .update-agent/
-          if-no-files-found: error
+          path: |
+            .update-agent/
+            .ci/
+            .review/
+          if-no-files-found: ignore
           overwrite: true
           retention-days: 14
 
@@ -129,27 +325,24 @@ jobs:
         if: always()
         run: |
           {
-            echo "## Update workflow"
+            echo "## Package update"
             echo
-            if [ -f .update-agent/failures.json ]; then
-              echo "These package updates built with errors and were left for the"
-              echo "repair workflow:"
-              echo
-              jq -r '.[] | "- `\(.label)` \(.old) -> \(.new) (\(.phase))"' \
-                .update-agent/failures.json
+            if [ -f .update-agent/updates.json ]; then
+              jq -r '.[] | "- \(.label): \(.old) -> \(.new)\(if .failed then " (repair)" else "" end)"' \
+                .update-agent/updates.json
             else
-              echo "Every package update built and was pushed."
+              echo "No package changed."
+            fi
+            if [ -f .update-agent/report-body.md ]; then
+              echo
+              cat .update-agent/report-body.md
+            fi
+            if [ -f .review/review.md ]; then
+              echo
+              cat .review/review.md
+            fi
+            if [ -f .update-agent/gate ]; then
+              echo
+              echo "Gate: **$(cat .update-agent/gate)**. Unverified pins were dropped."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
-
-  # The repair logic is a separate, reusable workflow so it can also be
-  # dispatched by hand against a pending branch.
-  repair:
-    needs: update
-    if: needs.update.outputs.failed == 'true'
-    uses: ./.github/workflows/repair-updates.yml
-    with:
-      branch: ${{ needs.update.outputs.branch }}
-      run_id: ${{ github.run_id }}
-    secrets:
-      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}

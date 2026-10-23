@@ -2,11 +2,11 @@
 """Adapt package updates that failed to build with an omp agent.
 
 `update-packages.py --build --keep-failed` writes `.update-agent/failures.json`
-and leaves each failed pin in the working tree. This script gives those
-failures to an omp agent, verifies every repaired package with `nix build`,
-and writes `.update-agent/report.json` plus a PR body. It never commits,
-pushes, or opens a pull request; the workflow does that after reviewing the
-verification result.
+and leaves each failed pin in the working tree. The workflow commits those
+pins, then runs this script. It gives the failures to an omp agent, verifies
+every repaired package with `nix build`, and writes `.update-agent/report.json`
+plus a report body. The repair changes stay uncommitted; the workflow commits
+them only after an independent review.
 
 The agent uses omp's built-in DeepSeek provider and the model named
 "DeepSeek V4.1 Flash 1017" (`deepseek/deepseek-flash`). The key comes from the
@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -152,7 +153,30 @@ def build_target(repo: Path, target: str, log: Path, timeout: int) -> bool:
     ) == 0
 
 
-def pr_body(report: dict, prompt: Path) -> str:
+def package_version(repo: Path, failure: dict) -> str | None:
+    """Read the pinned version so a no-op repair cannot pass the gate."""
+    for name in failure.get("files", []):
+        path = repo / name
+        if not path.is_file():
+            continue
+        if path.suffix == ".json":
+            try:
+                data = json.loads(path.read_text())
+            except json.JSONDecodeError:
+                continue
+            if isinstance(data, dict) and "version" in data:
+                return str(data["version"])
+            continue
+        match = re.search(
+            r'(?m)^[ \t]*version = "([^"]*)";',
+            path.read_text(errors="replace"),
+        )
+        if match:
+            return match.group(1)
+    return None
+
+
+def report_body(report: dict, prompt: Path) -> str:
     lines = [
         "## Automated package update repair",
         "",
@@ -184,16 +208,16 @@ def pr_body(report: dict, prompt: Path) -> str:
     if report["unresolved"]:
         lines += [
             "",
-            "At least one package still fails, so no pull request was opened.",
-            "Read the `update-agent` and `repair-report` workflow artifacts for",
-            "the full build logs before continuing.",
+            "At least one package still fails, so its pin is not committed.",
+            "Read the `update-agent` workflow artifact for the full build logs",
+            "before continuing.",
         ]
     lines += [
         "",
-        "This branch is not merged here. The PR workflow builds the changed",
-        "packages again, then a second omp agent reviews the diff. It merges",
-        "automatically only when both pass. The builds do not exercise the",
-        "applications at runtime.",
+        "The workflow commits clean update pins first. These repair changes",
+        "are committed separately, only after an independent omp review",
+        "approves them with no security findings. The builds do not exercise",
+        "the applications at runtime.",
         "",
     ]
     return "\n".join(lines)
@@ -240,7 +264,7 @@ def main(argv: list[str]) -> int:
             "unresolved": failures,
         }
         (log_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-        (log_dir / "pr-body.md").write_text(pr_body(report, prompt))
+        (log_dir / "report-body.md").write_text(report_body(report, prompt))
         error(reason)
         return 0
 
@@ -252,7 +276,7 @@ def main(argv: list[str]) -> int:
             "unresolved": failures,
         }
         (log_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-        (log_dir / "pr-body.md").write_text(pr_body(report, prompt))
+        (log_dir / "report-body.md").write_text(report_body(report, prompt))
         error(reason)
         return 0
 
@@ -281,7 +305,7 @@ def main(argv: list[str]) -> int:
             "unresolved": failures,
         }
         (log_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-        (log_dir / "pr-body.md").write_text(pr_body(report, prompt))
+        (log_dir / "report-body.md").write_text(report_body(report, prompt))
         print(f"prompt: {prompt}")
         return 0
 
@@ -309,6 +333,14 @@ def main(argv: list[str]) -> int:
     repaired: list[dict] = []
     unresolved: list[dict] = []
     for failure in failures:
+        actual = package_version(repo, failure)
+        if actual and actual != failure["new"]:
+            entry = dict(failure)
+            entry["reason"] = (
+                f"pinned version is {actual}, expected {failure['new']}"
+            )
+            unresolved.append(entry)
+            continue
         targets = [failure["name"]]
         if failure.get("target"):
             targets.append(failure["target"])
@@ -342,7 +374,7 @@ def main(argv: list[str]) -> int:
         "unresolved": unresolved,
     }
     (log_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-    (log_dir / "pr-body.md").write_text(pr_body(report, prompt))
+    (log_dir / "report-body.md").write_text(report_body(report, prompt))
     print(f"\nrepaired: {len(repaired)}")
     print(f"unresolved: {len(unresolved)}")
     if unresolved:

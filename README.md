@@ -33,9 +33,9 @@ On an already managed host, `just build` builds the local system and `just deplo
 
 ## Automated updates
 
-A scheduled workflow updates the flake lock and every exported package that declares `passthru.update` metadata. A package is committed to `main` only after it builds. A package that fails is handed to the reusable repair workflow: an omp agent adapts the local patches and substitutions, verifies the build, and opens a pull request. The PR workflow builds the changed packages again, a second omp agent reviews the diff, and the PR merges only when both pass. See [updates](docs/updates.md).
+A scheduled workflow updates the flake lock and every exported package that declares `passthru.update` metadata, then builds every updated package. A package that fails is repaired by an omp agent; a second omp agent reviews the repair, including a security check. The workflow commits only after the repair builds and the review approves. Update commits and the repair commit are separate. If a gate fails, the clean updates still land and the failed package keeps its previous version. See [updates](docs/updates.md).
 
-The agents use omp's built-in DeepSeek model. Set the `DEEPSEEK_API_KEY` repository secret as described in that document; without it, a failed build stays on a pending branch and the run fails.
+The agents use omp's built-in DeepSeek model. Set the `DEEPSEEK_API_KEY` repository secret as described in that document; without it, a failed build is not repaired and the run fails.
 
 Every installed machine switches to the newest revision of the published flake daily at 05:00. The run never reboots on its own, so a kernel update waits for a reboot the operator chooses.
 
@@ -59,4 +59,4 @@ Boot the target from the resulting ISO and connect it to the network with `nmtui
 
 Follow [machine preparation](.agents/skills/init-machine/SKILL.md), then the [installation procedure](.agents/skills/install-machine/SKILL.md). Preparation records hardware facts, selects the disk layout, and enrolls secret recipients when needed. Installation erases the selected disk; confirm the target and device before proceeding. The procedure also covers encrypted disks and Secure Boot.
 
-Last updated at: `baeb03adbbd5bd7353d3082a86a004ebd700cd80`.
+Last updated at: `bb06fffbc7b686b0620a8ea97ea717a9e02c0c19`.

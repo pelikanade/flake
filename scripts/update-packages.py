@@ -6,9 +6,11 @@ package that declares `passthru.update` metadata is updatable. Packages that
 track a flake input need no metadata; update every input with the `flake`
 target instead (`nix flake update`).
 
-The scheduled GitHub Actions workflow runs this with --commit and does not
-build. Interactively, run it from `nix develop`, add --build to build each
-tool and evaluate every machine, inspect the diff, and commit selectively.
+The scheduled GitHub Actions workflow runs the package step without --commit.
+It then builds every updated package, repairs failures, reviews the repairs,
+and commits the clean and repaired updates separately. Interactively, run it
+from `nix develop`, add --build to build each tool and evaluate every machine,
+inspect the diff, and commit selectively.
 
 A package registers itself with `passthru.update`:
 
@@ -41,6 +43,7 @@ log_dir = ".update-agent"
 updated: list[str] = []
 failed: list[str] = []
 failures: list[dict] = []
+updates: list[dict] = []
 
 DISCOVERY_EXPRESSION = (
     "pkgs: builtins.mapAttrs (name: pkg: pkg.passthru.update or null) pkgs"
@@ -65,10 +68,11 @@ update` for every input, including nixpkgs and home-manager.
   --build         Build each discovered tool after updating it, and evaluate
                   every machine after updating flake inputs.
   --commit        Commit each successful update with a conventional message.
-  --keep-failed   Leave a failed update in the working tree instead of
-                  reverting it, and write its log to --log-dir. The failures
-                  report is written to DIR/failures.json for the repair agent.
-  --log-dir=DIR   Directory for build logs and the failures report
+  --keep-failed   Leave an update in the working tree instead of committing
+                  or reverting it. Writes DIR/failures.json for the repair
+                  agent, DIR/updates.json for the commit phases, and
+                  DIR/blocking.json for failures that have no repair report.
+  --log-dir=DIR   Directory for build logs and the reports
                   (default: .update-agent).""",
         file=sys.stderr,
     )
@@ -108,6 +112,31 @@ def run_logged(command: list[str], path: Path, timeout: int = 3600) -> int:
     return code
 
 
+def record_update(
+    name: str,
+    label: str,
+    old: str,
+    new: str,
+    files: tuple[str, ...],
+    *,
+    failed: bool,
+    phase: str | None = None,
+    target: str | None = None,
+) -> None:
+    updates.append(
+        {
+            "name": name,
+            "label": label,
+            "old": old,
+            "new": new,
+            "files": list(files),
+            "failed": failed,
+            "phase": phase,
+            "target": target,
+        }
+    )
+
+
 def record_failure(
     name: str,
     label: str,
@@ -129,6 +158,16 @@ def record_failure(
             "phase": phase,
             "target": target,
         }
+    )
+    record_update(
+        name,
+        label,
+        old,
+        new,
+        files,
+        failed=True,
+        phase=phase,
+        target=target,
     )
 
 
@@ -345,7 +384,11 @@ def update_nix_update(name: str, label: str, metadata: dict) -> None:
     log = log_path(name)
     if run_logged(command, log) != 0:
         new = current_version(path) or old
-        record_failure(name, label, old, new, files, log, "update")
+        # A changed version means the failure is in the source/dependency
+        # update or build, which the repair agent can inspect. An unchanged
+        # version means the update command itself failed.
+        phase = "build" if new != old else "update"
+        record_failure(name, label, old, new, files, log, phase)
         action = "kept for repair" if keep_failed else "reverting"
         error(f"{label} update or build failed; {action}")
         if not keep_failed:
@@ -357,6 +400,7 @@ def update_nix_update(name: str, label: str, metadata: dict) -> None:
         return
     new = current_version(path)
     verify_targets(name, label, old, new, files, metadata)
+    record_update(name, label, old, new, files, failed=False)
     commit_changes(f"{label}: update {old} -> {new}", *files)
     if not commit:
         print(f"updated {label} to {new} (not committed)")
@@ -412,7 +456,8 @@ def update_rev_package(name: str, label: str, metadata: dict) -> None:
     command.append(name)
     log = log_path(name)
     if run_logged(command, log) != 0:
-        record_failure(name, label, old, new, files, log, "update")
+        # The version and rev were written before nix-update ran.
+        record_failure(name, label, old, new, files, log, "build")
         action = "kept for repair" if keep_failed else "reverting"
         error(f"{label} {new} failed to update or build; {action}")
         if not keep_failed:
@@ -421,6 +466,7 @@ def update_rev_package(name: str, label: str, metadata: dict) -> None:
     log.unlink(missing_ok=True)
     new = current_version(path)
     verify_targets(name, label, old, new, files, metadata)
+    record_update(name, label, old, new, files, failed=False)
     commit_changes(f"{label}: update {old} -> {new}", *files)
     if not commit:
         print(f"updated {label} to {new} (not committed)")
@@ -436,7 +482,8 @@ def update_script(name: str, label: str, metadata: dict) -> None:
     log = log_path(f"{name}-update")
     if run_logged(["bash", script], log) != 0:
         new = current_json_version(version_file) or old
-        record_failure(name, label, old, new, files, log, "update")
+        phase = "build" if new != old else "update"
+        record_failure(name, label, old, new, files, log, phase)
         action = "kept for repair" if keep_failed else "reverting"
         error(f"{label} update failed; {action}")
         if not keep_failed:
@@ -458,6 +505,7 @@ def update_script(name: str, label: str, metadata: dict) -> None:
             raise UpdateError("")
         build_log.unlink(missing_ok=True)
     verify_targets(name, label, old, new, files, metadata)
+    record_update(name, label, old, new, files, failed=False)
     commit_changes(f"{label}: update {old} -> {new}", *files)
     if not commit:
         print(f"updated {label} to {new} (not committed)")
@@ -553,6 +601,14 @@ def main(argv: list[str]) -> int:
         elif report.exists():
             report.unlink()
 
+        changes = Path(log_dir) / "updates.json"
+        if updates:
+            changes.parent.mkdir(parents=True, exist_ok=True)
+            changes.write_text(json.dumps(updates, indent=2) + "\n")
+            print(f"Recorded {len(updates)} package update(s): {changes}")
+        elif changes.exists():
+            changes.unlink()
+
     if updated:
         print("\nUpdated:")
         for message in updated:
@@ -566,6 +622,12 @@ def main(argv: list[str]) -> int:
         print("\nUpdates were left uncommitted; pass --commit to create commits.")
     deferred = {failure["name"] for failure in failures}
     blocking = [name for name in failed if name not in deferred]
+    if keep_failed:
+        blocking_file = Path(log_dir) / "blocking.json"
+        if blocking:
+            blocking_file.write_text(json.dumps(sorted(blocking), indent=2) + "\n")
+        elif blocking_file.exists():
+            blocking_file.unlink()
     if blocking:
         print("\nFailed:", file=sys.stderr)
         for name in blocking:

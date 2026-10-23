@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Build the packages changed by an update PR.
+"""Build every package touched by a unified update run.
 
-The repair agent's local verification is not the gate: this runs from the PR
-workflow on the merge revision. A package is selected when a changed path is
-one of its `passthru.update.files`, or lies under its package directory.
+With `--updates`, the package names come from the updater's `updates.json`;
+build failures are appended to `--failures-file` and the manifest is marked so
+the commit phases can separate clean updates from pins needing repair. The
+manifest is rewritten even when a previously failed pin now builds. Without
+`--updates`, the packages are selected from a git diff, which is useful when
+checking a branch by hand.
+
 Packages that declare `passthru.update.verify` bring those dependents with
-them.
-
-If a `modules/packages/` change matches no update metadata, every updatable
-package is built. That keeps a newly added or renamed package from escaping
-the PR gate.
+them. If a `modules/packages/` diff matches no update metadata, every
+updatable package is built, so a newly added or renamed package cannot escape
+the gate.
 """
 
 from __future__ import annotations
@@ -104,22 +106,50 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", default="origin/main")
     parser.add_argument("--head", default="HEAD")
+    parser.add_argument("--updates")
+    parser.add_argument("--failures-file", default=".update-agent/failures.json")
     parser.add_argument("--log-dir", default=".ci")
     parser.add_argument("--timeout", type=int, default=3600)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
 
     packages = discover_packages()
-    changed = changed_paths(args.base, args.head)
     selected: dict[str, dict] = {}
-    for name, metadata in sorted(packages.items()):
-        files, directories = package_paths(metadata)
-        if any(matches(path, files, directories) for path in changed):
-            selected[name] = metadata
-
-    if not selected and any(path.startswith("modules/packages/") for path in changed):
-        print("no package metadata matched; building every updatable package")
-        selected = dict(packages)
+    entries_by_name: dict[str, dict] = {}
+    if args.updates:
+        try:
+            entries = json.loads(Path(args.updates).read_text())
+        except FileNotFoundError:
+            raise SystemExit(f"error: {args.updates} does not exist")
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"error: could not parse {args.updates}: {exc}")
+        if not isinstance(entries, list):
+            raise SystemExit(f"error: {args.updates} must contain a JSON list")
+        changed = sorted(
+            {
+                path
+                for entry in entries
+                for path in entry.get("files", [])
+                if isinstance(path, str)
+            }
+        )
+        for entry in entries:
+            name = entry.get("name")
+            if isinstance(name, str):
+                entries_by_name[name] = entry
+            if name in packages:
+                selected[name] = packages[name]
+    else:
+        changed = changed_paths(args.base, args.head)
+        for name, metadata in sorted(packages.items()):
+            files, directories = package_paths(metadata)
+            if any(matches(path, files, directories) for path in changed):
+                selected[name] = metadata
+        if not selected and any(
+            path.startswith("modules/packages/") for path in changed
+        ):
+            print("no package metadata matched; building every updatable package")
+            selected = dict(packages)
 
     targets: list[str] = []
     for name, metadata in selected.items():
@@ -147,17 +177,88 @@ def main(argv: list[str]) -> int:
         return 0
 
     results: list[dict] = []
-    for target in targets:
-        print(f"\n==> {target}")
-        log = log_dir / "logs" / f"{target}.log"
-        code = run_logged(
-            ["nix", "build", "--no-link", f".#{target}"],
-            log,
-            timeout=args.timeout,
-        )
-        results.append({"target": target, "passed": code == 0, "log": str(log)})
-        if code != 0:
-            break
+    build_failures: list[dict] = []
+    entry_changed = False
+    for name, metadata in selected.items():
+        targets_for_package = [name, *metadata.get("verify", [])]
+        for target in targets_for_package:
+            print(f"\n==> {target}")
+            log = log_dir / "logs" / f"{target}.log"
+            code = run_logged(
+                ["nix", "build", "--no-link", f".#{target}"],
+                log,
+                timeout=args.timeout,
+            )
+            results.append(
+                {"target": target, "passed": code == 0, "log": str(log)}
+            )
+            primary = target == name
+            entry = entries_by_name.get(name)
+            if code == 0:
+                # A pin whose update command failed but now builds is a clean
+                # update, not a repair. Keep the failure log for the repair
+                # pass, but put the pin in the clean commit.
+                if (
+                    primary
+                    and entry is not None
+                    and entry.get("failed")
+                    and entry.get("phase") == "build"
+                ):
+                    entry["failed"] = False
+                    entry["phase"] = None
+                    entry["target"] = None
+                    entry_changed = True
+                continue
+
+            if entry is not None:
+                entry["failed"] = True
+                entry["phase"] = "build" if primary else "verify"
+                entry["target"] = None if primary else target
+                entry_changed = True
+                build_failures.append(
+                    {
+                        "name": name,
+                        "label": entry.get("label", name),
+                        "old": entry.get("old", ""),
+                        "new": entry.get("new", ""),
+                        "files": entry.get("files", []),
+                        "log": str(log),
+                        "phase": "build" if primary else "verify",
+                        "target": None if primary else target,
+                    }
+                )
+            if primary:
+                # The package did not build; its verify targets cannot add
+                # information about the update.
+                break
+
+    if args.updates and entry_changed:
+        if build_failures:
+            failures_path = Path(args.failures_file)
+            existing: list[dict] = []
+            if failures_path.exists():
+                try:
+                    existing = json.loads(failures_path.read_text())
+                except json.JSONDecodeError as exc:
+                    raise SystemExit(
+                        f"error: could not parse {failures_path}: {exc}"
+                    )
+                if not isinstance(existing, list):
+                    raise SystemExit(
+                        f"error: {failures_path} must contain a JSON list"
+                    )
+            seen = {
+                (entry.get("name"), entry.get("phase"), entry.get("target"))
+                for entry in existing
+            }
+            for failure in build_failures:
+                key = (failure["name"], failure["phase"], failure["target"])
+                if key not in seen:
+                    existing.append(failure)
+                    seen.add(key)
+            failures_path.parent.mkdir(parents=True, exist_ok=True)
+            failures_path.write_text(json.dumps(existing, indent=2) + "\n")
+        Path(args.updates).write_text(json.dumps(entries, indent=2) + "\n")
 
     summary = {
         "changed": changed,
