@@ -18,7 +18,7 @@ storage is involved. `modules/services/harmonia.nix` enables it on loopback:
 | `cache.signKeyPaths` | `config.sops.secrets.cache-signing-key.path` |
 
 The cache is published as the Tailscale Service `svc:nsphere-cache`, so clients
-use `https://<nsphere-cache>.<tailnet>` and the daemon terminates the
+use `http://<nsphere-cache>.<tailnet>` and the daemon terminates the
 certificate. The Service and its endpoint are defined in the tailnet's admin
 console; `modules/machines/neko-sphere.nix` only forwards `tcp:80` to
 `127.0.0.1:5000`.
@@ -65,7 +65,7 @@ The host's values live in `modules/services/freezer.nix`:
 | --- | --- |
 | `repositories` | `flake` — `https://github.com/pelikanade/flake.git`, `pelikanade/flake` |
 | `cache` | unset; Freezer builds into the host store and publishes nothing |
-| `publicUrl` | `https://nsphere-freezer.dwelf-hoki.ts.net`, used only as the commit-status link |
+| `publicUrl` | `http://nsphere-freezer.dwelf-hoki.ts.net`, used only as the commit-status link |
 | `pollInterval` | `10m` |
 
 The upstream module writes the server YAML into the store from these options
@@ -114,7 +114,7 @@ shows `nix build`, not `nix copy`; it posts its commit status with context
 `freezer`. Substitution is proved from another tailnet machine:
 
 ```sh
-nix path-info --store https://<nsphere-cache>.<tailnet> /nix/store/<path>
+nix path-info --store http://<nsphere-cache>.<tailnet> /nix/store/<path>
 ```
 
 Configuration evaluation and a package build prove only that the unit is

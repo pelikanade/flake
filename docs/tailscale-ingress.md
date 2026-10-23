@@ -136,10 +136,11 @@ tailscale status --json | jq '.Self.CapMap."service-host"'
 From another tailnet device:
 
 ```sh
-curl -sI https://nsphere-freezer.dwelf-hoki.ts.net/ | head -1
-curl -sI https://nsphere-magpie.dwelf-hoki.ts.net/ | head -1           # 401 or 200
-curl -s  https://nsphere-magpie-api.dwelf-hoki.ts.net/v1/models | head
-curl -sI https://nsphere-paseo.dwelf-hoki.ts.net/ | head -1
+curl -sI http://nsphere-freezer.dwelf-hoki.ts.net/ | head -1
+curl -sI http://nsphere-magpie.dwelf-hoki.ts.net/ | head -1           # 401 or 200
+curl -s  http://nsphere-magpie-api.dwelf-hoki.ts.net/v1/models | head
+curl -sI http://nsphere-paseo.dwelf-hoki.ts.net/ | head -1
+curl -s  http://nsphere-cache.dwelf-hoki.ts.net/nix-cache-info
 ```
 
 A name that resolves but refuses the connection usually means the host is not

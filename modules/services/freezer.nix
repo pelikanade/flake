@@ -19,7 +19,7 @@
         # The generated environment file holds the credentials; the template's
         # path is outside the store, and systemd reads it as root.
         environmentFile = config.sops.templates.freezer-environment.path;
-        publicUrl = "https://${config.constants.getTailnetFqdn "nsphere-freezer"}";
+        publicUrl = "http://${config.constants.getTailnetFqdn "nsphere-freezer"}";
         pollInterval = "10m";
 
         repositories = [
