@@ -127,12 +127,6 @@
             conditions = [ "[STATUS] == 200" ];
           }
           {
-            name = "SSH";
-            group = "Edge";
-            url = "tcp://127.0.0.1:22";
-            conditions = [ "[CONNECTED] == true" ];
-          }
-          {
             name = "Gatus";
             group = "Edge";
             url = "http://127.0.0.1:3001/";
