@@ -30,7 +30,7 @@ let
       pname = "strata";
       version = "1.1.0";
 
-      # The v1.0.0 tag. `src.rev` is the commit the About dialog names, so it is
+      # The v1.1.0 tag. `src.rev` is the commit the About dialog names, so it is
       # set from the pinned revision rather than left to build.rs, which finds
       # no git checkout in the sandbox.
       src = fetchFromGitHub {
@@ -40,12 +40,10 @@ let
         hash = "sha256-FoYYsjvWY+1SuZtvxancdVR6h7iFmnbtHXW2eTlVCJI=";
       };
 
-      # Two Nix-specific integrations, neither of which upstream's AUR packages
-      # need, because NixOS has neither /usr nor a system profile a sandbox can
-      # see. The updater learns that an executable under /nix/store is owned by
-      # Nix -- a store path cannot be replaced in place, and upstream reserves
-      # its `share/strata/install-source.toml` marker for pacman -- and trusted
-      # helper lookup accepts the closure's bubblewrap.
+      # Upstream's updater recognizes pacman-owned binaries, not store paths:
+      # a store path is immutable, and upstream reserves its
+      # `share/strata/install-source.toml` marker for pacman. Trusted helper
+      # lookup uses upstream's STRATA_TRUSTED_COMMAND_PATH.
       patches = [ ./nix-integration.patch ];
 
       cargoHash = "sha256-U52ypUksrz/2G8apmyh7x9c+47ZBStT1lHIWso7KfU4=";
@@ -102,7 +100,7 @@ let
 
         # bubblewrap itself is resolved from trusted system directories and never
         # from PATH, so the closure supplies it.
-        STRATA_HELPER_PATH = lib.makeBinPath [ bubblewrap ];
+        STRATA_TRUSTED_COMMAND_PATH = lib.makeBinPath [ bubblewrap ];
       };
 
       postInstall = ''

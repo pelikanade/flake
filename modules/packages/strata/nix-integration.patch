@@ -1,8 +1,8 @@
 diff --git a/src/services/update_check.rs b/src/services/update_check.rs
-index b7ac594..e39c739 100644
+index 7675188..3c2ec10 100644
 --- a/src/services/update_check.rs
 +++ b/src/services/update_check.rs
-@@ -664,7 +664,12 @@ pub fn check_for_updates(
+@@ -751,7 +751,12 @@ pub fn check_for_updates(
          .name("strata-update-check".into())
          .spawn(move || {
              let result = match update_method {
@@ -17,10 +17,10 @@ index b7ac594..e39c739 100644
                  UpdateMethod::Omarchy => {
                      fetch_package_update(&installed, omarchy_repository_version)
 diff --git a/src/services/update_install.rs b/src/services/update_install.rs
-index 07e2789..79ac969 100644
+index 925625d..23d3a99 100644
 --- a/src/services/update_install.rs
 +++ b/src/services/update_install.rs
-@@ -39,6 +39,7 @@ const AUR_RESPONSE_LIMIT: u64 = 1024 * 1024;
+@@ -42,6 +42,7 @@ const AUR_RESPONSE_LIMIT: u64 = 1024 * 1024;
  const PACMAN: &str = "/usr/bin/pacman";
  const PACMAN_CONF: &str = "/usr/bin/pacman-conf";
  const OS_RELEASE: &str = "/etc/os-release";
@@ -28,7 +28,7 @@ index 07e2789..79ac969 100644
  const PACKAGE_NAME: &str = "strata";
  const REPOSITORY_DATABASE_LIMIT: u64 = 4 * 1024 * 1024;
  
-@@ -48,6 +49,7 @@ pub enum UpdateMethod {
+@@ -51,6 +52,7 @@ pub enum UpdateMethod {
      Aur,
      Omarchy,
      Pacman,
@@ -36,7 +36,7 @@ index 07e2789..79ac969 100644
  }
  
  impl UpdateMethod {
-@@ -167,7 +169,7 @@ fn is_release_token(value: &str) -> bool {
+@@ -170,7 +172,7 @@ fn is_release_token(value: &str) -> bool {
  }
  
  /// Determines whether the running executable may be updated in place or is
@@ -45,7 +45,7 @@ index 07e2789..79ac969 100644
  pub fn update_method() -> UpdateMethod {
      if InstallSource::detect().is_managed() {
          return UpdateMethod::Aur;
-@@ -179,6 +181,17 @@ pub fn update_method() -> UpdateMethod {
+@@ -182,6 +184,17 @@ pub fn update_method() -> UpdateMethod {
  }
  
  fn update_method_for(executable: &Path, pacman: &Path, os_release: &Path) -> UpdateMethod {
@@ -63,7 +63,7 @@ index 07e2789..79ac969 100644
      let package_owned = match Command::new(pacman)
          .args(["--query", "--owns", "--quiet", "--"])
          .arg(executable)
-@@ -523,6 +536,11 @@ fn perform_install(
+@@ -526,6 +539,11 @@ fn perform_install(
                  "This installation is managed by pacman; install updates through a full system update.",
              )));
          }
@@ -118,43 +118,11 @@ index cf3d73e..066212a 100644
  #[test]
  fn stage_workdir_is_unique_per_call() {
      let exe_dir = tempfile::tempdir().expect("create scratch exe dir");
-diff --git a/src/trusted_command.rs b/src/trusted_command.rs
-index 701d170..689493f 100644
---- a/src/trusted_command.rs
-+++ b/src/trusted_command.rs
-@@ -30,8 +30,26 @@ pub(crate) const TRUST_ROOTS: &[&str] = &[
- #[cfg(test)]
- mod tests;
- 
-+/// Helper directories a package build may add through `STRATA_HELPER_PATH`,
-+/// separated by `:`. NixOS keeps system tools in the store instead of
-+/// `/usr/bin` and `/usr/sbin`, and a package cannot install into the system
-+/// profile, so a closure supplies the sandbox helper it was built against.
-+/// The trust check is unchanged: a candidate still has to canonicalize under
-+/// one of [`TRUST_ROOTS`], which covers `/nix/store`.
-+fn package_helper_directories() -> Vec<PathBuf> {
-+    option_env!("STRATA_HELPER_PATH")
-+        .into_iter()
-+        .flat_map(|value| std::env::split_paths(value).collect::<Vec<_>>())
-+        .filter(|directory| directory.is_absolute())
-+        .collect()
-+}
-+
- pub(crate) fn resolve(name: &str) -> Result<PathBuf, String> {
--    let search: Vec<&Path> = SEARCH_ROOTS.iter().copied().map(Path::new).collect();
-+    // The fixed system directories stay first: a host's setuid wrapper must
-+    // keep winning over the closure copy.
-+    let mut directories: Vec<PathBuf> = SEARCH_ROOTS.iter().map(PathBuf::from).collect();
-+    directories.extend(package_helper_directories());
-+    let search: Vec<&Path> = directories.iter().map(PathBuf::as_path).collect();
-     let trust: Vec<&Path> = TRUST_ROOTS.iter().copied().map(Path::new).collect();
-     resolve_in(name, &search, &trust)
- }
 diff --git a/src/ui/settings.rs b/src/ui/settings.rs
-index 6950ab7..27ac2a0 100644
+index 2a32cd8..2633c88 100644
 --- a/src/ui/settings.rs
 +++ b/src/ui/settings.rs
-@@ -1195,6 +1195,9 @@ fn automatic_updates_option(manager: &Rc<PreferenceManager>, method: UpdateMetho
+@@ -1327,6 +1327,9 @@ fn automatic_updates_option(manager: &Rc<PreferenceManager>, method: UpdateMetho
              UpdateMethod::Pacman => {
                  "Check the configured package repositories for a newer release when Strata starts."
              }
@@ -164,7 +132,7 @@ index 6950ab7..27ac2a0 100644
          },
          manager.checks_for_updates(),
      );
-@@ -1629,7 +1632,7 @@ struct PendingInstall {
+@@ -1761,7 +1764,7 @@ struct PendingInstall {
  /// an offer under the old one.
  fn effective_update_channel(selected: Channel, update_method: UpdateMethod) -> Channel {
      match update_method {
@@ -173,7 +141,7 @@ index 6950ab7..27ac2a0 100644
          UpdateMethod::Omarchy | UpdateMethod::Pacman => Channel::Stable,
      }
  }
-@@ -1858,6 +1861,7 @@ fn update_check_row_with(
+@@ -1990,6 +1993,7 @@ fn update_check_row_with(
                                          UpdateMethod::Aur => aur_update_action_label(),
                                          UpdateMethod::Omarchy => "Open Omarchy Update",
                                          UpdateMethod::Pacman => "Check again",
@@ -181,15 +149,15 @@ index 6950ab7..27ac2a0 100644
                                          UpdateMethod::InPlace => unreachable!(),
                                      }));
                                  } else {
-@@ -2398,6 +2402,7 @@ fn build_update_dialog(
-             UpdateMethod::Aur => aur_action,
-             UpdateMethod::Omarchy => "Open Omarchy Update",
-             UpdateMethod::Pacman => "Close",
-+            UpdateMethod::Nix => "Close",
+@@ -2567,6 +2571,7 @@ fn build_update_dialog(
+             (UpdateMethod::Aur, _) => aur_action,
+             (UpdateMethod::Omarchy, _) => "Open Omarchy Update",
+             (UpdateMethod::Pacman, _) => "Close",
++            (UpdateMethod::Nix, _) => "Close",
          }),
      );
      layout.content.add_css_class("update-dialog");
-@@ -2458,6 +2463,9 @@ fn build_update_dialog(
+@@ -2630,6 +2635,9 @@ fn build_update_dialog(
          UpdateMethod::Pacman => crate::i18n::tr(
              "This installation is managed by pacman. Install it through a full system update.",
          ),
@@ -199,8 +167,8 @@ index 6950ab7..27ac2a0 100644
      };
      let status = gtk::Label::new(Some(&status_message));
      status.add_css_class("update-dialog-status");
-@@ -2609,7 +2617,7 @@ fn build_update_dialog(
-             }
+@@ -2774,7 +2782,7 @@ fn build_update_dialog(
+             });
              return;
          }
 -        if update_method == UpdateMethod::Pacman {
@@ -208,7 +176,7 @@ index 6950ab7..27ac2a0 100644
              dismiss_modal_layer(&action_layer, &action_overlay, action_root.as_ref());
              button.set_sensitive(false);
              return;
-@@ -2914,6 +2922,9 @@ fn installed_version_status(
+@@ -3112,6 +3120,9 @@ fn installed_version_status(
          UpdateMethod::Pacman => {
              rust_i18n::t!("%{version} · Managed by pacman", version = version).into_owned()
          }
@@ -218,7 +186,7 @@ index 6950ab7..27ac2a0 100644
      }
  }
  
-@@ -2943,6 +2954,7 @@ fn update_check_message(result: &UpdateCheck, update_method: UpdateMethod) -> St
+@@ -3141,6 +3152,7 @@ fn update_check_message(result: &UpdateCheck, update_method: UpdateMethod) -> St
                  UpdateMethod::InPlace | UpdateMethod::Aur => rust_i18n::t!("Update available: <a href=\"%{value1}\">v%{value2}</a>", value1 = url, value2 = version),
                  UpdateMethod::Omarchy => rust_i18n::t!("Update available: <a href=\"%{value1}\">v%{value2}</a> · Run “omarchy update” to install", value1 = url, value2 = version),
                  UpdateMethod::Pacman => rust_i18n::t!("Update available: <a href=\"%{value1}\">v%{value2}</a> · Install through a full system update", value1 = url, value2 = version),
@@ -227,10 +195,10 @@ index 6950ab7..27ac2a0 100644
              .into_owned()
          }
 diff --git a/src/ui/window/composition/settings.rs b/src/ui/window/composition/settings.rs
-index ae39b38..b49c147 100644
+index b8cf576..e608a4f 100644
 --- a/src/ui/window/composition/settings.rs
 +++ b/src/ui/window/composition/settings.rs
-@@ -212,5 +212,10 @@ fn update_tooltip(release: &ReleaseMetadata, method: UpdateMethod) -> String {
+@@ -221,5 +221,10 @@ fn update_tooltip(release: &ReleaseMetadata, method: UpdateMethod) -> String {
              value1 = release.version
          )
          .into_owned(),

@@ -5,7 +5,7 @@ browsing, fuzzy search, previews rendered inside a bubblewrap sandbox, and
 optional desktop integration (file chooser portal, folder handling, encrypted
 volume unlock).
 
-`modules/packages/strata/default.nix` builds upstream release `v1.0.0` from
+`modules/packages/strata/default.nix` builds upstream release `v1.1.0` from
 source, and `modules/apps/strata.nix` installs it for every machine that imports
 the `workstation` role.
 
@@ -52,7 +52,7 @@ under `/nix/store` is reported as Nix-managed.
 - Update checks keep querying GitHub, so **Settings → Updates** still reports a
   newer release, with the instruction to update the package in the Nix
   configuration.
-- The status row reads `Version 1.0.0 · Managed by Nix`.
+- The status row reads `Version 1.1.0 · Managed by Nix`.
 
 Set `STRATA_BUILD_COMMIT` from the pinned revision (as the expression does),
 because build.rs finds no git checkout in the sandbox and would otherwise report
@@ -68,7 +68,7 @@ defaults cannot work: with the stock `STRATA_SANDBOX_ROOT=/usr`, the helper cann
 even exec (its ELF interpreter lives in the store) and the app reports
 `Preview unavailable — Connection reset by peer (os error 104)`. The expression
 therefore sets upstream's documented knobs (see upstream
-`docs/preview-sandbox.md`) plus one added by `nix-integration.patch`:
+`docs/preview-sandbox.md`) and the closure's helper directories:
 
 | Build-time variable | Value here |
 | --- | --- |
@@ -76,7 +76,7 @@ therefore sets upstream's documented knobs (see upstream
 | `STRATA_SANDBOX_PRLIMIT` | `util-linux`'s `prlimit`, the resource-limit launcher |
 | `STRATA_SANDBOX_GDK_PIXBUF_MODULE_FILE` | `librsvg`'s `loaders.cache` (GdkPixbuf's loaders plus SVG) |
 | `STRATA_SANDBOX_PATH` | `coreutils`, `ffmpeg`, `ffmpegthumbnailer`, `fontconfig`, `imagemagick`, `libraw`, `squashfs-tools`, `util-linux` |
-| `STRATA_HELPER_PATH` | the closure's `bubblewrap` |
+| `STRATA_TRUSTED_COMMAND_PATH` | the closure's `bubblewrap` |
 
 The sandboxed workers exec those helpers by name for video frames and thumbnails,
 camera RAW, document text (`fc-list`), AppImage icons (`unsquashfs`), and the
@@ -86,10 +86,11 @@ host tools cannot be reached from inside the namespace. The application process
 itself is not sandboxed, so its GStreamer audio player keeps the plugin path
 `wrapGAppsHook4` builds from `gst-plugins-good` and `gst-libav`.
 
-`bwrap` is resolved from fixed trusted directories, never `PATH`, which is why
-`STRATA_HELPER_PATH` exists; trust is unchanged, since a candidate still has to
-canonicalize under a trust root, and `/nix/store` is one, while a host's own copy
-still wins because those directories are searched first.
+`bwrap` is resolved from fixed trusted directories plus
+`STRATA_TRUSTED_COMMAND_PATH`, never `PATH`; trust is unchanged, since a
+configured directory is searched only when it canonicalizes under a trust root,
+and `/nix/store` is one, while a host's own copy still wins because the fixed
+directories are searched first.
 
 Without the helper, the app logs `the bubblewrap sandbox is unavailable` and
 refuses the preview instead of rendering it unsandboxed.
