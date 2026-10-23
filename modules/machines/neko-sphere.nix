@@ -18,6 +18,7 @@
       freezer
       gh
       tailscale-ingress
+      beszel-agent
       zswap
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;

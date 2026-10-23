@@ -18,6 +18,7 @@ The aspect enables `services.caddy` with `openFirewall = true`, which admits TCP
 | --- | --- | --- |
 | `status.nvirellia.im` | `http://127.0.0.1:3001` | [Gatus](gatus.md) status page |
 | `nvirellia.im`, `www.nvirellia.im` | `http://127.0.0.1:8080` | The personal site |
+| `probe.nvirellia.im` | `http://127.0.0.1:8090` | [Beszel](beszel.md) monitoring hub |
 
 The personal site listens there through [its own module](nvirellia.md); a 502 on
 those names means that service is not running while Caddy still holds a valid

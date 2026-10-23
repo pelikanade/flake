@@ -10,6 +10,8 @@
       caddy
       nvirellia-im
       gatus
+      beszel-hub
+      beszel-agent
       zswap
       auto-upgrade-no-build
     ];
@@ -78,6 +80,9 @@
         tailnet = config.constants.getTailnetFqdn;
       in
       {
+        # The hub runs here, so its own agent only has to be reachable locally.
+        services.beszel.agent.environment.LISTEN = "127.0.0.1:45876";
+
         # Automatic HTTPS issues a certificate per name once its A/AAAA record
         # resolves here, so pointing the names at this host is the whole
         # deployment step. The site keeps the upstream module's default port.
@@ -87,6 +92,7 @@
             serverAliases = [ "www.nvirellia.im" ];
             extraConfig = "reverse_proxy 127.0.0.1:8080";
           };
+          "probe.nvirellia.im".extraConfig = "reverse_proxy 127.0.0.1:8090";
         };
 
         services.gatus.settings.endpoints = [
