@@ -34,6 +34,7 @@ creation_rules:
           - *neko-sphere
           - *asymmetry
           - *parallax
+          - *edge
   - path_regex: ^modules/secrets/freezer\.yaml$
     key_groups:
       - age:

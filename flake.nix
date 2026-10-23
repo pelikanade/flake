@@ -62,6 +62,10 @@
       };
     };
     noctalia.url = "github:noctalia-dev/noctalia";
+    nvirellia = {
+      url = "github:pelikanade/nvirellia.im";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     omp = {
       url = "github:can1357/oh-my-pi";
       inputs.nixpkgs.follows = "nixpkgs";
