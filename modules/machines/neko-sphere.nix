@@ -44,8 +44,6 @@
           nsphere-magpie.endpoints."tcp:80" = "http://127.0.0.1:3430";
           nsphere-magpie-api.endpoints."tcp:80" = "http://127.0.0.1:3425";
 
-          nsphere-nvirellia-im.endpoints."tcp:80" = "http://127.0.0.1:8081";
-
           nsphere-paseo.endpoints."tcp:80" = "http://127.0.0.1:6767";
         };
 

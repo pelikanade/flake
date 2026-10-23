@@ -18,7 +18,6 @@ the same host, and a service keeps its name if it later moves to another host.
 | `svc:nsphere-freezer` | `tcp:443` | `http://127.0.0.1:8080` | Freezer, the flake build service |
 | `svc:nsphere-magpie` | `tcp:443` | `http://127.0.0.1:3430` | Magpie's browser page, guarded by `magpie_web_key` |
 | `svc:nsphere-magpie-api` | `tcp:443` | `http://127.0.0.1:3425` | Magpie's gateway, every route upstream serves |
-| `svc:nsphere-nvirellia-im` | `tcp:443` | `http://127.0.0.1:8081` | The personal site |
 | `svc:nsphere-paseo` | `tcp:443` | `http://127.0.0.1:6767` | The Paseo daemon, HTTP and WebSocket |
 
 The tailnet answers `svc:<name>` at `<name>.<tailnetDnsName>`, so
@@ -109,22 +108,6 @@ the node's MagicDNS name and port, and the omp endpoint in
 gateway's port. It adds names; it does not rename what the services
 tell their clients.
 
-## The personal site and Funnel
-
-`nsphere-nvirellia-im` is the personal site. Its `tcp:443` endpoint is already a
-layer-7 HTTPS handler, so the backend does not need to know whether the request
-came from the tailnet or, later, from the public internet.
-
-Tailscale Funnel does not accept a `svc:` target: it publishes a port on the
-node's own MagicDNS name (`neko-sphere.dwelf-hoki.ts.net`). Public exposure is
-therefore a separate declaration, and `nvirellia.im` CNAMEs to the Funnel name
-Tailscale prints. The Service remains the tailnet-internal name; both paths can
-reach the same local target.
-
-Funnel works only over TLS and only on ports 443, 8443 and 10000. Port 443 on the
-node is free here: Services listen on their own virtual addresses, and nothing
-else on this host binds 443.
-
 ## Adding a service
 
 1. Define the Service and its endpoints in the admin console.
@@ -156,7 +139,6 @@ From another tailnet device:
 curl -sI https://nsphere-freezer.dwelf-hoki.ts.net/ | head -1
 curl -sI https://nsphere-magpie.dwelf-hoki.ts.net/ | head -1           # 401 or 200
 curl -s  https://nsphere-magpie-api.dwelf-hoki.ts.net/v1/models | head
-curl -sI https://nsphere-nvirellia-im.dwelf-hoki.ts.net/ | head -1
 curl -sI https://nsphere-paseo.dwelf-hoki.ts.net/ | head -1
 ```
 
