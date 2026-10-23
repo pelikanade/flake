@@ -8,6 +8,7 @@
       bios
       tailscale
       caddy
+      nvirellia-im
       gatus
       zswap
       auto-upgrade-no-build
@@ -79,12 +80,12 @@
       {
         # Automatic HTTPS issues a certificate per name once its A/AAAA record
         # resolves here, so pointing the names at this host is the whole
-        # deployment step. The personal site is expected on loopback 8081.
+        # deployment step. The site keeps the upstream module's default port.
         services.caddy.virtualHosts = {
           "status.nvirellia.im".extraConfig = "reverse_proxy 127.0.0.1:3001";
           "nvirellia.im" = {
             serverAliases = [ "www.nvirellia.im" ];
-            extraConfig = "reverse_proxy 127.0.0.1:8081";
+            extraConfig = "reverse_proxy 127.0.0.1:8080";
           };
         };
 

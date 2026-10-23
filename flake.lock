@@ -793,6 +793,26 @@
         "type": "github"
       }
     },
+    "nvirellia": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792751336,
+        "narHash": "sha256-dKTL+NWrqVak2dlHVcncaoJi+TUhmusn2C6PMbP4Ztc=",
+        "owner": "pelikanade",
+        "repo": "nvirellia.im",
+        "rev": "51427f88f24616a0d38fe357bb0da68773e293ee",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pelikanade",
+        "repo": "nvirellia.im",
+        "type": "github"
+      }
+    },
     "omp": {
       "inputs": {
         "bun2nix": "bun2nix_2",
@@ -881,6 +901,7 @@
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",
         "noctalia": "noctalia",
+        "nvirellia": "nvirellia",
         "omp": "omp",
         "paseo": "paseo",
         "sops-nix": "sops-nix",

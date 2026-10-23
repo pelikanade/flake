@@ -17,10 +17,11 @@ The aspect enables `services.caddy` with `openFirewall = true`, which admits TCP
 | Name | Upstream | Purpose |
 | --- | --- | --- |
 | `status.nvirellia.im` | `http://127.0.0.1:3001` | [Gatus](gatus.md) status page |
-| `nvirellia.im`, `www.nvirellia.im` | `http://127.0.0.1:8081` | The personal site |
+| `nvirellia.im`, `www.nvirellia.im` | `http://127.0.0.1:8080` | The personal site |
 
-The personal site's module must listen on `127.0.0.1:8081`. Until it does, the
-name answers 502 while Caddy still holds a valid certificate.
+The personal site listens there through [its own module](nvirellia.md); a 502 on
+those names means that service is not running while Caddy still holds a valid
+certificate.
 
 ## Certificate issuance
 
