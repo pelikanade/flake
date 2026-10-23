@@ -800,11 +800,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792751336,
-        "narHash": "sha256-dKTL+NWrqVak2dlHVcncaoJi+TUhmusn2C6PMbP4Ztc=",
+        "lastModified": 1792778714,
+        "narHash": "sha256-S/S1oMeYaRoGl+BK9qIQXiJnM5afvkj6wYuE6qH3rvQ=",
         "owner": "pelikanade",
         "repo": "nvirellia.im",
-        "rev": "51427f88f24616a0d38fe357bb0da68773e293ee",
+        "rev": "50c3c142c94b6467c9549d0b65ed9b3b7c94bc05",
         "type": "github"
       },
       "original": {
