@@ -9,7 +9,7 @@ SQLite data; every monitored host runs an agent.
 
 | Aspect | Host | Role |
 | --- | --- | --- |
-| `beszel-hub` | `edge` | Web UI on `127.0.0.1:8090`, data in `/var/lib/beszel-hub` |
+| `beszel-hub` | `edge` | Web UI on `0.0.0.0:8090`, data in `/var/lib/beszel-hub` |
 | `beszel-agent` | `edge` | Listens on `127.0.0.1:45876`, dialled by the local hub |
 | `beszel-agent` | `neko-sphere` | Listens on `45876` on every interface; only the tailnet reaches it |
 
@@ -17,9 +17,10 @@ The hub dials each agent over SSH on 45876, so the agent needs the hub's public
 key and nothing else; no agent secret is stored here. `edge`'s agent binds
 loopback because the hub is on the same host. `neko-sphere`'s agent binds all
 interfaces, but its firewall only admits the `tailscale0` interface, so the hub
-reaches it at `neko-sphere.dwelf-hoki.ts.net:45876` without a public port.
+reaches it at `neko-sphere.dwelf-hoki.ts.net:45876`: the SSH session travels
+inside WireGuard and no agent port is reachable from the internet.
 
-The hub publishes through [Caddy](caddy.md) at
+The hub listens on loopback and is published by [Caddy](caddy.md) at
 `https://probe.nvirellia.im/`.
 
 ## The hub key
