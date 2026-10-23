@@ -16,7 +16,6 @@
       podman
       paseo-daemon
       freezer
-      gatus
       gh
       tailscale-ingress
       zswap
@@ -48,8 +47,6 @@
           nsphere-nvirellia-im.endpoints."tcp:80" = "http://127.0.0.1:8081";
 
           nsphere-paseo.endpoints."tcp:80" = "http://127.0.0.1:6767";
-
-          nsphere-gatus.endpoints."tcp:80" = "http://127.0.0.1:3001";
         };
 
         networking = {
@@ -78,51 +75,6 @@
         address = "172.0.161.24";
         port = 8083;
       };
-
-      services.gatus.settings.endpoints = [
-        {
-          name = "Freezer";
-          group = "Neko Sphere";
-          url = "http://nsphere-freezer.dwelf-hoki.ts.net/";
-          conditions = [ "[STATUS] == 200" ];
-        }
-        {
-          name = "Magpie gateway";
-          group = "Neko Sphere";
-          url = "http://nsphere-magpie-api.dwelf-hoki.ts.net/v1/models";
-          conditions = [ "[STATUS] == 401" ];
-        }
-        {
-          name = "Magpie UI";
-          group = "Neko Sphere";
-          url = "http://nsphere-magpie.dwelf-hoki.ts.net/";
-          conditions = [ "[STATUS] == 401" ];
-        }
-        {
-          name = "Paseo daemon";
-          group = "Neko Sphere";
-          url = "http://nsphere-paseo.dwelf-hoki.ts.net/api/health";
-          conditions = [ "[STATUS] == 200" ];
-        }
-        {
-          name = "ATME NetBird tunnel";
-          group = "Neko Sphere";
-          url = "tcp://127.0.0.1:18083";
-          conditions = [ "[CONNECTED] == true" ];
-        }
-        {
-          name = "nvirellia.im";
-          group = "Noa's IVs";
-          url = "https://nvirellia.im/";
-          conditions = [ "[STATUS] == 200" ];
-        }
-        {
-          name = "nuts.nvirellia.im";
-          group = "Noa's IVs";
-          url = "https://nuts.nvirellia.im/";
-          conditions = [ "[STATUS] == 200" ];
-        }
-      ];
 
       # zswap compresses swapped pages into a RAM pool and writes them here when
       # that pool fills, so the file is both what zswap needs as a backing store

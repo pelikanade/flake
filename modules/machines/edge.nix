@@ -7,6 +7,8 @@
       server
       bios
       tailscale
+      caddy
+      gatus
       zswap
       auto-upgrade-no-build
     ];
@@ -62,6 +64,80 @@
         hardware.enableRedistributableFirmware = false;
 
         disko.devices.disk.main.device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0-0-0-0";
+      };
+
+    # The monitors this host runs. It sits outside the services it checks, so a
+    # failure in the machine that serves them still reaches the status page. The
+    # tailnet entries are the Services neko-sphere advertises; the local ones
+    # cover this host itself, and the NetBird tunnel that only neko-sphere can
+    # see is not carried over.
+    nixosModule =
+      { config, ... }:
+      let
+        tailnet = config.constants.getTailnetFqdn;
+      in
+      {
+        # Automatic HTTPS issues a certificate per name once its A/AAAA record
+        # resolves here, so pointing the names at this host is the whole
+        # deployment step. The personal site is expected on loopback 8081.
+        services.caddy.virtualHosts = {
+          "status.nvirellia.im".extraConfig = "reverse_proxy 127.0.0.1:3001";
+          "nvirellia.im" = {
+            serverAliases = [ "www.nvirellia.im" ];
+            extraConfig = "reverse_proxy 127.0.0.1:8081";
+          };
+        };
+
+        services.gatus.settings.endpoints = [
+          {
+            name = "Freezer";
+            group = "Neko Sphere";
+            url = "http://${tailnet "nsphere-freezer"}/";
+            conditions = [ "[STATUS] == 200" ];
+          }
+          {
+            name = "Magpie gateway";
+            group = "Neko Sphere";
+            url = "http://${tailnet "nsphere-magpie-api"}/v1/models";
+            conditions = [ "[STATUS] == 401" ];
+          }
+          {
+            name = "Magpie UI";
+            group = "Neko Sphere";
+            url = "http://${tailnet "nsphere-magpie"}/";
+            conditions = [ "[STATUS] == 401" ];
+          }
+          {
+            name = "Paseo daemon";
+            group = "Neko Sphere";
+            url = "http://${tailnet "nsphere-paseo"}/api/health";
+            conditions = [ "[STATUS] == 200" ];
+          }
+          {
+            name = "nvirellia.im";
+            group = "Noa's IVs";
+            url = "https://nvirellia.im/";
+            conditions = [ "[STATUS] == 200" ];
+          }
+          {
+            name = "nuts.nvirellia.im";
+            group = "Noa's IVs";
+            url = "https://nuts.nvirellia.im/";
+            conditions = [ "[STATUS] == 200" ];
+          }
+          {
+            name = "SSH";
+            group = "Edge";
+            url = "tcp://127.0.0.1:22";
+            conditions = [ "[CONNECTED] == true" ];
+          }
+          {
+            name = "Gatus";
+            group = "Edge";
+            url = "http://127.0.0.1:3001/";
+            conditions = [ "[STATUS] == 200" ];
+          }
+        ];
       };
   };
 }
