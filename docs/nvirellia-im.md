@@ -1,6 +1,6 @@
 # nvirellia.im
 
-[`modules/services/nvirellia.nix`](../modules/services/nvirellia.nix) runs the
+[`modules/services/nvirellia-im.nix`](../modules/services/nvirellia-im.nix) runs the
 personal site on `edge`. The site is its own flake
 ([`pelikanade/nvirellia.im`](https://github.com/pelikanade/nvirellia.im)): a Go
 service whose templates and static assets are embedded in the binary. This
@@ -16,7 +16,10 @@ Both the input and the aspect are named `nvirellia-im`, so the upstream flake
 and the aspect that deploys it are easy to pair. The suffix also keeps the
 aspect distinct from the maintainer's user module
 ([modules/users/nvirellia.nix](../modules/users/nvirellia.nix)), whose
-`flake.modules.nixos.nvirellia` name would otherwise merge into it.
+`flake.modules.nixos.nvirellia` name would otherwise merge into it. The module
+file and its sops template carry the same suffix; only the upstream-fixed
+`services.nvirellia` option namespace and `nvirellia.service` unit name keep the
+bare name.
 
 The service listens on `127.0.0.1:8080`, the upstream default, and Caddy
 reverse-proxies `nvirellia.im` and `www.nvirellia.im` to it ([caddy.md](caddy.md)).
