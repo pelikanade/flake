@@ -112,8 +112,9 @@ with; `wrapGAppsHook3` supplies the GTK environment; `ldflags` stamps the versio
 the CLI reports. `copyDesktopItems` installs a `Development` entry claiming
 `x-scheme-handler/magpie`, which is how the app is handed its own links, and the
 icon is installed into hicolor at 1024x1024. The toolchain is the channel's
-`go_1_27`, because upstream's `go.mod` demands go >= 1.26.8 and nixos-26.05's
-default Go is 1.26.7.
+default Go, 1.26.8, which upstream's `go.mod` pins: its gateway tests compare
+`marshalRaw` byte for byte with `encoding/json`, and Go 1.27 also escapes
+U+2028 and U+2029 in compacted raw messages, which 1.26 leaves as they are.
 
 Three patches keep a Nix-managed copy from fighting its store path:
 
@@ -143,14 +144,14 @@ wrapper prepends `xdg-utils` and `desktop-file-utils` to `PATH` and unsets
 `APPIMAGE`.
 
 `preCheck` rewrites the test suite's absolute `/bin/cat`, `/bin/mkdir`,
-`/usr/bin:/bin` and `--session` references to store paths — the `os` import one
-such rewrite leaves unused goes with them — gives the WSL probe's PATH
-`coreutils` and `bash`, and widens the source-policy test to accept the vendored
-tree, before `go test -tags=production,gtk3 ./...` runs. The check inputs add
-`procps`, for the tests that read a process's name out of `ps`, beside the Nix
-Bun. The install check runs the finished `magpie --version` and, without network
-or sign-in, adds a test plugin through the installed wrapper and lists it,
-asserting that no Bun landed in `$XDG_CACHE_HOME`.
+`/usr/bin:/bin`, `/usr/bin/env` and `--session` references to store paths — the
+`os` import one such rewrite leaves unused goes with them — gives the WSL
+probe's PATH `coreutils` and `bash`, and widens the source-policy test to accept
+the vendored tree, before `go test -tags=production,gtk3 ./...` runs. The check
+inputs add `procps`, for the tests that read a process's name out of `ps`, beside
+the Nix Bun. The install check runs the finished `magpie --version` and, without
+network or sign-in, adds a test plugin through the installed wrapper and lists
+it, asserting that no Bun landed in `$XDG_CACHE_HOME`.
 
 ## State
 
@@ -165,6 +166,7 @@ stored under the service home, and nothing here renders into that home.
 
 Bump `version` together with the `hash` of the new tag, and `vendorHash` when
 `go.mod` changes. A raised `go` directive needs a channel Go that meets it:
-`packages.magpie` pins `go_1_27` today. The in-app updater cannot help and
-neither can `magpie update`: the store is read-only and the terminal path refuses
-on purpose.
+`packages.magpie` takes the channel default, which `go.mod` pins today. Moving
+to a channel's `go_1_*` instead means rechecking the gateway's byte-for-byte
+`encoding/json` comparisons. The in-app updater cannot help and neither can
+`magpie update`: the store is read-only and the terminal path refuses on purpose.

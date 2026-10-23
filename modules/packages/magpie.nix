@@ -4,7 +4,6 @@ let
     {
       lib,
       buildGoModule,
-      go,
       fetchFromGitHub,
       bun,
       pkg-config,
@@ -26,7 +25,7 @@ let
       grok,
       claude-code,
     }:
-    (buildGoModule.override { inherit go; }) (finalAttrs: {
+    buildGoModule (finalAttrs: {
       pname = "magpie";
       version = "0.1.1327";
 
@@ -139,6 +138,11 @@ let
           --replace-fail '/bin/cat' '${coreutils}/bin/cat'
         substituteInPlace internal/provider/codex_keychain_ask_unix_test.go \
           --replace-fail '/bin/sleep' '${coreutils}/bin/sleep'
+        # The fake WSL launcher stands in for wsl.exe with /usr/bin/env, which
+        # carries the fake server's mode into the check it starts.
+        substituteInPlace internal/library/mcp_check_wsl_test.go \
+          --replace-fail 'c.Path, c.Args = "/usr/bin/env", append([]string{"/usr/bin/env", fakeMode' \
+          'c.Path, c.Args = "${coreutils}/bin/env", append([]string{"${coreutils}/bin/env", fakeMode'
         substituteInPlace internal/agent/zed_credential_secret_test.go \
           --replace-fail '"--session"' '"--config-file=${dbus}/share/dbus-1/session.conf"'
         substituteInPlace internal/proc/proc_test.go internal/sqlitedb/sqlitedb_test.go \
@@ -156,11 +160,7 @@ let
       '';
       checkPhase = ''
         runHook preCheck
-        # TestCodexFittedImagesPastTheBudget sizes its cache budget from the
-        # length of the first fitted PNG and assumes every other image encodes
-        # to the same length. They do not under Go 1.27, so 11 rather than 10
-        # entries fit and the test fails although the cache keeps its budget.
-        go test -tags=production,gtk3 -skip '^TestCodexFittedImagesPastTheBudget$' ./...
+        go test -tags=production,gtk3 ./...
         runHook postCheck
       '';
 
@@ -222,6 +222,7 @@ let
       passthru.update = {
         kind = "nix-update";
         file = "modules/packages/magpie.nix";
+        files = [ "modules/packages/magpie.nix" ];
       };
 
       meta = {
@@ -245,12 +246,12 @@ in
     {
       # Magpie never runs a Bun older than its BunVersion floor (1.4.2), which
       # nixos-26.05 does not carry yet; take the unstable set's Bun and leave the
-      # rest of the build on stable. Its go.mod demands go >= 1.26.8, past the
-      # channel's default Go (1.26.7), so build with the channel's newer go_1_27
-      # rather than with another package set's toolchain.
+      # rest of the build on stable. Its go.mod pins Go 1.26.8, the channel's
+      # default toolchain, whose encoding/json the gateway's byte-for-byte
+      # comparison tests are written against; Go 1.27 escapes U+2028 and U+2029
+      # in compacted raw messages that 1.26 leaves alone.
       packages.magpie = pkgs.callPackage package {
         inherit (pkgsUnstable) bun;
-        go = pkgs.go_1_27;
         inherit (inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}) grok claude-code;
       };
     };
