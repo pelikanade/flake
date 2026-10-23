@@ -3,7 +3,7 @@
   # The personal site is its own flake: a Go service whose templates and static
   # assets are embedded in the binary. The input carries the package and the
   # upstream NixOS module, which owns the unit, hardening and its options.
-  flake-file.inputs.nvirellia = {
+  flake-file.inputs.nvirellia-im = {
     url = "github:pelikanade/nvirellia.im";
     inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -11,7 +11,7 @@
   flake.modules.nixos.nvirellia-im =
     { config, ... }:
     {
-      imports = [ inputs.nvirellia.nixosModules.default ];
+      imports = [ inputs.nvirellia-im.nixosModules.default ];
 
       services.nvirellia = {
         enable = true;

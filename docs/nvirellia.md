@@ -8,14 +8,15 @@ repository takes it as an input and contributes only the deployment.
 
 ## The input and the aspect
 
-`flake-file.inputs.nvirellia` pins the upstream flake, with `nixpkgs` following
+`flake-file.inputs.nvirellia-im` pins the upstream flake, with `nixpkgs` following
 this repository's. The aspect imports its `nixosModules.default` and enables
 `services.nvirellia`; the unit, its hardening and its options belong upstream.
 
-The aspect is named `nvirellia-im`, not `nvirellia`: the latter is the
-maintainer's user module ([modules/users/nvirellia.nix](../modules/users/nvirellia.nix)),
-and two files declaring the same `flake.modules.nixos` name are merged rather
-than kept apart.
+Both the input and the aspect are named `nvirellia-im`, so the upstream flake
+and the aspect that deploys it are easy to pair. The suffix also keeps the
+aspect distinct from the maintainer's user module
+([modules/users/nvirellia.nix](../modules/users/nvirellia.nix)), whose
+`flake.modules.nixos.nvirellia` name would otherwise merge into it.
 
 The service listens on `127.0.0.1:8080`, the upstream default, and Caddy
 reverse-proxies `nvirellia.im` and `www.nvirellia.im` to it ([caddy.md](caddy.md)).

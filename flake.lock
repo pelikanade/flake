@@ -793,7 +793,7 @@
         "type": "github"
       }
     },
-    "nvirellia": {
+    "nvirellia-im": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
@@ -901,7 +901,7 @@
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",
         "noctalia": "noctalia",
-        "nvirellia": "nvirellia",
+        "nvirellia-im": "nvirellia-im",
         "omp": "omp",
         "paseo": "paseo",
         "sops-nix": "sops-nix",

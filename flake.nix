@@ -62,7 +62,7 @@
       };
     };
     noctalia.url = "github:noctalia-dev/noctalia";
-    nvirellia = {
+    nvirellia-im = {
       url = "github:pelikanade/nvirellia.im";
       inputs.nixpkgs.follows = "nixpkgs";
     };
