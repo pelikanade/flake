@@ -3,8 +3,7 @@
   # The personal site is its own flake: a Go service whose templates and static
   # assets are embedded in the binary. The input carries the package and the
   # upstream NixOS module, which owns the unit, hardening and its options.
-  # Upstream fixes the option namespace and unit name as `nvirellia`; this
-  # repository's aspect, file and sops template carry the `nvirellia-im` suffix.
+  # The option namespace and unit name carry the same suffix as this aspect.
   flake-file.inputs.nvirellia-im = {
     url = "github:pelikanade/nvirellia.im";
     inputs.nixpkgs.follows = "nixpkgs";
@@ -15,7 +14,7 @@
     {
       imports = [ inputs.nvirellia-im.nixosModules.default ];
 
-      services.nvirellia = {
+      services.nvirellia-im = {
         enable = true;
 
         # The Resources panel asks Magpie's web API through its tailnet Service.
@@ -35,12 +34,12 @@
         format = "yaml";
         key = "magpie_web_key";
         sopsFile = config.constants.resources.getSecretPath "magpie.yaml";
-        restartUnits = [ "nvirellia.service" ];
+        restartUnits = [ "nvirellia-im.service" ];
       };
 
       sops.templates.nvirellia-im-environment = {
         content = "MAGPIE_WEB_KEY=${config.sops.placeholder."magpie-web-key"}";
-        restartUnits = [ "nvirellia.service" ];
+        restartUnits = [ "nvirellia-im.service" ];
       };
     };
 }
