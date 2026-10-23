@@ -1,8 +1,10 @@
 # Beszel
 
-[`modules/services/beszel.nix`](../modules/services/beszel.nix) runs
+[`modules/services/beszel-hub.nix`](../modules/services/beszel-hub.nix) runs the
+hub and [`modules/services/beszel-agent.nix`](../modules/services/beszel-agent.nix)
+the agents for
 [Beszel](https://beszel.dev), a small monitor that keeps per-host history of CPU,
-memory, disk, containers and systemd units. One hub owns the web UI and the
+memory, disk, containers and systemd units. The hub owns the web UI and the
 SQLite data; every monitored host runs an agent.
 
 ## Composition
@@ -10,45 +12,45 @@ SQLite data; every monitored host runs an agent.
 | Aspect | Host | Role |
 | --- | --- | --- |
 | `beszel-hub` | `edge` | Web UI on `0.0.0.0:8090`, data in `/var/lib/beszel-hub` |
-| `beszel-agent` | `edge` | Listens on `127.0.0.1:45876`, dialled by the local hub |
-| `beszel-agent` | `neko-sphere` | Listens on `45876` on every interface; only the tailnet reaches it |
+| `beszel-agent` | `edge` | Dials `http://127.0.0.1:8090` |
+| `beszel-agent` | `neko-sphere` | Dials `https://probe.nvirellia.im` |
 
-The hub dials each agent over SSH on 45876, so the agent needs the hub's public
-key and nothing else; no agent secret is stored here. `edge`'s agent binds
-loopback because the hub is on the same host. `neko-sphere`'s agent binds all
-interfaces, but its firewall only admits the `tailscale0` interface, so the hub
-reaches it at `neko-sphere.dwelf-hoki.ts.net:45876`: the SSH session travels
-inside WireGuard and no agent port is reachable from the internet.
+Agents connect out to the hub over a WebSocket and listen on no port at all:
+`DISABLE_SSH=true` on both sides removes the SSH server and the hub's SSH
+fallback, so a disconnected agent is marked down rather than dialled. The hub is
+published by [Caddy](caddy.md) at `https://probe.nvirellia.im/`, and binds every
+interface so tailnet peers reach it directly; its port stays closed on the
+public firewall.
 
-The hub listens on loopback and is published by [Caddy](caddy.md) at
-`https://probe.nvirellia.im/`.
+`neko-sphere` dials the public name because sing-box captures that host's
+outbound tailnet traffic, so a direct `edge.dwelf-hoki.ts.net:8090` URL times
+out. The WebSocket goes through the proxy to Cloudflare to `edge`.
 
-## The hub key
+## Registration
 
-The hub generates `id_ed25519` in its data directory on first start, and
-`services.beszel.agent.environment.KEY` carries its public half. The private half
-is what the hub signs agent connections with: back up
-`/var/lib/beszel-hub/beszel_data/` with the database. If the key is lost, every
-agent's `KEY` changes and the systems have to be registered again.
+One universal token authenticates every agent. It lives in
+`modules/secrets/beszel.yaml` (recipient: the maintainer and both agents) and is
+rendered into `TOKEN=` in the unit's `EnvironmentFile` by sops. The hub creates a
+system per agent the first time it connects, named after the agent's
+`SYSTEM_NAME` (the machine's hostname) and keyed by a fingerprint derived from
+`/etc/machine-id`, so restarts and reconnects reuse the same system.
 
-## Adding a system
-
-The hub keeps its system list in its own database, so the agents are not
-registered declaratively. After creating the admin account at
-`https://probe.nvirellia.im/`, add one system per host:
-
-| Name | Host | Port |
-| --- | --- | --- |
-| `edge` | `127.0.0.1` | `45876` |
-| `neko-sphere` | `neko-sphere.dwelf-hoki.ts.net` | `45876` |
+`KEY` stays in the agent's environment although it no longer authenticates
+anything: the agent refuses to start without a public key. The private half
+lives in `/var/lib/beszel-hub/beszel_data/id_ed25519`; back up that directory
+with the database.
 
 ## Verification
 
-The agent's SSH endpoint answers a successful handshake with a stats document,
-which proves the key is accepted without the UI:
+```sh
+systemctl status beszel-hub beszel-agent
+journalctl -u beszel-agent -b --no-pager | grep WebSocket   # "WebSocket connected"
+ss -ltn | grep 45876                                        # no output: no agent listener
+```
+
+The hub's database records the registered systems:
 
 ```sh
-ssh -p 45876 -i /var/lib/beszel-hub/beszel_data/id_ed25519 \
-  -o UserKnownHostsFile=/dev/null beszel@neko-sphere.dwelf-hoki.ts.net
-systemctl status beszel-hub beszel-agent
+nix shell nixpkgs#sqlite -c sqlite3 -readonly \
+  /var/lib/beszel-hub/beszel_data/data.db "select name, host, status from systems;"
 ```

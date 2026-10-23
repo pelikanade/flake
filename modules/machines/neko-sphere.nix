@@ -64,6 +64,10 @@
     # neither runs Home Manager, so this machine's author identity belongs in the
     # system-wide gitconfig that both read.
     nixosModule = {
+      # The agent dials the hub over its public name: sing-box captures this
+      # host's outbound tailnet traffic, so a direct tailnet URL does not work.
+      services.beszel.agent.environment.HUB_URL = "https://probe.nvirellia.im";
+
       programs.git.config.user = {
         name = "Felis catus 'Clonazepam' Suzume";
         email = "suzume@neko-sphere.lotus.local";

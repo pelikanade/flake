@@ -80,8 +80,8 @@
         tailnet = config.constants.getTailnetFqdn;
       in
       {
-        # The hub runs here, so its own agent only has to be reachable locally.
-        services.beszel.agent.environment.LISTEN = "127.0.0.1:45876";
+        # The hub runs on this host, so its agent dials it over loopback.
+        services.beszel.agent.environment.HUB_URL = "http://127.0.0.1:8090";
 
         # Automatic HTTPS issues a certificate per name once its A/AAAA record
         # resolves here, so pointing the names at this host is the whole

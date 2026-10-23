@@ -50,3 +50,9 @@ creation_rules:
       - age:
           - *noa
           - *neko-sphere
+  - path_regex: ^modules/secrets/beszel\.yaml$
+    key_groups:
+      - age:
+          - *noa
+          - *edge
+          - *neko-sphere
