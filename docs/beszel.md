@@ -22,9 +22,11 @@ published by [Caddy](caddy.md) at `https://probe.nvirellia.im/`, and binds every
 interface so tailnet peers reach it directly; its port stays closed on the
 public firewall.
 
-`neko-sphere` dials the public name because sing-box captures that host's
-outbound tailnet traffic, so a direct `edge.dwelf-hoki.ts.net:8090` URL times
-out. The WebSocket goes through the proxy to Cloudflare to `edge`.
+`neko-sphere` dials the public name because the tailnet ACL does not admit that
+tagged node to `edge:8090`; `tailscaled` logs the rejection as
+`rejected due to acl`. Its WebSocket therefore goes out through the proxy to
+Cloudflare to `edge`. Granting the node that destination lets the URL become
+`http://edge.dwelf-hoki.ts.net:8090` instead.
 
 ## Registration
 
