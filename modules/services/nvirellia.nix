@@ -19,14 +19,10 @@
         # The Resources panel asks Magpie's web API through its tailnet Service.
         magpie.url = "http://${config.constants.getTailnetFqdn "nsphere-magpie"}";
         magpie.keyFile = config.sops.templates.nvirellia-environment.path;
-      };
 
-      # The pinned site input predates the Status tab's module options, so the
-      # loopback APIs go in the unit environment directly. Move these to
-      # services.nvirellia.{gatus,prometheus} after bumping the input.
-      systemd.services.nvirellia.environment = {
-        GATUS_URL = "http://127.0.0.1:3001";
-        PROMETHEUS_URL = "http://127.0.0.1:9090";
+        # The Status tab reads the monitors that run on this host.
+        gatus.url = "http://127.0.0.1:3001";
+        prometheus.url = "http://127.0.0.1:9090";
       };
 
       # The key lives in Magpie's own document; enrollment is per document, so

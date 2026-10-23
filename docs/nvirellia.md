@@ -33,9 +33,8 @@ document, so `edge` can unwrap the whole Magpie document, not only the web key.
 
 The Status tab reads two loopback APIs on `edge`: Gatus at
 `http://127.0.0.1:3001` and Prometheus at `http://127.0.0.1:9090`. The aspect
-sets them in the unit environment as `GATUS_URL` and `PROMETHEUS_URL` (the
-pinned site input predates those module options); both APIs are read-only and
-need no key. Gatus supplies per-endpoint uptime and its last result, while
+sets `services.nvirellia.gatus.url` and `services.nvirellia.prometheus.url`;
+both APIs are read-only and need no key. Gatus supplies per-endpoint uptime and its last result, while
 Prometheus supplies node_exporter's CPU, memory, disk and host uptime for the
 targets declared in [probe](probe.md).
 

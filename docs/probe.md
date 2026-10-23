@@ -29,9 +29,8 @@ display name the site uses, so keep it short and stable.
 
 ## API used by the site
 
-The aspect sets `PROMETHEUS_URL=http://127.0.0.1:9090` in the site's unit
-environment (the pinned site input predates the module option) and the site
-queries the read-only API. It reads `up{job="node"}` for the target state,
+The aspect sets `services.nvirellia.prometheus.url = "http://127.0.0.1:9090"`
+and the site queries the read-only API. It reads `up{job="node"}` for the target state,
 `node_boot_time_seconds` for host uptime, and `query_range` for the CPU,
 memory and root-disk percentage histories behind the sparklines. Metrics for a
 target whose `up` is `0` are left blank rather than showing the last stale
