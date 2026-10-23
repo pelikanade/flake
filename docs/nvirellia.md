@@ -29,6 +29,19 @@ and renders `MAGPIE_WEB_KEY=...` into a sops template the unit reads as its
 `EnvironmentFile`, so the key never enters the Nix store. Enrollment is per
 document, so `edge` can unwrap the whole Magpie document, not only the web key.
 
+## Status tab
+
+The Status tab reads two loopback APIs on `edge`: Gatus at
+`http://127.0.0.1:3001` and Prometheus at `http://127.0.0.1:9090`. The aspect
+sets them in the unit environment as `GATUS_URL` and `PROMETHEUS_URL` (the
+pinned site input predates those module options); both APIs are read-only and
+need no key. Gatus supplies per-endpoint uptime and its last result, while
+Prometheus supplies node_exporter's CPU, memory, disk and host uptime for the
+targets declared in [probe](probe.md).
+
+When either upstream has no data the tab's corresponding frame is omitted; when
+both are empty the tab is disabled, just like Resources without Magpie.
+
 ## Verification
 
 ```sh

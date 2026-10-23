@@ -10,8 +10,8 @@
       caddy
       nvirellia-im
       gatus
-      beszel-hub
-      beszel-agent
+      probe-hub
+      probe-agent
       zswap
       auto-upgrade-no-build
     ];
@@ -69,19 +69,29 @@
         disko.devices.disk.main.device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0-0-0-0";
       };
 
-    # The monitors this host runs. It sits outside the services it checks, so a
-    # failure in the machine that serves them still reaches the status page. The
-    # tailnet entries are the Services neko-sphere advertises; the local ones
-    # cover this host itself, and the NetBird tunnel that only neko-sphere can
-    # see is not carried over.
+    # The monitors this host runs: Gatus checks the public and tailnet Services,
+    # while Prometheus scrapes node_exporter on this host and its peer. Both sit
+    # outside the machine that serves most of what they check, so a failure
+    # there still reaches the status page. The tailnet entries are the Services
+    # neko-sphere advertises; the local ones cover this host itself, and the
+    # NetBird tunnel that only neko-sphere can see is not carried over.
     nixosModule =
       { config, ... }:
       let
         tailnet = config.constants.getTailnetFqdn;
       in
       {
-        # The hub runs on this host, so its agent dials it over loopback.
-        services.beszel.agent.environment.HUB_URL = "http://127.0.0.1:8090";
+        # Prometheus scrapes itself over loopback and the peer over the tailnet.
+        services.probe.targets = [
+          {
+            name = "edge";
+            address = "127.0.0.1";
+          }
+          {
+            name = "neko-sphere";
+            address = tailnet "neko-sphere";
+          }
+        ];
 
         # Automatic HTTPS issues a certificate per name once its A/AAAA record
         # resolves here, so pointing the names at this host is the whole
@@ -92,7 +102,6 @@
             serverAliases = [ "www.nvirellia.im" ];
             extraConfig = "reverse_proxy 127.0.0.1:8080";
           };
-          "probe.nvirellia.im".extraConfig = "reverse_proxy 127.0.0.1:8090";
         };
 
         services.gatus.settings.endpoints = [

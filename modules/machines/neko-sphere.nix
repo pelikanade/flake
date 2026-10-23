@@ -19,7 +19,7 @@
       harmonia
       gh
       tailscale-ingress
-      beszel-agent
+      probe-agent
       zswap
     ];
     diskoConfig = inputs.self.diskoConfigurations.workstation-legacy;
@@ -66,10 +66,6 @@
     # neither runs Home Manager, so this machine's author identity belongs in the
     # system-wide gitconfig that both read.
     nixosModule = {
-      # The tailnet ACL does not admit this tagged node to edge:8090, so the
-      # agent dials the hub through its public name instead.
-      services.beszel.agent.environment.HUB_URL = "https://probe.nvirellia.im";
-
       programs.git.config.user = {
         name = "Felis catus 'Clonazepam' Suzume";
         email = "suzume@neko-sphere.lotus.local";
