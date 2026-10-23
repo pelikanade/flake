@@ -16,6 +16,7 @@
       podman
       paseo-daemon
       freezer
+      harmonia
       gh
       tailscale-ingress
       beszel-agent
@@ -41,6 +42,7 @@
         # forward the connection unmodified instead.
         services.tailscale-ingress.services = {
           nsphere-freezer.endpoints."tcp:80" = "http://127.0.0.1:8080";
+          nsphere-cache.endpoints."tcp:80" = "http://127.0.0.1:5000";
 
           nsphere-magpie.endpoints."tcp:80" = "http://127.0.0.1:3430";
           nsphere-magpie-api.endpoints."tcp:80" = "http://127.0.0.1:3425";

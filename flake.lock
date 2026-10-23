@@ -400,11 +400,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792639003,
-        "narHash": "sha256-ZT28lQXWH/4ExLBLZENz3eKwypS0f0arpGy+IEOrtag=",
+        "lastModified": 1792754861,
+        "narHash": "sha256-m1AFvRkDhc8prycR/EOcqBrfaS2uiDAoGDOleTl0C3c=",
         "owner": "pelikanade",
         "repo": "freezer",
-        "rev": "93e921ee3c4b727f1d0dfed168dac7c5be1e5715",
+        "rev": "b6670bdf82fcdafb2ad3ecfdbbb4cfdf32f0013b",
         "type": "github"
       },
       "original": {

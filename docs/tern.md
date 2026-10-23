@@ -43,7 +43,8 @@ nix build .#tern
 `requireFile` compares by output path, which is the content hash plus the
 artifact's own file name: add the tarball under the name the expression expects,
 and neither rename it (`Tern-0.9.5-linux-x86_64(1).tar.gz` will not do) nor edit
-it. Keep the artifact out of the repository and out of any public cache.
+it. Keep the artifact out of the repository and out of any public cache; the
+private Harmonia cache on `neko-sphere` is the intended consumer.
 
 ## The build
 
