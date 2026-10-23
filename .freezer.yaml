@@ -4,5 +4,6 @@
 entries:
   - packages.x86_64-linux.*
   - nixosConfigurations.asymmetry.config.system.build.toplevel
+  - nixosConfigurations.edge.config.system.build.toplevel
   - nixosConfigurations.neko-sphere.config.system.build.toplevel
   - nixosConfigurations.parallax.config.system.build.toplevel
