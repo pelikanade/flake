@@ -18,7 +18,7 @@
         # The generated environment file holds the credentials; the template's
         # path is outside the store, and systemd reads it as root.
         environmentFile = config.sops.templates.freezer-environment.path;
-        publicUrl = "https://freezer.neko-sphere.nvirellia.im";
+        publicUrl = "https://${config.constants.getTailnetFqdn "nsphere-freezer"}";
         pollInterval = "10m";
 
         cache = {

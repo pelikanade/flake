@@ -38,7 +38,7 @@ The host's values live in `modules/services/freezer.nix`:
 | `repositories` | `flake` — `https://github.com/pelikanade/flake.git`, `pelikanade/flake` |
 | `cache.bucket` | `nix-binary-cache` |
 | `cache.endpoint` | the R2 S3 endpoint of the cache account |
-| `publicUrl` | `https://freezer.neko-sphere.nvirellia.im`, used only as the commit-status link |
+| `publicUrl` | `https://nsphere-freezer.dwelf-hoki.ts.net`, used only as the commit-status link |
 | `pollInterval` | `10m` |
 
 The bucket is served publicly through the custom domain
