@@ -30,10 +30,9 @@ push main ──> Deploy workflow (self-hosted runner on neko-sphere)
 - `workflow_dispatch` from `main`.
 
 A dispatch from another ref is skipped. The matrix runs with
-`fail-fast: false` and `max-parallel: 1`, so the single runner processes one
-target at a time. Each job builds its own closure and sends its own trigger; a
-build failure leaves that target on its current generation while the other
-matrix jobs continue.
+`fail-fast: false`; the single runner processes one target at a time. Each job
+builds its own closure and sends its own trigger; a build failure leaves that
+target on its current generation while the other matrix jobs continue.
 
 The update workflow pushes its commits with `GITHUB_TOKEN`. GitHub does not
 start a new `push` workflow for that token, so
@@ -46,8 +45,8 @@ workflow needs the `actions: write` permission.
 `modules/services/github-runner.nix` registers one repository-level runner,
 named `neko-sphere`, with the labels `self-hosted` and `neko-sphere`. It is
 ephemeral: it registers, processes one job, deregisters, and is registered
-again by systemd for the next job. With one runner and `max-parallel: 1`, the
-matrix jobs run one after another.
+again by systemd for the next job. With one runner, the matrix jobs run one
+after another.
 
 The runner service runs as the static `github-runner` user. It has no root, no
 SSH key, and no deployment unit of its own. The `avalanche` aspect, imported by

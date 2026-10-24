@@ -21,7 +21,6 @@ jobs:
     name: Deploy ${{ matrix.target }}
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         # Keep this list in sync with the machines that import avalanche.
         target:
