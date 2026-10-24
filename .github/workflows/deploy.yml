@@ -39,7 +39,7 @@ jobs:
       - name: Build and trigger deploy target
         env:
           AVALANCHE_CLIENT_TAILNET: dwelf-hoki.ts.net
-          AVALANCHE_CLIENT_PORT: "8080"
+          AVALANCHE_CLIENT_PORT: "28250"
           AVALANCHE_CLIENT_FLAKE: "."
           AVALANCHE_CLIENT_TIMEOUT: 2h
         run: /run/current-system/sw/bin/avalanche-client --target "${{ matrix.target }}"

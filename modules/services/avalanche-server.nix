@@ -9,7 +9,7 @@
     }:
     let
       triggerDir = "/run/avalanche";
-      triggerPort = 8080;
+      triggerPort = 28250;
       avalanche = pkgs.selfPackages.avalanche;
 
       serverYaml = (pkgs.formats.yaml { }).generate "server.yaml" {

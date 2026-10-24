@@ -123,13 +123,13 @@ public DERP server, through the proxy on this side.
 Each deploy target publishes its loopback trigger with:
 
 ```sh
-tailscale serve --bg --http=8080 8080
+tailscale serve --bg --http=28250 28250
 ```
 
-The runner calls `http://<target>.<tailnetDnsName>:8080/deploy`. This uses the
+The runner calls `http://<target>.<tailnetDnsName>:28250/deploy`. This uses the
 node's own MagicDNS name, not a Tailscale Service, so nothing needs to be
 created in the admin console. The tailnet policy only needs to allow
-`tcp:8080` from the runner to the targets if it is not already open; the request
+`tcp:28250` from the runner to the targets if it is not already open; the request
 carries a bearer token from sops. Tailscale SSH is not enabled or used.
 
 The target service, token, and activation path are described in

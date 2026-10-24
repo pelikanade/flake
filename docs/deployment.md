@@ -114,7 +114,7 @@ The workflow passes the client configuration through the environment:
 ```yaml
 env:
   AVALANCHE_CLIENT_TAILNET: <tailnetDnsName>
-  AVALANCHE_CLIENT_PORT: "8080"
+  AVALANCHE_CLIENT_PORT: "28250"
   AVALANCHE_CLIENT_FLAKE: "."
   AVALANCHE_CLIENT_TIMEOUT: 2h
 ```
@@ -131,7 +131,7 @@ server:
   hostname: <hostname>
   token_file: /run/secrets/avalanche_token
   dir: /run/avalanche
-  port: 8080
+  port: 28250
   timeout: 2h
 ```
 
@@ -142,14 +142,14 @@ file is optional, so an environment-only deployment still works.
 ## Deploy trigger
 
 Each target runs `avalanche-server.service` as the non-root `avalanche`
-user. It runs `avalanche-server serve`, which listens on `127.0.0.1:8080`;
+user. It runs `avalanche-server serve`, which listens on `127.0.0.1:28250`;
 `tailscale-serve-deploy.service` publishes that port with:
 
 ```sh
-tailscale serve --bg --http=8080 8080
+tailscale serve --bg --http=28250 28250
 ```
 
-The client calls `http://<machine>.<tailnetDnsName>:8080/deploy`, so this uses
+The client calls `http://<machine>.<tailnetDnsName>:28250/deploy`, so this uses
 the node's own MagicDNS name. No Tailscale Service is needed in the admin
 console, and Tailscale SSH is not used.
 
@@ -267,7 +267,7 @@ last successfully activated revision after the next run.
   `journalctl -u github-runner-avalanche`. A missing or expired PAT fails
   during runner registration.
 - **Trigger refused:** check `journalctl -u avalanche-server`, the token file's
-  group, and `tailscale serve status`. The tailnet policy must allow `tcp:8080`
+  group, and `tailscale serve status`. The tailnet policy must allow `tcp:28250`
   from the runner to the target if it is not already open.
 - **Deployment fails:** `journalctl -u avalanche-deploy` shows the request; the
   transient unit is `avalanche-deploy-transient-<nonce>`. Check that the target can reach
