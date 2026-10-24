@@ -14,7 +14,7 @@ push main ──> Deploy workflow (self-hosted runner on neko-sphere)
                            │         ├─ NDJSON stream: phase / log / done
                            │         └─ avalanche-deploy.path
                            │              └─ avalanche-deploy.service
-                           │                   └─ transient avalanche-deploy-<nonce>
+                           │                   └─ transient avalanche-deploy-transient-<nonce>
                            │                        └─ avalanche-server activate
                            │                             ├─ nix-store --realise <path>   # from Harmonia
                            │                             ├─ nix-env -p /nix/var/nix/profiles/system --set <path>
@@ -258,12 +258,12 @@ last successfully activated revision after the next run.
   group, and `tailscale serve status`. The tailnet policy must allow `tcp:8080`
   from the runner to the target if it is not already open.
 - **Deployment fails:** `journalctl -u avalanche-deploy` shows the request; the
-  transient unit is `avalanche-deploy-<nonce>`. Check that the target can reach
+  transient unit is `avalanche-deploy-transient-<nonce>`. Check that the target can reach
   `nsphere-cache` and that the store path is present there. The client's
   `target=<name>` lines include the activation output up to the failure.
 - **Local job is lost:** the `neko-sphere` switch can restart the runner before
   the HTTP response arrives, canceling the local matrix job. The transient unit
-  still completes; check it with `journalctl -u avalanche-deploy-<nonce>`.
+  still completes; check it with `journalctl -u avalanche-deploy-transient-<nonce>`.
   Rerun the failed matrix job from the workflow run if needed.
 
 ## Security

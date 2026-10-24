@@ -43,7 +43,7 @@ func Request() error {
 
 	timeout := int64(cfg.Timeout.Seconds())
 	args := []string{
-		"--unit=avalanche-deploy-" + nonce,
+		"--unit=avalanche-deploy-transient-" + nonce,
 		"--collect",
 		"--property=Type=oneshot",
 		fmt.Sprintf("--property=TimeoutStartSec=%d", timeout),
