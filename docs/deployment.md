@@ -12,8 +12,8 @@ push main ──> Deploy workflow (self-hosted runner on neko-sphere)
                            ├─ POST store path + bearer token
                            │    └─ avalanche-server.service (avalanche-server serve)
                            │         ├─ NDJSON stream: phase / log / done
-                           │         └─ nixos-deploy.path
-                           │              └─ nixos-deploy.service
+                           │         └─ avalanche-deploy.path
+                           │              └─ avalanche-deploy.service
                            │                   └─ transient avalanche-deploy-<nonce>
                            │                        └─ avalanche-server activate
                            │                             ├─ nix-store --realise <path>   # from Harmonia
@@ -166,7 +166,7 @@ A failed activation ends with `{"type":"done","error":"deployment failed"}`.
 The client logs each event with `target=<name>`; matrix job logs remain
 distinguishable in the workflow run.
 
-A `systemd.path` unit starts `nixos-deploy.service`, which starts a
+A `systemd.path` unit starts `avalanche-deploy.service`, which starts a
 **transient** `systemd-run` unit. That unit runs:
 
 ```sh
@@ -226,7 +226,7 @@ them has been activated. The first deployment is therefore manual:
    `just rdeploy edge root@<edge>`.
 3. Verify on each target:
    ```sh
-   systemctl status avalanche-server tailscale-serve-deploy nixos-deploy.path
+   systemctl status avalanche-server tailscale-serve-deploy avalanche-deploy.path
    tailscale serve status
    ```
 4. Run the workflow once with `gh workflow run deploy.yml --ref main`, or push
@@ -257,7 +257,7 @@ last successfully activated revision after the next run.
 - **Trigger refused:** check `journalctl -u avalanche-server`, the token file's
   group, and `tailscale serve status`. The tailnet policy must allow `tcp:8080`
   from the runner to the target if it is not already open.
-- **Deployment fails:** `journalctl -u nixos-deploy` shows the request; the
+- **Deployment fails:** `journalctl -u avalanche-deploy` shows the request; the
   transient unit is `avalanche-deploy-<nonce>`. Check that the target can reach
   `nsphere-cache` and that the store path is present there. The client's
   `target=<name>` lines include the activation output up to the failure.

@@ -93,7 +93,7 @@
             };
           };
 
-          systemd.services.nixos-deploy = {
+          systemd.services.avalanche-deploy = {
             description = "Activate a triggered NixOS closure";
             after = [ "avalanche-server.service" ];
             requires = [ "avalanche-server.service" ];
@@ -107,14 +107,14 @@
             };
           };
 
-          systemd.paths.nixos-deploy = {
+          systemd.paths.avalanche-deploy = {
             description = "Watch for a deployment request";
             wantedBy = [ "multi-user.target" ];
             after = [ "avalanche-server.service" ];
             requires = [ "avalanche-server.service" ];
             pathConfig = {
               PathChanged = "${triggerDir}/request";
-              Unit = "nixos-deploy.service";
+              Unit = "avalanche-deploy.service";
             };
           };
 
