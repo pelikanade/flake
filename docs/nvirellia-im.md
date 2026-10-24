@@ -38,8 +38,16 @@ The Status tab reads two loopback APIs on `edge`: Gatus at
 `http://127.0.0.1:3001` and Prometheus at `http://127.0.0.1:9090`. The aspect
 sets `services.nvirellia-im.gatus.url` and `services.nvirellia-im.prometheus.url`;
 both APIs are read-only and need no key. Gatus supplies per-endpoint uptime and its last result, while
-Prometheus supplies node_exporter's CPU, memory, disk and host uptime for the
-targets declared in [probe](probe.md).
+Prometheus supplies node_exporter's CPU, memory, disk, host uptime, flake
+revision and generation activation time for the targets declared in
+[probe](probe.md).
+
+The site compares each host's revision with the head of
+`pelikanade/flake` through GitHub's public API and labels it up to date,
+outdated, modified or unknown. That is the upstream default for
+`services.nvirellia-im.prometheus.flakeRepository`, which is also the
+repository the machines auto-upgrade from; the answer is cached for five
+minutes and needs no token.
 
 When either upstream has no data the tab's corresponding frame is omitted; when
 both are empty the tab is disabled, just like Resources without Magpie.

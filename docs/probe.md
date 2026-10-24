@@ -48,9 +48,12 @@ which does not change the unit and therefore does not restart it.
 The aspect sets `services.nvirellia-im.prometheus.url = "http://127.0.0.1:9090"`
 and the site queries the read-only API. It reads `up{job="node"}` for the target state,
 `node_boot_time_seconds` for host uptime, and `query_range` for the CPU,
-memory and root-disk percentage histories behind the sparklines. Metrics for a
-target whose `up` is `0` are left blank rather than showing the last stale
-sample.
+memory and root-disk percentage histories behind the sparklines. It also reads
+`nixos_flake_info` for the revision shown per host and
+`nixos_system_update_time_seconds` for its last update, comparing the revision
+with the head of `pelikanade/flake` to label the host up to date, outdated,
+modified or unknown. Metrics for a target whose `up` is `0` are left blank
+rather than showing the last stale sample.
 
 Prometheus binds loopback, node_exporter's port stays closed on the public
 firewall, and the tailnet interface is trusted. Nothing here needs a secret.
@@ -65,6 +68,7 @@ curl -s http://127.0.0.1:9100/metrics | grep '^nixos_'
 curl -s 'http://127.0.0.1:9090/api/v1/query?query=up%7Bjob%3D%22node%22%7D' | jq
 curl -s 'http://127.0.0.1:9090/api/v1/query?query=time()%20-%20node_boot_time_seconds%7Bjob%3D%22node%22%7D' | jq
 curl -s 'http://127.0.0.1:9090/api/v1/query?query=nixos_flake_info%7Bjob%3D%22node%22%7D' | jq
+curl -s 'http://127.0.0.1:9090/api/v1/query?query=nixos_system_update_time_seconds%7Bjob%3D%22node%22%7D' | jq
 ss -ltn | grep -E '9090|9100'
 ```
 
