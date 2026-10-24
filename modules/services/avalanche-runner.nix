@@ -10,7 +10,6 @@
       environment.systemPackages = [ pkgs.selfPackages.avalanche ];
 
       users.groups.${runnerUser} = { };
-      users.groups.avalanche = { };
 
       users.users.${runnerUser} = {
         isSystemUser = true;

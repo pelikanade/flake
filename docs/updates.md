@@ -51,7 +51,7 @@ then commits. There is no separate repair workflow and no pull request.
    ```
    packages: adapt updates (strata)
    ```
-10. **Publish.** All commits are pushed to `main`. The push then dispatches
+10. **Publish.** All commits are pushed to `main`. The workflow then dispatches
     the `Deploy` workflow: a push made with `GITHUB_TOKEN` does not trigger a
     `push` workflow by itself. See [deployment](deployment.md).
 

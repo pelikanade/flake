@@ -240,6 +240,7 @@ them has been activated. The first deployment is therefore manual:
    systemctl status avalanche-server tailscale-serve-deploy avalanche-deploy.path
    tailscale serve status
    ```
+   On `neko-sphere`, also check `systemctl status github-runner-avalanche`.
 4. Run the workflow once with `gh workflow run deploy.yml --ref main`, or push
    a trivial commit, and confirm the targets switch.
 
