@@ -1,5 +1,5 @@
 {
-  flake.modules.nixos.github-runner =
+  flake.modules.nixos.avalanche-gh-runner =
     { config, ... }:
     let
       runnerName = "neko-sphere";
@@ -14,6 +14,8 @@
         description = "GitHub Actions runner";
       };
 
+      # This runner exists to deploy the avalanche targets, so it owns its
+      # registration PAT from the avalanche document.
       sops.secrets.github_runner_pat = {
         sopsFile = ../secrets/avalanche.yaml;
         key = "pat";

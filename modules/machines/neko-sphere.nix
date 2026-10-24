@@ -18,7 +18,7 @@
       freezer
       harmonia
       gh
-      github-runner
+      avalanche-gh-runner
       avalanche-server
       avalanche-client
       tailscale-ingress
