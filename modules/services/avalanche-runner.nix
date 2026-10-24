@@ -1,5 +1,5 @@
 {
-  flake.modules.nixos.avalanche-gh-runner =
+  flake.modules.nixos.avalanche-runner =
     { config, ... }:
     let
       runnerName = "neko-sphere";

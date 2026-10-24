@@ -42,7 +42,7 @@ workflow needs the `actions: write` permission.
 
 ## Runner
 
-`modules/services/avalanche-gh-runner.nix` registers one repository-level runner,
+`modules/services/avalanche-runner.nix` registers one repository-level runner,
 named `neko-sphere`, with the labels `self-hosted` and `neko-sphere`. It is
 ephemeral: it registers, processes one job, deregisters, and is registered
 again by systemd for the next job. With one runner, the matrix jobs run one
