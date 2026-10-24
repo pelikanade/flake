@@ -6,7 +6,6 @@ require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/google/uuid v1.6.0
 	github.com/spf13/viper v1.21.0
-	golang.org/x/sync v0.24.0
 )
 
 require (

@@ -18,6 +18,14 @@ jobs:
     # A dispatch from any other ref must not activate this repository's
     # configuration on the servers.
     if: github.ref == 'refs/heads/main'
+    name: Deploy ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Keep this list in sync with the machines that import deploy-target.
+        target:
+          - edge
+          - neko-sphere
     runs-on:
       - self-hosted
       - neko-sphere
@@ -28,5 +36,5 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build and trigger deploy targets
-        run: /run/current-system/sw/bin/avalanche-client
+      - name: Build and trigger deploy target
+        run: /run/current-system/sw/bin/avalanche-client --target "${{ matrix.target }}"

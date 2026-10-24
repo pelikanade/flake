@@ -6,7 +6,7 @@
         pname = "avalanche";
         version = "0.1.0";
         src = ./.;
-        vendorHash = "sha256-JpPiD8F/3t4kMMVWmQunAC24VuhBj2S0NeLBnYMlt+I=";
+        vendorHash = "sha256-6dPtjSkdJhN/BmlnyZKQqHhcqxtKkAUksBaePFvS2Lk=";
         subPackages = [
           "cmd/avalanche-client"
           "cmd/avalanche-server"

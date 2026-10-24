@@ -38,13 +38,12 @@ A scheduled workflow updates the flake lock and every exported package that decl
 The agents use omp's built-in DeepSeek model. Set the `DEEPSEEK_API_KEY` repository secret as described in that document; without it, a failed build is not repaired and the run fails.
 
 A push to `main`—including the update workflow's own commits—triggers the
-`Deploy` workflow on the `neko-sphere` self-hosted runner. It builds every
-machine that imports the `deploy-target` aspect concurrently, then asks the
-targets to pull and activate their closures from the Harmonia cache while
-streaming each target's phase and log back to the workflow. The runner never
-gets SSH or root access to a target. Workstations are not deployed
-automatically. The switch never reboots on its own, so a kernel update waits
-for a reboot the operator chooses. See [deployment](docs/deployment.md).
+`Deploy` workflow on the `neko-sphere` self-hosted runners. It runs one matrix
+job per target, so each job builds and deploys its machine concurrently, then
+streams the target's phase and log back to the workflow. The runners never get
+SSH or root access to a target. Workstations are not deployed automatically.
+The switch never reboots on its own, so a kernel update waits for a reboot the
+operator chooses. See [deployment](docs/deployment.md).
 
 Run the same updater from `nix develop`; it leaves changes uncommitted for review:
 

@@ -10,9 +10,6 @@ import (
 	"net/http"
 	"os/exec"
 	"strings"
-	"sync"
-
-	"golang.org/x/sync/errgroup"
 
 	"avalanche/internal/deploy"
 	"avalanche/internal/protocol"
@@ -27,10 +24,12 @@ func (e *deployFailedError) Error() string {
 	return fmt.Sprintf("%s: %s", e.target, e.message)
 }
 
-// Run builds every target concurrently, then triggers all remote targets
-// concurrently. The local target starts after every remote request has been
-// dispatched, because activating it may restart the runner running this client.
-func Run() error {
+// Run builds and deploys one target supplied by the workflow matrix.
+func Run(target string) error {
+	if target == "" {
+		return fmt.Errorf("target is required")
+	}
+
 	cfg, err := LoadConfig()
 	if err != nil {
 		return err
@@ -40,42 +39,24 @@ func Run() error {
 		return err
 	}
 
-	paths, err := buildAll(cfg.Flake, cfg.Targets)
+	path, err := buildTarget(cfg.Flake, target)
 	if err != nil {
 		return err
 	}
-	return deployAll(cfg, token, paths)
-}
+	slog.Info("built target", "target", target, "path", path)
 
-func buildAll(flake string, targets []string) (map[string]string, error) {
-	paths := make(map[string]string, len(targets))
-	var mutex sync.Mutex
-	var buildErrors []error
-	var group errgroup.Group
-
-	for _, target := range targets {
-		target := target
-		group.Go(func() error {
-			path, err := buildTarget(flake, target)
-			if err != nil {
-				mutex.Lock()
-				buildErrors = append(buildErrors, err)
-				mutex.Unlock()
-				return nil
-			}
-			mutex.Lock()
-			paths[target] = path
-			mutex.Unlock()
-			slog.Info("built target", "target", target, "path", path)
+	httpClient := &http.Client{Timeout: cfg.Timeout}
+	err = postDeploy(httpClient, cfg, token, target, path)
+	if err != nil && target == cfg.Local {
+		var failed *deployFailedError
+		if !errors.As(err, &failed) {
+			// A lost connection usually means the local switch restarted the
+			// runner; the transient activation unit keeps going.
+			slog.Warn("local trigger lost", "target", target, "error", err)
 			return nil
-		})
+		}
 	}
-
-	_ = group.Wait()
-	if len(buildErrors) > 0 {
-		return nil, errors.Join(buildErrors...)
-	}
-	return paths, nil
+	return err
 }
 
 func buildTarget(flake, target string) (string, error) {
@@ -96,61 +77,7 @@ func buildTarget(flake, target string) (string, error) {
 	return path, nil
 }
 
-func deployAll(cfg *Config, token string, paths map[string]string) error {
-	httpClient := &http.Client{Timeout: cfg.Timeout}
-	remote := make([]string, 0, len(cfg.Targets))
-	for _, target := range cfg.Targets {
-		if target != cfg.Local {
-			remote = append(remote, target)
-		}
-	}
-
-	started := make(chan struct{}, len(remote))
-	var group errgroup.Group
-	var mutex sync.Mutex
-	var remoteErrors []error
-	var localErr error
-
-	for _, target := range remote {
-		target := target
-		group.Go(func() error {
-			err := postDeploy(httpClient, cfg, token, target, paths[target], started)
-			if err != nil {
-				mutex.Lock()
-				remoteErrors = append(remoteErrors, err)
-				mutex.Unlock()
-			}
-			return nil
-		})
-	}
-
-	for range remote {
-		<-started
-	}
-
-	if path, ok := paths[cfg.Local]; ok {
-		group.Go(func() error {
-			localErr = postDeploy(httpClient, cfg, token, cfg.Local, path, nil)
-			return nil
-		})
-	}
-
-	_ = group.Wait()
-
-	if localErr != nil {
-		var failed *deployFailedError
-		if errors.As(localErr, &failed) {
-			remoteErrors = append(remoteErrors, localErr)
-		} else {
-			// A lost connection usually means the local switch restarted the
-			// runner; the transient activation unit keeps going.
-			slog.Warn("local trigger lost", "error", localErr)
-		}
-	}
-	return errors.Join(remoteErrors...)
-}
-
-func postDeploy(httpClient *http.Client, cfg *Config, token, target, storePath string, started chan<- struct{}) error {
+func postDeploy(httpClient *http.Client, cfg *Config, token, target, storePath string) error {
 	url := fmt.Sprintf("http://%s.%s:%d/deploy", target, cfg.Tailnet, cfg.Port)
 	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(storePath))
 	if err != nil {
@@ -159,17 +86,7 @@ func postDeploy(httpClient *http.Client, cfg *Config, token, target, storePath s
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "text/plain")
 
-	startedOnce := false
-	signalStarted := func() {
-		if started != nil && !startedOnce {
-			started <- struct{}{}
-			startedOnce = true
-		}
-	}
-	defer signalStarted()
-
 	resp, err := httpClient.Do(req)
-	signalStarted()
 	if err != nil {
 		return fmt.Errorf("%s: %w", target, err)
 	}
