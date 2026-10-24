@@ -29,4 +29,4 @@ jobs:
           persist-credentials: false
 
       - name: Build and trigger deploy targets
-        run: /run/current-system/sw/bin/nixos-deploy-trigger
+        run: /run/current-system/sw/bin/avalanche-client --flake .

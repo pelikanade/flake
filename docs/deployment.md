@@ -6,16 +6,19 @@ runner never gets SSH access.
 
 ```text
 push main ──> Deploy workflow (self-hosted runner on neko-sphere)
-                 └─ nixos-deploy-trigger
-                      ├─ nix build every target toplevel
-                      ├─ POST store path + bearer token to each remote target
-                      │    └─ deploy-trigger.service (non-root)
+                 └─ avalanche-client
+                      ├─ nix build every target toplevel (concurrently)
+                      ├─ POST store path + bearer token to remote targets (concurrently)
+                      │    └─ deploy-trigger.service (avalanche-target serve)
+                      │         ├─ NDJSON stream: phase / log / done
                       │         └─ nixos-deploy.path
-                      │              └─ transient root unit
-                      │                   ├─ nix-store --realise <path>   # from Harmonia
-                      │                   ├─ nix-env -p /nix/var/nix/profiles/system --set <path>
-                      │                   └─ switch-to-configuration switch
-                      └─ POST to neko-sphere last
+                      │              └─ nixos-deploy.service
+                      │                   └─ transient avalanche-deploy-<nonce>
+                      │                        └─ avalanche-target activate
+                      │                             ├─ nix-store --realise <path>   # from Harmonia
+                      │                             ├─ nix-env -p /nix/var/nix/profiles/system --set <path>
+                      │                             └─ switch-to-configuration switch
+                      └─ POST to neko-sphere after remote requests are dispatched
 ```
 
 ## Trigger
@@ -42,12 +45,34 @@ ephemeral: it registers, processes one job, deregisters, and is registered
 again by systemd for the next job.
 
 The runner service runs as the static `github-runner` user. It has no root, no
-SSH key, and no deployment unit of its own. Its `nixos-deploy-trigger` command:
+SSH key, and no deployment unit of its own. The deploy client is a separate
+aspect, `deploy-client`, imported only by `neko-sphere`; it installs the
+`avalanche` package, writes `/etc/avalanche/client.conf`, and gives the runner
+the `deploy` group needed to read the shared token.
 
-1. reads the shared trigger token from sops;
-2. builds every target with `nix build --no-link --print-out-paths`;
-3. POSTs the resulting toplevel store path to each target, remote targets
-   first and its own host last.
+The workflow invokes:
+
+```sh
+avalanche-client --flake .
+```
+
+The client:
+
+1. reads `/etc/avalanche/client.conf` and the shared trigger token from sops;
+2. builds every target with
+   `nix build --no-link --print-out-paths .#nixosConfigurations.<target>.config.system.build.toplevel`,
+   concurrently;
+3. sends the store path to every remote target concurrently;
+4. starts the local target after every remote request has been dispatched;
+5. streams each target's phase and log events to the workflow log, and fails
+   the job if any remote target reports a failed deployment.
+
+The local trigger is delayed until remote requests are in flight because
+activating `neko-sphere` can restart the runner executing the client. The
+transient activation unit is independent of the client and continues even if
+the runner is restarted; the workflow may still report the job as lost. A lost
+local connection is therefore a warning, but a local target that reports a
+failed activation still fails the job.
 
 ### Registration token
 
@@ -77,7 +102,7 @@ false to keep the aspect imported while disabling the service. Currently
 `neko-sphere` and `edge` import it; `asymmetry`, `parallax`, and the installer
 do not.
 
-The runner derives the target list by reading
+`deploy-client` derives the target list by reading
 `services.deploy-target.enable` from each materialized configuration. Add the
 aspect to a machine to include it; remove it or disable the option to exclude
 it.
@@ -85,8 +110,8 @@ it.
 ## Deploy trigger
 
 Each target runs `deploy-trigger.service` as the non-root `deploy-trigger` user.
-It listens on `127.0.0.1:8080`; `tailscale-serve-deploy.service` publishes that
-port with:
+It runs `avalanche-target serve`, which listens on `127.0.0.1:8080`;
+`tailscale-serve-deploy.service` publishes that port with:
 
 ```sh
 tailscale serve --bg --http=8080 8080
@@ -97,9 +122,29 @@ the node's own MagicDNS name. No Tailscale Service is needed in the admin
 console, and Tailscale SSH is not used.
 
 The request carries `Authorization: Bearer <token>` and a toplevel store path.
-The handler validates both, writes a request file, and waits for a result file.
-A `systemd.path` unit starts `nixos-deploy.service`, which starts a **transient**
-`systemd-run` unit. That unit:
+The handler validates both, writes a request file, and streams the deployment
+as newline-delimited JSON:
+
+```json
+{"type":"phase","phase":"queued"}
+{"type":"log","line":"$ nix-store --realise /nix/store/… --option max-jobs 0"}
+{"type":"phase","phase":"switch"}
+{"type":"done","ok":true}
+```
+
+Phases are `queued`, `realise`, `profile`, `switch`, and `done` (or `failed`).
+A failed activation ends with `{"type":"done","error":"deployment failed"}`.
+The client prints each event as `[<target>] …`, so concurrent targets remain
+distinguishable.
+
+A `systemd.path` unit starts `nixos-deploy.service`, which starts a
+**transient** `systemd-run` unit. That unit runs:
+
+```sh
+avalanche-target activate <nonce> <store-path> <dir> <hostname>
+```
+
+and performs:
 
 ```sh
 nix-store --realise <store-path> --option max-jobs 0
@@ -107,9 +152,12 @@ nix-env -p /nix/var/nix/profiles/system --set <store-path>
 <store-path>/bin/switch-to-configuration switch
 ```
 
-The transient unit is outside the NixOS configuration, so the switch cannot
-restart it mid-activation. If the runner is restarted by the local switch, the
-transient unit keeps going; the workflow may report the job as lost.
+`activate` tees stdout and stderr into `log-<nonce>` and publishes
+`status-<nonce>` and `result-<nonce>`; `serve` tails those files for the
+requesting client. The transient unit is outside the NixOS configuration, so
+the switch cannot restart it mid-activation. If the runner is restarted by the
+local switch, the transient unit keeps going; the workflow may report the job
+as lost.
 
 ## Cache
 
@@ -167,9 +215,9 @@ workflow failure, run the normal switch from a workstation:
 nixos-rebuild switch --flake .#<machine> --target-host root@<host>
 ```
 
-A partial deployment is possible. Remote targets are triggered first; the
-runner's own host is triggered last. Both remain on the last successfully
-activated revision after the next run.
+A partial deployment is possible. Remote targets are triggered concurrently;
+the runner's own host starts after those requests are dispatched. Both remain
+on the last successfully activated revision after the next run.
 
 ## Troubleshooting
 
@@ -180,11 +228,12 @@ activated revision after the next run.
   group, and `tailscale serve status`. The tailnet policy must allow `tcp:8080`
   from the runner to the target if it is not already open.
 - **Deployment fails:** `journalctl -u nixos-deploy` shows the request; the
-  transient unit is `nixos-deploy-run-<nonce>`. Check that the target can reach
-  `nsphere-cache` and that the store path is present there.
+  transient unit is `avalanche-deploy-<nonce>`. Check that the target can reach
+  `nsphere-cache` and that the store path is present there. The client's
+  `[<target>]` lines include the activation output up to the failure.
 - **Local job is lost:** the `neko-sphere` switch can restart the runner before
   the HTTP response arrives. The transient unit still completes; check it with
-  `journalctl -u nixos-deploy-run-<nonce>`.
+  `journalctl -u avalanche-deploy-<nonce>`.
 
 ## Security
 

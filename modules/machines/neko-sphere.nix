@@ -20,6 +20,7 @@
       gh
       github-runner
       deploy-target
+      deploy-client
       tailscale-ingress
       probe-agent
       zswap

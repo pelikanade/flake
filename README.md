@@ -39,11 +39,12 @@ The agents use omp's built-in DeepSeek model. Set the `DEEPSEEK_API_KEY` reposit
 
 A push to `main`—including the update workflow's own commits—triggers the
 `Deploy` workflow on the `neko-sphere` self-hosted runner. It builds every
-machine that imports the `deploy-target` aspect, then asks each target to pull
-and activate its closure from the Harmonia cache. The runner never gets SSH or
-root access to a target. Workstations are not deployed automatically. The
-switch never reboots on its own, so a kernel update waits for a reboot the
-operator chooses. See [deployment](docs/deployment.md).
+machine that imports the `deploy-target` aspect concurrently, then asks the
+targets to pull and activate their closures from the Harmonia cache while
+streaming each target's phase and log back to the workflow. The runner never
+gets SSH or root access to a target. Workstations are not deployed
+automatically. The switch never reboots on its own, so a kernel update waits
+for a reboot the operator chooses. See [deployment](docs/deployment.md).
 
 Run the same updater from `nix develop`; it leaves changes uncommitted for review:
 
