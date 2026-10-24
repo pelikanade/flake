@@ -2,8 +2,8 @@
   flake.modules.nixos.avalanche-runner =
     { config, pkgs, ... }:
     let
-      runnerName = "neko-sphere";
-      runnerUser = "github-runner";
+      runnerName = "avalanche";
+      runnerUser = "avalanche-runner";
       runnerService = "github-runner-${runnerName}";
     in
     {
@@ -15,13 +15,13 @@
       users.users.${runnerUser} = {
         isSystemUser = true;
         group = runnerUser;
-        description = "GitHub Actions runner";
+        description = "Avalanche GitHub Actions runner";
       };
 
       # This runner exists to deploy the avalanche targets, so it owns its
       # registration PAT from the avalanche document and may read the trigger
       # token through the avalanche group.
-      sops.secrets.github_runner_pat = {
+      sops.secrets.avalanche_runner_pat = {
         sopsFile = ../secrets/avalanche.yaml;
         key = "pat";
         owner = runnerUser;
@@ -37,7 +37,7 @@
         url = "https://github.com/pelikanade/flake";
         name = runnerName;
         tokenType = "access";
-        tokenFile = config.sops.secrets.github_runner_pat.path;
+        tokenFile = config.sops.secrets.avalanche_runner_pat.path;
         ephemeral = true;
         replace = true;
         extraLabels = [ runnerName ];

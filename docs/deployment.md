@@ -43,12 +43,12 @@ workflow needs the `actions: write` permission.
 ## Runner
 
 `modules/services/avalanche-runner.nix` registers one repository-level runner,
-named `neko-sphere`, with the labels `self-hosted` and `neko-sphere`. It is
+named `avalanche`, with the labels `self-hosted` and `avalanche`. It is
 ephemeral: it registers, processes one job, deregisters, and is registered
 again by systemd for the next job. With one runner, the matrix jobs run one
 after another.
 
-The runner service runs as the static `github-runner` user. It has no root, no
+The runner service runs as the static `avalanche-runner` user. It has no root, no
 SSH key, and no deployment unit of its own. The `avalanche-runner` module
 installs the `avalanche` package and gives the runner service the `avalanche`
 group, so the client reads `/run/secrets/avalanche_token` directly. The client
@@ -84,7 +84,7 @@ The runner daemon needs a credential before any job exists. A workflow's
 `GITHUB_TOKEN` is issued only after a runner has picked up a job and does not
 have the `administration` permission required by the runner registration API.
 The NixOS module therefore reads a long-lived fine-grained PAT from
-`/run/secrets/github_runner_pat`.
+`/run/secrets/avalanche_runner_pat`.
 
 Create a fine-grained PAT with:
 
@@ -95,7 +95,7 @@ Create a fine-grained PAT with:
 
 The value lives in `modules/secrets/avalanche.yaml` as `pat`, encrypted to the
 maintainer, `neko-sphere`, and `edge`. Rotation: update the encrypted document,
-switch `neko-sphere` (or restart `github-runner-neko-sphere`); the next job
+switch `neko-sphere` (or restart `github-runner-avalanche`); the next job
 registers with the new value.
 
 ## Targets
@@ -211,14 +211,14 @@ the maintainer, `neko-sphere`, and `edge`:
 - `token`: the shared trigger token, provisioned as `root:avalanche` with mode
   `0440`. The runner service has `avalanche` as a supplementary group, so the
   client reads this file directly;
-- `pat`: the runner PAT, provisioned as `github-runner:github-runner` with mode
-  `0400`.
+- `pat`: the runner PAT, provisioned as `avalanche-runner:avalanche-runner` with
+  mode `0400`.
 
 No Actions secret carries the trigger token. The `avalanche` server user's
 primary group is `avalanche`.
 
 Rotation: replace the affected value with `sops`, then switch the targets (or
-restart `avalanche-server.service` / `github-runner-neko-sphere`). The next job
+restart `avalanche-server.service` / `github-runner-avalanche`). The next job
 uses the new value.
 
 A shared token means any compromised target can trigger another target. Each
@@ -262,8 +262,8 @@ last successfully activated revision after the next run.
 
 ## Troubleshooting
 
-- **Runner is offline:** `systemctl status github-runner-neko-sphere` and
-  `journalctl -u github-runner-neko-sphere`. A missing or expired PAT fails
+- **Runner is offline:** `systemctl status github-runner-avalanche` and
+  `journalctl -u github-runner-avalanche`. A missing or expired PAT fails
   during runner registration.
 - **Trigger refused:** check `journalctl -u avalanche-server`, the token file's
   group, and `tailscale serve status`. The tailnet policy must allow `tcp:8080`
@@ -282,7 +282,7 @@ last successfully activated revision after the next run.
 The repository is public, and GitHub warns against self-hosted runners on
 public repositories. Keep **Require approval for all outside collaborators**
 enabled and do not approve workflows from untrusted pull requests: an approved
-job runs as `github-runner` on `neko-sphere`.
+job runs as `avalanche-runner` on `neko-sphere`.
 
 The runner is ephemeral and unprivileged; it cannot SSH to a target. The
 target trigger is non-root and bound to loopback, its only public surface is

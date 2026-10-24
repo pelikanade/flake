@@ -28,7 +28,7 @@ jobs:
           - neko-sphere
     runs-on:
       - self-hosted
-      - neko-sphere
+      - avalanche
     timeout-minutes: 240
     steps:
       - name: Check out main
