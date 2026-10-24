@@ -28,22 +28,10 @@ jobs:
         with:
           persist-credentials: false
 
-      # Build both systems before touching either host. The deploy unit
-      # clones the same main revision and reuses the store paths.
-      - name: Build neko-sphere
-        run: >-
-          nix build --no-link
-          .#nixosConfigurations.neko-sphere.config.system.build.toplevel
+      - name: Build deploy targets
+        run: /run/current-system/sw/bin/nixos-deploy-build
 
-      - name: Build edge
-        run: >-
-          nix build --no-link
-          .#nixosConfigurations.edge.config.system.build.toplevel
-
-      # Edge first: the neko-sphere switch can restart this runner. The root
-      # unit keeps running even if the job is killed at that point.
-      - name: Deploy edge
-        run: /run/current-system/sw/bin/nixos-deploy-request edge
-
-      - name: Deploy neko-sphere
-        run: /run/current-system/sw/bin/nixos-deploy-request neko-sphere
+      # Remote targets first; the runner's own host is deployed last by the
+      # request wrapper.
+      - name: Deploy all targets
+        run: /run/current-system/sw/bin/nixos-deploy-request all

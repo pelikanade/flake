@@ -127,10 +127,12 @@ public DERP server, through the proxy on this side.
 A host that imports the `server` role and has `services.tailscale.enable` set
 advertises Tailscale SSH: the server role assigns
 `services.tailscale.extraSetFlags = [ "--ssh" ]` when the option exists and is
-enabled, and `tailscaled-set.service` runs `tailscale set --ssh`. The daemon
-claims port 22 only on the tailnet address; the regular `sshd` still serves the
-other interfaces. Workstations and the installer do not import the server role,
-so they do not advertise it.
+enabled, and `tailscaled-set.service` runs `tailscale set --ssh`. The deployment
+runner selects targets by the `auto-deployable` machine tag instead; add that
+tag in the machine definition to make a server a target. The daemon claims port
+22 only on the tailnet address; the regular `sshd` still serves the other
+interfaces. Workstations and the installer do not import the server role, so
+they are not targets and do not advertise it.
 
 The tailnet policy must grant both network access to port 22 and an SSH rule
 that accepts the deployment runner as `root`. The default `check` action

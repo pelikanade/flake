@@ -2,6 +2,10 @@
 {
   machines.edge = {
     system = "x86_64-linux";
+    tags = [
+      "server"
+      "auto-deployable"
+    ];
     imports = with inputs.self.modules.aspects; [
       base
       server

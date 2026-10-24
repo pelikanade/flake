@@ -1,4 +1,11 @@
 {
+  config,
+  ...
+}:
+let
+  inherit (config) machines;
+in
+{
   flake.modules.nixos.github-runner =
     {
       config,
@@ -9,6 +16,48 @@
     let
       runnerName = "neko-sphere";
       deployUser = "github-runner";
+
+      # The `auto-deployable` machine tag marks a host as a deployment target.
+      # Derive the list from the machine definitions so the polkit rule and the
+      # deploy script do not repeat names.
+      deployTargets = lib.filter (name: lib.elem "auto-deployable" machines.${name}.tags) (
+        builtins.attrNames machines
+      );
+
+      targetInfo = name: {
+        inherit name;
+        local = name == config.networking.hostName;
+        fqdn = config.constants.getTailnetFqdn name;
+      };
+
+      targets = map targetInfo deployTargets;
+      targetList = lib.concatStringsSep " " (map (target: target.name) targets);
+      targetPattern = lib.concatStringsSep " | " (map (target: target.name) targets);
+
+      targetCase = lib.concatStringsSep "\n" (
+        map (
+          target:
+          if target.local then
+            ''
+              ${target.name})
+                exec /run/current-system/sw/bin/nixos-rebuild switch --flake "$src#${target.name}" -L
+                ;;
+            ''
+          else
+            ''
+              ${target.name})
+                exec /run/current-system/sw/bin/nixos-rebuild switch \
+                  --flake "$src#${target.name}" \
+                  --target-host "root@${target.fqdn}" \
+                  -L
+                ;;
+            ''
+        ) targets
+      );
+
+      polkitUnits = lib.concatMapStringsSep " ||\n" (
+        target: ''action.lookup("unit") == "nixos-deploy@${target.name}.service"''
+      ) targets;
 
       # The deploy itself runs in the root unit below, outside the runner's
       # sandbox. It clones main from GitHub rather than trusting the runner's
@@ -27,7 +76,7 @@
 
           machine="''${1:?machine required}"
           case "$machine" in
-            neko-sphere | edge) ;;
+            ${targetPattern}) ;;
             *)
               echo "unsupported machine: $machine" >&2
               exit 2
@@ -48,23 +97,31 @@
           export NIX_SSHOPTS="-o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=$root/known_hosts"
 
           case "$machine" in
-            neko-sphere)
-              exec /run/current-system/sw/bin/nixos-rebuild switch \
-                --flake "$src#neko-sphere" -L
-              ;;
-            edge)
-              exec /run/current-system/sw/bin/nixos-rebuild switch \
-                --flake "$src#edge" \
-                --target-host "root@${config.constants.getTailnetFqdn "edge"}" \
-                -L
-              ;;
+          ${targetCase}
           esac
         '';
       };
 
-      # The runner is allowed to start only these two deployments. Polkit
-      # authorizes the start; the runner never gains privileges itself. The
-      # unit keeps running if the runner is restarted by the neko-sphere switch.
+      # Run as the runner user before the root units: it is the build gate and
+      # warms the store for every target.
+      deployBuild = pkgs.writeShellApplication {
+        name = "nixos-deploy-build";
+        runtimeInputs = [
+          config.nix.package
+          pkgs.coreutils
+          pkgs.git
+        ];
+        text = ''
+          set -euo pipefail
+
+          for machine in ${targetList}; do
+            nix build --no-link ".#nixosConfigurations.$machine.config.system.build.toplevel"
+          done
+        '';
+      };
+
+      # The runner may start any deploy target, or all of them in the safe
+      # order: every remote target first, the runner's own host last.
       deployRequest = pkgs.writeShellApplication {
         name = "nixos-deploy-request";
         runtimeInputs = [ pkgs.systemd ];
@@ -73,18 +130,40 @@
 
           machine="''${1:?machine required}"
           case "$machine" in
-            neko-sphere | edge) ;;
+            all | ${targetPattern}) ;;
             *)
               echo "unsupported machine: $machine" >&2
               exit 2
               ;;
           esac
 
-          systemctl start --wait --no-ask-password "nixos-deploy@$machine.service"
+          targets="${targetList}"
+          local_machine="${config.networking.hostName}"
+
+          if [ "$machine" = all ]; then
+            for target in $targets; do
+              if [ "$target" = "$local_machine" ]; then
+                continue
+              fi
+              systemctl start --wait --no-ask-password "nixos-deploy@$target.service"
+            done
+            case " $targets " in
+              *" $local_machine "*) systemctl start --wait --no-ask-password "nixos-deploy@$local_machine.service" ;;
+            esac
+          else
+            systemctl start --wait --no-ask-password "nixos-deploy@$machine.service"
+          fi
         '';
       };
     in
     {
+      assertions = [
+        {
+          assertion = targets != [ ];
+          message = "github-runner: tag at least one machine auto-deployable";
+        }
+      ];
+
       users.groups.${deployUser} = { };
 
       users.users.${deployUser} = {
@@ -138,8 +217,13 @@
         };
       };
 
-      environment.systemPackages = [ deployRequest ];
+      environment.systemPackages = [
+        deployBuild
+        deployRequest
+      ];
 
+      # The runner never gains privileges. Polkit lets it ask PID 1 to start the
+      # derived deployment units; the runner keeps NoNewPrivileges=true.
       security.polkit = {
         enable = true;
         extraConfig = ''
@@ -147,8 +231,7 @@
             if (action.id == "org.freedesktop.systemd1.manage-units" &&
                 subject.user == "${deployUser}" &&
                 action.lookup("verb") == "start" &&
-                (action.lookup("unit") == "nixos-deploy@neko-sphere.service" ||
-                 action.lookup("unit") == "nixos-deploy@edge.service")) {
+                (${polkitUnits})) {
               return polkit.Result.YES;
             }
           });

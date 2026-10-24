@@ -5,17 +5,17 @@ repository on a timer.
 
 ```text
 push main ──> Deploy workflow (self-hosted runner on neko-sphere)
-                 ├─ build neko-sphere and edge
-                 ├─ nixos-deploy-request edge
-                 │     └─ nixos-deploy@edge.service (root, unsandboxed)
-                 │           └─ clone main + nixos-rebuild --target-host root@edge…
-                 └─ nixos-deploy-request neko-sphere
-                       └─ nixos-deploy@neko-sphere.service (root)
+                 ├─ nixos-deploy-build: build every deploy target
+                 └─ nixos-deploy-request all
+                       ├─ remote targets: nixos-deploy@<target>.service
+                       │     └─ clone main + nixos-rebuild --target-host root@<target>…
+                       └─ runner host last: nixos-deploy@<host>.service
                              └─ clone main + nixos-rebuild switch
 ```
 
-Only `neko-sphere` and `edge` are deployed. `asymmetry`, `parallax`, and the
-installer have no automatic deployment path.
+Only machines tagged `auto-deployable` are deployed; today that is
+`neko-sphere` and `edge`. `asymmetry`, `parallax`, and the installer have no
+automatic deployment path.
 
 ## Trigger
 
@@ -44,7 +44,30 @@ registration with the same name.
 
 The runner service runs as the static `github-runner` user. It is not root and
 cannot build or activate a system itself. It never gains privileges: a polkit
-rule lets it ask PID 1 to start the two deployment units.
+rule lets it ask PID 1 to start the deployment units.
+
+## Machine tags and targets
+
+`machines.<name>.tags` labels a machine for policy. The deploy target list is
+every machine whose tags include `auto-deployable`; the current tags are:
+
+| Machine | Tags |
+| --- | --- |
+| `neko-sphere` | `server`, `auto-deployable` |
+| `edge` | `server`, `auto-deployable` |
+| `asymmetry` | `workstation` |
+| `parallax` | `workstation` |
+| `installer` | `installer` |
+
+The `server` and `workstation` tags describe the machine type; only
+`auto-deployable` drives the runner. Add the tag to a machine definition to
+include it. The same list generates the polkit units, the deploy script's
+target cases, the build loop, and the `all` request, so a new tagged machine
+needs no edit to the runner module.
+
+The runner's own host is deployed last; every other target is reached over
+Tailscale SSH at its MagicDNS name. Machine names and tailnet hostnames are the
+same in this repository.
 
 ### Registration token
 
@@ -77,16 +100,16 @@ needs an additional token-minting service.
 The runner invokes one request command as itself:
 
 ```sh
-/run/current-system/sw/bin/nixos-deploy-request <neko-sphere|edge>
+/run/current-system/sw/bin/nixos-deploy-request <all|target>
 ```
 
-A polkit rule allows `github-runner` to start exactly the two
+The same request wrapper validates the target against the derived list. With
+`all`, it starts every remote target first and the runner's own host last. A
+polkit rule allows `github-runner` to start exactly those
 `nixos-deploy@…` units, and only with the `start` verb. The runner keeps the
 module's `NoNewPrivileges=true`; no setuid helper, `sudo`, or capability grant is
-involved. The request wrapper validates the machine name and starts
-`nixos-deploy@<machine>.service`; that unit runs as root, outside the runner's
-sandbox, so activation does not inherit the runner's filesystem or capability
-restrictions.
+involved. Each unit runs as root, outside the runner's sandbox, so activation
+does not inherit the runner's filesystem or capability restrictions.
 
 The unit clones `https://github.com/pelikanade/flake.git` at `main` into
 `/var/lib/nixos-deploy/<machine>` and runs:
@@ -99,22 +122,24 @@ For `edge` it adds `--target-host root@edge.dwelf-hoki.ts.net`; the build stays
 local on `neko-sphere` and the closure is copied over Tailscale SSH. The clone
 preserves `.git`, so `inputs.self.rev` remains available to the probe.
 
-The workflow's checkout and build are a gate and a store warmer. The unit does
-not trust the runner's working tree: it deploys the current `main` revision from
+The workflow's `nixos-deploy-build` runs as the runner user and builds every
+target toplevel; it is the gate and a store warmer. The deploy unit does not
+trust the runner's working tree: it deploys the current `main` revision from
 GitHub. A job can trigger a deployment of `main`; it cannot point the unit at a
 modified flake.
 
-`TimeoutStartSec` is two hours. Edge is deployed first, then `neko-sphere`:
-the `neko-sphere` switch can restart the runner, but the root unit keeps
-running independently, so the deployment finishes even if the job is reported
-as lost.
+`TimeoutStartSec` is two hours. `all` starts every remote target first and the
+runner's own host last: the local switch can restart the runner, but the root
+unit keeps running independently, so the deployment finishes even if the job is
+reported as lost.
 
 ## Tailscale SSH
 
-Both servers import the `server` role and the `tailscale` aspect. The server
-role sets `services.tailscale.extraSetFlags = [ "--ssh" ]` when the tailscale
-option exists and is enabled, so both advertise Tailscale SSH. The deployment
-uses it for `edge` only; `neko-sphere` is switched locally.
+A machine tagged `auto-deployable` is a deploy target. The server role sets
+`services.tailscale.extraSetFlags = [ "--ssh" ]` when the tailscale option
+exists and is enabled, so both current targets advertise Tailscale SSH. The
+deployment uses it for remote targets only; the runner's host is switched
+locally.
 
 The tailnet policy needs an `accept` SSH rule for the deployment source as
 `root`; the default `check` action would require interactive re-authentication.
@@ -183,5 +208,5 @@ public repositories. Keep **Require approval for all outside collaborators**
 enabled and do not approve workflows from untrusted pull requests: an approved
 job runs as `github-runner` on `neko-sphere`. The runner is ephemeral, the
 secret is hidden from job processes, and the only privileged action is the
-polkit-authorized start of the two deployment units, which can deploy `main`
-but cannot supply a flake.
+polkit-authorized start of the derived deployment units, which can deploy
+`main` but cannot supply a flake.
