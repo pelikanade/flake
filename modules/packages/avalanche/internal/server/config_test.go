@@ -15,7 +15,7 @@ server:
   hostname: neko-sphere
   token_file: /tmp/token
   dir: /run/avalanche
-  port: 8080
+  port: 28250
   timeout: 2h
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -26,7 +26,7 @@ server:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Hostname != "neko-sphere" || cfg.Port != 8080 {
+	if cfg.Hostname != "neko-sphere" || cfg.Port != 28250 {
 		t.Fatalf("unexpected config: %+v", cfg)
 	}
 	if cfg.Timeout != 2*time.Hour {
@@ -57,7 +57,7 @@ func TestLoadConfigEnvironmentOnly(t *testing.T) {
 	t.Setenv("AVALANCHE_SERVER_HOSTNAME", "edge")
 	t.Setenv("AVALANCHE_SERVER_TOKEN_FILE", "/tmp/token")
 	t.Setenv("AVALANCHE_SERVER_DIR", "/run/avalanche")
-	t.Setenv("AVALANCHE_SERVER_PORT", "8080")
+	t.Setenv("AVALANCHE_SERVER_PORT", "28250")
 	t.Setenv("AVALANCHE_SERVER_TIMEOUT", "2h")
 
 	cfg, err := LoadConfig()

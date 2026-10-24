@@ -27,7 +27,7 @@ func LoadConfig() (*Config, error) {
 		"server.hostname":   "",
 		"server.token_file": "/run/secrets/avalanche_token",
 		"server.dir":        deploy.DefaultDir,
-		"server.port":       8080,
+		"server.port":       28250,
 		"server.timeout":    "2h",
 		"server.nonce":      "",
 		"server.store_path": "",

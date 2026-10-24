@@ -14,7 +14,7 @@ func TestLoadConfigYAMLAndEnvironment(t *testing.T) {
 client:
   tailnet: example.ts.net
   token_file: /tmp/token
-  port: 8080
+  port: 28250
   flake: .
   timeout: 2h
 `), 0o644); err != nil {
@@ -51,7 +51,7 @@ func TestLoadConfigEnvironmentOnly(t *testing.T) {
 	t.Setenv("AVALANCHE_CONFIG", filepath.Join(t.TempDir(), "missing.yaml"))
 	t.Setenv("AVALANCHE_CLIENT_TAILNET", "example.ts.net")
 	t.Setenv("AVALANCHE_CLIENT_TOKEN_FILE", "/tmp/token")
-	t.Setenv("AVALANCHE_CLIENT_PORT", "8080")
+	t.Setenv("AVALANCHE_CLIENT_PORT", "28250")
 	t.Setenv("AVALANCHE_CLIENT_FLAKE", ".")
 	t.Setenv("AVALANCHE_CLIENT_TIMEOUT", "2h")
 
@@ -59,7 +59,7 @@ func TestLoadConfigEnvironmentOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Port != 8080 || cfg.Tailnet != "example.ts.net" || cfg.TokenFile != "/tmp/token" {
+	if cfg.Port != 28250 || cfg.Tailnet != "example.ts.net" || cfg.TokenFile != "/tmp/token" {
 		t.Fatalf("unexpected config: %+v", cfg)
 	}
 }
