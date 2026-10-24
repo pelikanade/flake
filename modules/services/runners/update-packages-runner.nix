@@ -19,7 +19,7 @@
       # access PAT as the deploy runner; both are separate registrations on
       # this host, so each gets its own unreadable-by-others copy.
       sops.secrets.update_packages_runner_pat = {
-        sopsFile = ../secrets/avalanche.yaml;
+        sopsFile = ../../secrets/avalanche.yaml;
         key = "pat";
         owner = runnerUser;
         group = runnerUser;
@@ -41,9 +41,10 @@
 
         # The workflow calls these directly instead of entering a nix shell:
         # the scripts run under python3 and use git and jq, nix-update formats
-        # with nixfmt, the repair agent uses ripgrep and openssh, and the
-        # deploy dispatch uses gh. Nix and git come from the runner service
-        # itself.
+        # with nixfmt, the repair and review agents are omp, the agent reaches
+        # for ripgrep and openssh, and the deploy dispatch uses gh. Nix and
+        # git come from the runner service itself. omp is this flake's locked
+        # output, so the workflow does not build .#omp per run.
         extraPackages = with pkgs; [
           gh
           jq
@@ -52,6 +53,7 @@
           openssh
           python3
           ripgrep
+          selfPackages.omp
         ];
       };
     };

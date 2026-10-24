@@ -6,10 +6,10 @@ failures with an omp agent, reviews the repairs with a second omp agent, and
 then commits. There is no separate repair workflow and no pull request.
 
 It runs on the `update-packages` self-hosted runner on `neko-sphere`.
-`modules/services/update-packages-runner.nix` puts the tools its steps call
-(python3, jq, gh, ripgrep, openssh, nix-update, and nixfmt) on the job `PATH`,
-so the steps invoke the scripts and `gh` directly instead of entering a Nix
-shell.
+`modules/services/runners/update-packages-runner.nix` puts the tools its steps
+call (python3, jq, gh, ripgrep, openssh, nix-update, nixfmt, and omp) on the
+job `PATH`, so the steps invoke the scripts and `gh` directly, and the repair
+and review agents run with the installed omp instead of building `.#omp`.
 
 ## Sequence
 
