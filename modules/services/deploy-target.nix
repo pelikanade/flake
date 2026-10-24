@@ -11,6 +11,16 @@
       triggerDir = "/run/deploy-trigger";
       triggerPort = 8080;
       avalanche = pkgs.selfPackages.avalanche;
+
+      serverYaml = (pkgs.formats.yaml { }).generate "server.yaml" {
+        server = {
+          hostname = config.networking.hostName;
+          token_file = config.sops.secrets.deploy_trigger_token.path;
+          dir = triggerDir;
+          port = triggerPort;
+          timeout = "2h";
+        };
+      };
     in
     {
       options.services.deploy-target.enable = lib.mkOption {
@@ -20,6 +30,8 @@
       };
 
       config = lib.mkIf config.services.deploy-target.enable {
+        environment.etc."avalanche/server.yaml".source = serverYaml;
+
         users.groups.deploy = { };
         users.groups.deploy-trigger = { };
 
@@ -49,16 +61,9 @@
             SupplementaryGroups = [ "deploy" ];
             RuntimeDirectory = "deploy-trigger";
             RuntimeDirectoryMode = "0700";
-            ExecStart = "${avalanche}/bin/avalanche-target serve";
+            ExecStart = "${avalanche}/bin/avalanche-server serve";
             Restart = "always";
             RestartSec = 2;
-            Environment = [
-              "AVALANCHE_TARGET_HOSTNAME=${config.networking.hostName}"
-              "AVALANCHE_TRIGGER_TOKEN_FILE=${config.sops.secrets.deploy_trigger_token.path}"
-              "AVALANCHE_TRIGGER_DIR=${triggerDir}"
-              "AVALANCHE_TRIGGER_PORT=${toString triggerPort}"
-              "AVALANCHE_TRIGGER_TIMEOUT=7200"
-            ];
             NoNewPrivileges = true;
             PrivateTmp = true;
             ProtectHome = true;
@@ -86,10 +91,8 @@
           requires = [ "deploy-trigger.service" ];
           serviceConfig = {
             Type = "oneshot";
-            ExecStart = "${avalanche}/bin/avalanche-target request";
+            ExecStart = "${avalanche}/bin/avalanche-server request";
             Environment = [
-              "AVALANCHE_TARGET_HOSTNAME=${config.networking.hostName}"
-              "AVALANCHE_TRIGGER_DIR=${triggerDir}"
               "PATH=/run/current-system/sw/bin"
             ];
             TimeoutStartSec = "5m";

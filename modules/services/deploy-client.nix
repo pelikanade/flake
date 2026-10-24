@@ -17,14 +17,17 @@
           configurations.${name}.config.services.deploy-target.enable or false
       ) (builtins.attrNames configurations);
 
-      targetLines = lib.concatMapStringsSep "\n" (name: "target ${name}") targetNames;
-      clientConfig = ''
-        local ${config.networking.hostName}
-        tailnet ${config.constants.tailnetDnsName}
-        token /run/secrets/deploy_trigger_token
-        port 8080
-        ${targetLines}
-      '';
+      clientYaml = (pkgs.formats.yaml { }).generate "client.yaml" {
+        client = {
+          local = config.networking.hostName;
+          tailnet = config.constants.tailnetDnsName;
+          token_file = "/run/secrets/deploy_trigger_token";
+          port = 8080;
+          targets = targetNames;
+          flake = ".";
+          timeout = "2h";
+        };
+      };
     in
     {
       assertions = [
@@ -38,7 +41,7 @@
         }
       ];
 
-      environment.etc."avalanche/client.conf".text = clientConfig;
+      environment.etc."avalanche/client.yaml".source = clientYaml;
       environment.systemPackages = [ pkgs.selfPackages.avalanche ];
 
       users.users.github-runner.extraGroups = [ "deploy" ];

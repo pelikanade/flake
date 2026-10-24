@@ -1,16 +1,14 @@
-package avalanche
+package deploy
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-// TriggerDir is the runtime directory shared by the trigger and root units.
-const TriggerDir = "/run/deploy-trigger"
+// DefaultDir is the runtime directory shared by the trigger and root units.
+const DefaultDir = "/run/deploy-trigger"
 
 // ValidStorePath accepts a NixOS system toplevel for the given hostname.
 func ValidStorePath(hostname, path string) bool {
@@ -35,13 +33,37 @@ func ValidStorePath(hostname, path string) bool {
 	return name == want || strings.HasPrefix(name, want+"-")
 }
 
-// Nonce returns a random identifier for one deployment request.
-func Nonce() (string, error) {
-	var raw [8]byte
-	if _, err := rand.Read(raw[:]); err != nil {
-		return "", err
+// WriteRequest publishes the single pending request.
+func WriteRequest(dir, nonce, storePath string) error {
+	file, err := os.CreateTemp(dir, ".request-")
+	if err != nil {
+		return err
 	}
-	return hex.EncodeToString(raw[:]), nil
+	name := file.Name()
+	defer os.Remove(name)
+
+	if _, err := fmt.Fprintf(file, "%s %s\n", nonce, storePath); err != nil {
+		file.Close()
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	return os.Rename(name, filepath.Join(dir, "request"))
+}
+
+// ReadRequest reads the single pending request written by the trigger.
+func ReadRequest(dir string) (nonce, storePath string, err error) {
+	data, err := os.ReadFile(filepath.Join(dir, "request"))
+	if err != nil {
+		return "", "", err
+	}
+
+	fields := strings.Fields(string(data))
+	if len(fields) != 2 {
+		return "", "", fmt.Errorf("malformed deployment request")
+	}
+	return fields[0], fields[1], nil
 }
 
 // WriteStatus publishes the current activation phase.
@@ -75,16 +97,15 @@ func WriteResult(dir, nonce, status string) error {
 	return os.Chmod(path, 0o644)
 }
 
-// ReadRequest reads the single pending request written by the trigger.
-func ReadRequest(dir string) (nonce, storePath string, err error) {
-	data, err := os.ReadFile(filepath.Join(dir, "request"))
+// ReadToken reads and trims a non-empty bearer token file.
+func ReadToken(path string) (string, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", "", err
+		return "", fmt.Errorf("read token %s: %w", path, err)
 	}
-
-	fields := strings.Fields(string(data))
-	if len(fields) != 2 {
-		return "", "", fmt.Errorf("malformed deployment request")
+	token := strings.TrimSpace(string(data))
+	if token == "" {
+		return "", fmt.Errorf("token file %s is empty", path)
 	}
-	return fields[0], fields[1], nil
+	return token, nil
 }

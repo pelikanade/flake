@@ -9,12 +9,12 @@ push main ──> Deploy workflow (self-hosted runner on neko-sphere)
                  └─ avalanche-client
                       ├─ nix build every target toplevel (concurrently)
                       ├─ POST store path + bearer token to remote targets (concurrently)
-                      │    └─ deploy-trigger.service (avalanche-target serve)
+                      │    └─ deploy-trigger.service (avalanche-server serve)
                       │         ├─ NDJSON stream: phase / log / done
                       │         └─ nixos-deploy.path
                       │              └─ nixos-deploy.service
                       │                   └─ transient avalanche-deploy-<nonce>
-                      │                        └─ avalanche-target activate
+                      │                        └─ avalanche-server activate
                       │                             ├─ nix-store --realise <path>   # from Harmonia
                       │                             ├─ nix-env -p /nix/var/nix/profiles/system --set <path>
                       │                             └─ switch-to-configuration switch
@@ -47,18 +47,20 @@ again by systemd for the next job.
 The runner service runs as the static `github-runner` user. It has no root, no
 SSH key, and no deployment unit of its own. The deploy client is a separate
 aspect, `deploy-client`, imported only by `neko-sphere`; it installs the
-`avalanche` package, writes `/etc/avalanche/client.conf`, and gives the runner
+`avalanche` package, writes `/etc/avalanche/client.yaml`, and gives the runner
 the `deploy` group needed to read the shared token.
 
 The workflow invokes:
 
 ```sh
-avalanche-client --flake .
+avalanche-client
 ```
 
 The client:
 
-1. reads `/etc/avalanche/client.conf` and the shared trigger token from sops;
+1. reads `/etc/avalanche/client.yaml` with Viper and the shared trigger token
+   from sops; every `AVALANCHE_CLIENT_*` environment variable overrides the
+   YAML value, and `AVALANCHE_CONFIG` selects a different file;
 2. builds every target with
    `nix build --no-link --print-out-paths .#nixosConfigurations.<target>.config.system.build.toplevel`,
    concurrently;
@@ -107,10 +109,41 @@ do not.
 aspect to a machine to include it; remove it or disable the option to exclude
 it.
 
+The generated client configuration is:
+
+```yaml
+client:
+  local: neko-sphere
+  tailnet: <tailnetDnsName>
+  token_file: /run/secrets/deploy_trigger_token
+  port: 8080
+  targets:
+    - edge
+    - neko-sphere
+  flake: "."
+  timeout: 2h
+```
+
+The generated server configuration on each target is:
+
+```yaml
+server:
+  hostname: <hostname>
+  token_file: /run/secrets/deploy_trigger_token
+  dir: /run/deploy-trigger
+  port: 8080
+  timeout: 2h
+```
+
+Viper loads the YAML file and automatically maps `client.*` / `server.*` to
+`AVALANCHE_CLIENT_*` / `AVALANCHE_SERVER_*`; environment variables win over
+file values. The file is optional, so an environment-only deployment still
+works.
+
 ## Deploy trigger
 
 Each target runs `deploy-trigger.service` as the non-root `deploy-trigger` user.
-It runs `avalanche-target serve`, which listens on `127.0.0.1:8080`;
+It runs `avalanche-server serve`, which listens on `127.0.0.1:8080`;
 `tailscale-serve-deploy.service` publishes that port with:
 
 ```sh
@@ -134,17 +167,18 @@ as newline-delimited JSON:
 
 Phases are `queued`, `realise`, `profile`, `switch`, and `done` (or `failed`).
 A failed activation ends with `{"type":"done","error":"deployment failed"}`.
-The client prints each event as `[<target>] …`, so concurrent targets remain
+The client logs each event with `target=<name>`, so concurrent targets remain
 distinguishable.
 
 A `systemd.path` unit starts `nixos-deploy.service`, which starts a
 **transient** `systemd-run` unit. That unit runs:
 
 ```sh
-avalanche-target activate <nonce> <store-path> <dir> <hostname>
+avalanche-server activate
 ```
 
-and performs:
+with `AVALANCHE_SERVER_NONCE` and `AVALANCHE_SERVER_STORE_PATH` passed through
+`systemd-run --setenv`, and performs:
 
 ```sh
 nix-store --realise <store-path> --option max-jobs 0

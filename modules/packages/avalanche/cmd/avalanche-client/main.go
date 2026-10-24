@@ -1,21 +1,16 @@
 package main
 
 import (
-	"flag"
-	"fmt"
+	"log/slog"
 	"os"
 
-	"avalanche/internal/avalanche"
+	"avalanche/internal/client"
 )
 
 func main() {
-	flake := flag.String("flake", ".", "flake path")
-	config := flag.String("config", "/etc/avalanche/client.conf", "client configuration")
-	dryRun := flag.Bool("dry-run", false, "print targets without building or triggering")
-	flag.Parse()
-
-	if err := avalanche.RunClient(*config, *flake, *dryRun); err != nil {
-		fmt.Fprintln(os.Stderr, "avalanche-client:", err)
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	if err := client.Run(); err != nil {
+		slog.Error("deployment failed", "error", err)
 		os.Exit(1)
 	}
 }
