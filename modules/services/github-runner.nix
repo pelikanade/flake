@@ -33,7 +33,7 @@
         user = deployUser;
         group = deployUser;
         serviceOverrides = {
-          SupplementaryGroups = [ "deploy" ];
+          SupplementaryGroups = [ "avalanche" ];
         };
       };
     };

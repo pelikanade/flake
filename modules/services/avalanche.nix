@@ -40,13 +40,11 @@
         {
           environment.etc."avalanche/server.yaml".source = serverYaml;
 
-          users.groups.deploy = { };
-          users.groups.deploy-trigger = { };
+          users.groups.avalanche = { };
 
           users.users.deploy-trigger = {
             isSystemUser = true;
-            group = "deploy-trigger";
-            extraGroups = [ "deploy" ];
+            group = "avalanche";
             description = "Deployment trigger service";
           };
 
@@ -54,7 +52,7 @@
             sopsFile = ../secrets/deploy-trigger.yaml;
             key = "deploy_trigger_token";
             owner = "root";
-            group = "deploy";
+            group = "avalanche";
             mode = "0440";
             restartUnits = [ "avalanche-server.service" ];
           };
@@ -65,8 +63,7 @@
             after = [ "network.target" ];
             serviceConfig = {
               User = "deploy-trigger";
-              Group = "deploy-trigger";
-              SupplementaryGroups = [ "deploy" ];
+              Group = "avalanche";
               RuntimeDirectory = "deploy-trigger";
               RuntimeDirectoryMode = "0700";
               ExecStart = "${avalanche}/bin/avalanche-server serve";

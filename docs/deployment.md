@@ -204,8 +204,9 @@ cache does not have a required path.
 
 `modules/secrets/deploy-trigger.yaml` holds one shared value,
 `deploy_trigger_token`, encrypted to the maintainer and every target. The
-module provisions it as `root:deploy` with mode `0440`; the runner service has
-`deploy` as a supplementary group, and the `deploy-trigger` user is in it.
+module provisions it as `root:avalanche` with mode `0440`; the runner service
+has `avalanche` as a supplementary group, and the `deploy-trigger` service
+user's primary group is `avalanche`.
 
 Rotation: replace the value with `sops`, then switch the targets (or restart
 `avalanche-server.service`). The client reads the new value on its next job.
