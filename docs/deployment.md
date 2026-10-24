@@ -10,7 +10,7 @@ push main ──> Deploy workflow (self-hosted runner on neko-sphere)
                       └─ avalanche-client --target <target>
                            ├─ nix build <target> toplevel
                            ├─ POST store path + bearer token
-                           │    └─ deploy-trigger.service (avalanche-server serve)
+                           │    └─ avalanche-server.service (avalanche-server serve)
                            │         ├─ NDJSON stream: phase / log / done
                            │         └─ nixos-deploy.path
                            │              └─ nixos-deploy.service
@@ -138,8 +138,8 @@ works.
 
 ## Deploy trigger
 
-Each target runs `deploy-trigger.service` as the non-root `deploy-trigger` user.
-It runs `avalanche-server serve`, which listens on `127.0.0.1:8080`;
+Each target runs `avalanche-server.service` as the non-root `deploy-trigger`
+user. It runs `avalanche-server serve`, which listens on `127.0.0.1:8080`;
 `tailscale-serve-deploy.service` publishes that port with:
 
 ```sh
@@ -208,7 +208,7 @@ module provisions it as `root:deploy` with mode `0440`; the runner service has
 `deploy` as a supplementary group, and the `deploy-trigger` user is in it.
 
 Rotation: replace the value with `sops`, then switch the targets (or restart
-`deploy-trigger.service`). The client reads the new value on its next job.
+`avalanche-server.service`). The client reads the new value on its next job.
 
 A shared token means any compromised target can trigger another target. Each
 target still validates the store path against its own hostname and can only
@@ -226,7 +226,7 @@ them has been activated. The first deployment is therefore manual:
    `just rdeploy edge root@<edge>`.
 3. Verify on each target:
    ```sh
-   systemctl status deploy-trigger tailscale-serve-deploy nixos-deploy.path
+   systemctl status avalanche-server tailscale-serve-deploy nixos-deploy.path
    tailscale serve status
    ```
 4. Run the workflow once with `gh workflow run deploy.yml --ref main`, or push
@@ -254,7 +254,7 @@ last successfully activated revision after the next run.
 - **Runner is offline:** `systemctl status github-runner-neko-sphere` and
   `journalctl -u github-runner-neko-sphere`. A missing or expired PAT fails
   during runner registration.
-- **Trigger refused:** check `journalctl -u deploy-trigger`, the token file's
+- **Trigger refused:** check `journalctl -u avalanche-server`, the token file's
   group, and `tailscale serve status`. The tailnet policy must allow `tcp:8080`
   from the runner to the target if it is not already open.
 - **Deployment fails:** `journalctl -u nixos-deploy` shows the request; the

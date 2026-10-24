@@ -56,10 +56,10 @@
             owner = "root";
             group = "deploy";
             mode = "0440";
-            restartUnits = [ "deploy-trigger.service" ];
+            restartUnits = [ "avalanche-server.service" ];
           };
 
-          systemd.services.deploy-trigger = {
+          systemd.services.avalanche-server = {
             description = "Authenticated pull-based deployment trigger";
             wantedBy = [ "multi-user.target" ];
             after = [ "network.target" ];
@@ -95,8 +95,8 @@
 
           systemd.services.nixos-deploy = {
             description = "Activate a triggered NixOS closure";
-            after = [ "deploy-trigger.service" ];
-            requires = [ "deploy-trigger.service" ];
+            after = [ "avalanche-server.service" ];
+            requires = [ "avalanche-server.service" ];
             serviceConfig = {
               Type = "oneshot";
               ExecStart = "${avalanche}/bin/avalanche-server request";
@@ -110,8 +110,8 @@
           systemd.paths.nixos-deploy = {
             description = "Watch for a deployment request";
             wantedBy = [ "multi-user.target" ];
-            after = [ "deploy-trigger.service" ];
-            requires = [ "deploy-trigger.service" ];
+            after = [ "avalanche-server.service" ];
+            requires = [ "avalanche-server.service" ];
             pathConfig = {
               PathChanged = "${triggerDir}/request";
               Unit = "nixos-deploy.service";
@@ -127,7 +127,7 @@
                 after = [
                   "tailscaled.service"
                   "tailscaled-autoconnect.service"
-                  "deploy-trigger.service"
+                  "avalanche-server.service"
                 ];
                 serviceConfig = {
                   Type = "oneshot";
