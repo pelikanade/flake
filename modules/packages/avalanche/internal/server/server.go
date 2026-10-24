@@ -25,9 +25,6 @@ func Serve() error {
 	if err != nil {
 		return err
 	}
-	if cfg.Hostname == "" {
-		return fmt.Errorf("server.hostname is required")
-	}
 	token, err := deploy.ReadToken(cfg.TokenFile)
 	if err != nil {
 		return err

@@ -1,15 +1,10 @@
 package server
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
-	"strings"
 	"time"
 
-	"github.com/spf13/viper"
-
+	"avalanche/internal/config"
 	"avalanche/internal/deploy"
 )
 
@@ -28,31 +23,17 @@ type Config struct {
 // LoadConfig reads server.yaml, then lets AVALANCHE_SERVER_* environment
 // variables override every key.
 func LoadConfig() (*Config, error) {
-	path := os.Getenv("AVALANCHE_CONFIG")
-	if path == "" {
-		path = DefaultConfigPath
-	}
-
-	loader := viper.New()
-	loader.SetConfigFile(path)
-	loader.SetConfigType("yaml")
-	loader.SetEnvPrefix("AVALANCHE")
-	loader.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	loader.AutomaticEnv()
-
-	loader.SetDefault("server.hostname", "")
-	loader.SetDefault("server.token_file", "/run/secrets/deploy_trigger_token")
-	loader.SetDefault("server.dir", deploy.DefaultDir)
-	loader.SetDefault("server.port", 8080)
-	loader.SetDefault("server.timeout", "2h")
-	loader.SetDefault("server.nonce", "")
-	loader.SetDefault("server.store_path", "")
-
-	if err := loader.ReadInConfig(); err != nil {
-		var notFound viper.ConfigFileNotFoundError
-		if !errors.Is(err, fs.ErrNotExist) && !errors.As(err, &notFound) {
-			return nil, fmt.Errorf("read %s: %w", path, err)
-		}
+	loader, path, err := config.Load(DefaultConfigPath, map[string]any{
+		"server.hostname":   "",
+		"server.token_file": "/run/secrets/deploy_trigger_token",
+		"server.dir":        deploy.DefaultDir,
+		"server.port":       8080,
+		"server.timeout":    "2h",
+		"server.nonce":      "",
+		"server.store_path": "",
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	var root struct {
@@ -63,6 +44,9 @@ func LoadConfig() (*Config, error) {
 	}
 	cfg := root.Server
 
+	if cfg.Hostname == "" {
+		return nil, fmt.Errorf("%s: server.hostname is required", path)
+	}
 	if cfg.Dir == "" {
 		return nil, fmt.Errorf("%s: server.dir is required", path)
 	}

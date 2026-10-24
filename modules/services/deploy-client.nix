@@ -12,9 +12,9 @@
       targetNames = lib.filter (
         name:
         if name == config.networking.hostName then
-          config.services.deploy-target.enable or false
+          config.systemd.services ? deploy-trigger
         else
-          configurations.${name}.config.services.deploy-target.enable or false
+          configurations.${name}.config.systemd.services ? deploy-trigger
       ) (builtins.attrNames configurations);
 
       clientYaml = (pkgs.formats.yaml { }).generate "client.yaml" {

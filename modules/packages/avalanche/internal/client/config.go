@@ -1,14 +1,11 @@
 package client
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/spf13/viper"
+	configutil "avalanche/internal/config"
 )
 
 const DefaultConfigPath = "/etc/avalanche/client.yaml"
@@ -26,31 +23,17 @@ type Config struct {
 // LoadConfig reads client.yaml, then lets AVALANCHE_CLIENT_* environment
 // variables override every key.
 func LoadConfig() (*Config, error) {
-	path := os.Getenv("AVALANCHE_CONFIG")
-	if path == "" {
-		path = DefaultConfigPath
-	}
-
-	loader := viper.New()
-	loader.SetConfigFile(path)
-	loader.SetConfigType("yaml")
-	loader.SetEnvPrefix("AVALANCHE")
-	loader.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	loader.AutomaticEnv()
-
-	loader.SetDefault("client.local", "")
-	loader.SetDefault("client.tailnet", "")
-	loader.SetDefault("client.token_file", "/run/secrets/deploy_trigger_token")
-	loader.SetDefault("client.port", 8080)
-	loader.SetDefault("client.targets", []string{})
-	loader.SetDefault("client.flake", ".")
-	loader.SetDefault("client.timeout", "2h")
-
-	if err := loader.ReadInConfig(); err != nil {
-		var notFound viper.ConfigFileNotFoundError
-		if !errors.Is(err, fs.ErrNotExist) && !errors.As(err, &notFound) {
-			return nil, fmt.Errorf("read %s: %w", path, err)
-		}
+	loader, path, err := configutil.Load(DefaultConfigPath, map[string]any{
+		"client.local":      "",
+		"client.tailnet":    "",
+		"client.token_file": "/run/secrets/deploy_trigger_token",
+		"client.port":       8080,
+		"client.targets":    []string{},
+		"client.flake":      ".",
+		"client.timeout":    "2h",
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	var root struct {

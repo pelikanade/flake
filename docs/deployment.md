@@ -99,15 +99,13 @@ with the new value.
 ## Targets
 
 A machine is a deployment target when it imports the `deploy-target` aspect.
-The option `services.deploy-target.enable` defaults to true and can be set to
-false to keep the aspect imported while disabling the service. Currently
-`neko-sphere` and `edge` import it; `asymmetry`, `parallax`, and the installer
-do not.
+Importing it always enables the trigger; there is no separate enable toggle.
+Currently `neko-sphere` and `edge` import it; `asymmetry`, `parallax`, and the
+installer do not.
 
-`deploy-client` derives the target list by reading
-`services.deploy-target.enable` from each materialized configuration. Add the
-aspect to a machine to include it; remove it or disable the option to exclude
-it.
+`deploy-client` derives the target list by checking which materialized
+configurations define `deploy-trigger.service`. Add the aspect to a machine to
+include it; remove it to exclude it.
 
 The generated client configuration is:
 

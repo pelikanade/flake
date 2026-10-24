@@ -33,23 +33,31 @@ func ValidStorePath(hostname, path string) bool {
 	return name == want || strings.HasPrefix(name, want+"-")
 }
 
-// WriteRequest publishes the single pending request.
-func WriteRequest(dir, nonce, storePath string) error {
-	file, err := os.CreateTemp(dir, ".request-")
+func writeAtomic(dir, prefix, name string, data []byte, mode os.FileMode) error {
+	file, err := os.CreateTemp(dir, prefix)
 	if err != nil {
 		return err
 	}
-	name := file.Name()
-	defer os.Remove(name)
+	temp := file.Name()
+	defer os.Remove(temp)
 
-	if _, err := fmt.Fprintf(file, "%s %s\n", nonce, storePath); err != nil {
+	if _, err := file.Write(data); err != nil {
 		file.Close()
 		return err
 	}
 	if err := file.Close(); err != nil {
 		return err
 	}
-	return os.Rename(name, filepath.Join(dir, "request"))
+	if err := os.Chmod(temp, mode); err != nil {
+		return err
+	}
+	return os.Rename(temp, filepath.Join(dir, name))
+}
+
+// WriteRequest publishes the single pending request.
+func WriteRequest(dir, nonce, storePath string) error {
+	data := fmt.Sprintf("%s %s\n", nonce, storePath)
+	return writeAtomic(dir, ".request-", "request", []byte(data), 0o600)
 }
 
 // ReadRequest reads the single pending request written by the trigger.
@@ -68,33 +76,12 @@ func ReadRequest(dir string) (nonce, storePath string, err error) {
 
 // WriteStatus publishes the current activation phase.
 func WriteStatus(dir, nonce, status string) error {
-	file, err := os.CreateTemp(dir, ".status-")
-	if err != nil {
-		return err
-	}
-	name := file.Name()
-	defer os.Remove(name)
-
-	if _, err := file.WriteString(status + "\n"); err != nil {
-		file.Close()
-		return err
-	}
-	if err := file.Close(); err != nil {
-		return err
-	}
-	if err := os.Chmod(name, 0o644); err != nil {
-		return err
-	}
-	return os.Rename(name, filepath.Join(dir, "status-"+nonce))
+	return writeAtomic(dir, ".status-", "status-"+nonce, []byte(status+"\n"), 0o644)
 }
 
 // WriteResult publishes the outcome of the transient activation unit.
 func WriteResult(dir, nonce, status string) error {
-	path := filepath.Join(dir, "result-"+nonce)
-	if err := os.WriteFile(path, []byte(status+"\n"), 0o644); err != nil {
-		return err
-	}
-	return os.Chmod(path, 0o644)
+	return writeAtomic(dir, ".result-", "result-"+nonce, []byte(status+"\n"), 0o644)
 }
 
 // ReadToken reads and trims a non-empty bearer token file.

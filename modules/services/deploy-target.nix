@@ -23,13 +23,7 @@
       };
     in
     {
-      options.services.deploy-target.enable = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Whether this host accepts pull-based deployment triggers.";
-      };
-
-      config = lib.mkIf config.services.deploy-target.enable {
+      config = {
         environment.etc."avalanche/server.yaml".source = serverYaml;
 
         users.groups.deploy = { };

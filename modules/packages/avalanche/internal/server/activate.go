@@ -21,10 +21,6 @@ func Request() error {
 	if err != nil {
 		return err
 	}
-	if cfg.Hostname == "" {
-		return fmt.Errorf("server.hostname is required")
-	}
-
 	nonce, storePath, err := deploy.ReadRequest(cfg.Dir)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
@@ -79,9 +75,6 @@ func Activate() error {
 	cfg, err := LoadConfig()
 	if err != nil {
 		return err
-	}
-	if cfg.Hostname == "" {
-		return fmt.Errorf("server.hostname is required")
 	}
 	if cfg.Nonce == "" || cfg.StorePath == "" {
 		return fmt.Errorf("server.nonce and server.store_path are required")
