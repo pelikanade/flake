@@ -5,6 +5,12 @@ the flake lock, updates every locally packaged tool, builds them, repairs
 failures with an omp agent, reviews the repairs with a second omp agent, and
 then commits. There is no separate repair workflow and no pull request.
 
+It runs on the `update-packages` self-hosted runner on `neko-sphere`.
+`modules/services/update-packages-runner.nix` puts the tools its steps call
+(python3, jq, gh, ripgrep, openssh, nix-update, and nixfmt) on the job `PATH`,
+so the steps invoke the scripts and `gh` directly instead of entering a Nix
+shell.
+
 ## Sequence
 
 1. **Flake inputs.** `nix flake update` runs for every input, then every

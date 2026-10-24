@@ -38,21 +38,36 @@ The update workflow pushes its commits with `GITHUB_TOKEN`. GitHub does not
 start a new `push` workflow for that token, so
 [`update-packages.yml`](../.github/workflows/update-packages.yml) explicitly
 runs `gh workflow run deploy.yml --ref main` after a push. This is why that
-workflow needs the `actions: write` permission.
+workflow needs the `actions: write` permission. The update workflow runs on the
+`update-packages` runner described below, separate from the deploy runner, so a
+nightly update never occupies the deploy queue.
 
-## Runner
+## Runners
 
-`modules/services/avalanche-runner.nix` registers one repository-level runner,
-named `avalanche`, with the labels `self-hosted` and `avalanche`. It is
-ephemeral: it registers, processes one job, deregisters, and is registered
-again by systemd for the next job. With one runner, the matrix jobs run one
-after another.
+Two repository-level runners run on `neko-sphere`, each ephemeral: a runner
+registers, processes one job, deregisters, and systemd registers it again for
+the next job.
 
-The runner service runs as the static `avalanche-runner` user. It has no root, no
-SSH key, and no deployment unit of its own. The `avalanche-runner` module
-installs the `avalanche` package and gives the runner service the `avalanche`
-group, so the client reads `/run/secrets/avalanche_token` directly. The client
-is a command, not a service; the workflow carries no trigger token.
+- `modules/services/avalanche-runner.nix` registers `avalanche` with the
+  labels `self-hosted` and `avalanche`. `deploy.yml` targets it, and the
+  matrix jobs run one after another.
+- `modules/services/update-packages-runner.nix` registers `update-packages`
+  with the labels `self-hosted` and `update-packages`. `update-packages.yml`
+  targets it. Its `extraPackages` put python3, jq, gh, ripgrep, openssh,
+  nix-update, and nixfmt on the job `PATH`, so the workflow calls them
+  directly instead of entering a Nix shell.
+
+The `avalanche` runner service runs as the static `avalanche-runner` user. It
+has no root, no SSH key, and no deployment unit of its own. The
+`avalanche-runner` module installs the `avalanche` package and gives the runner
+service the `avalanche` group, so the client reads
+`/run/secrets/avalanche_token` directly. The client is a command, not a
+service; the workflow carries no trigger token.
+
+The `update-packages` runner service runs as the static
+`update-packages-runner` user. It has no root, no SSH key, and no deployment
+unit; its only repository credential is the registration PAT. The workflow
+pushes with the job's `GITHUB_TOKEN`.
 
 Each matrix job invokes:
 
@@ -83,8 +98,11 @@ the single runner, so it normally runs after the runner re-registers.
 The runner daemon needs a credential before any job exists. A workflow's
 `GITHUB_TOKEN` is issued only after a runner has picked up a job and does not
 have the `administration` permission required by the runner registration API.
-The NixOS module therefore reads a long-lived fine-grained PAT from
-`/run/secrets/avalanche_runner_pat`.
+The NixOS modules therefore read a long-lived fine-grained PAT:
+`modules/services/avalanche-runner.nix` installs it at
+`/run/secrets/avalanche_runner_pat`, and
+`modules/services/update-packages-runner.nix` installs the same document key at
+`/run/secrets/update_packages_runner_pat`.
 
 Create a fine-grained PAT with:
 
@@ -211,15 +229,16 @@ the maintainer, `neko-sphere`, and `edge`:
 - `token`: the shared trigger token, provisioned as `root:avalanche` with mode
   `0440`. The runner service has `avalanche` as a supplementary group, so the
   client reads this file directly;
-- `pat`: the runner PAT, provisioned as `avalanche-runner:avalanche-runner` with
-  mode `0400`.
+- `pat`: the runner registration PAT, provisioned twice with mode `0400`:
+  `avalanche-runner:avalanche-runner` and
+  `update-packages-runner:update-packages-runner`.
 
 No Actions secret carries the trigger token. The `avalanche` server user's
 primary group is `avalanche`.
 
 Rotation: replace the affected value with `sops`, then switch the targets (or
-restart `avalanche-server.service` / `github-runner-avalanche`). The next job
-uses the new value.
+restart `avalanche-server.service`, `github-runner-avalanche`, or
+`github-runner-update-packages`). The next job uses the new value.
 
 A shared token means any compromised target can trigger another target. Each
 target still validates the store path against its own hostname and can only
@@ -240,7 +259,8 @@ them has been activated. The first deployment is therefore manual:
    systemctl status avalanche-server tailscale-serve-deploy avalanche-deploy.path
    tailscale serve status
    ```
-   On `neko-sphere`, also check `systemctl status github-runner-avalanche`.
+   On `neko-sphere`, also check `systemctl status github-runner-avalanche
+   github-runner-update-packages`.
 4. Run the workflow once with `gh workflow run deploy.yml --ref main`, or push
    a trivial commit, and confirm the targets switch.
 
@@ -264,7 +284,8 @@ last successfully activated revision after the next run.
 ## Troubleshooting
 
 - **Runner is offline:** `systemctl status github-runner-avalanche` and
-  `journalctl -u github-runner-avalanche`. A missing or expired PAT fails
+  `journalctl -u github-runner-avalanche` for deploys;
+  `github-runner-update-packages` for updates. A missing or expired PAT fails
   during runner registration.
 - **Trigger refused:** check `journalctl -u avalanche-server`, the token file's
   group, and `tailscale serve status`. The tailnet policy must allow `tcp:28250`

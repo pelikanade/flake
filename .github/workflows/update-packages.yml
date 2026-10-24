@@ -17,14 +17,18 @@ concurrency:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    # This runner, its Nix and its tools are defined by
+    # modules/services/update-packages-runner.nix. It is a separate label from
+    # the deploy runner so an update cannot occupy the deploy queue.
+    runs-on:
+      - self-hosted
+      - update-packages
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v7
         with:
           # The agents run before the final push and have no git credentials.
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
@@ -42,10 +46,7 @@ jobs:
       - name: Update packages
         id: packages
         continue-on-error: true
-        run: >-
-          nix shell nixpkgs#nix-update nixpkgs#nixfmt-rfc-style
-          -c ./scripts/update-packages.py --keep-failed
-          --log-dir=.update-agent
+        run: ./scripts/update-packages.py --keep-failed --log-dir=.update-agent
 
       - name: Stop on a fatal updater failure
         if: steps.packages.outcome == 'failure'
