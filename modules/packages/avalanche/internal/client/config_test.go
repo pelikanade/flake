@@ -12,7 +12,6 @@ func TestLoadConfigYAMLAndEnvironment(t *testing.T) {
 	path := filepath.Join(dir, "client.yaml")
 	if err := os.WriteFile(path, []byte(`
 client:
-  local: neko-sphere
   tailnet: example.ts.net
   token_file: /tmp/token
   port: 8080
@@ -27,7 +26,7 @@ client:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Local != "neko-sphere" || cfg.Tailnet != "example.ts.net" {
+	if cfg.Tailnet != "example.ts.net" {
 		t.Fatalf("unexpected config: %+v", cfg)
 	}
 	if cfg.Timeout != 2*time.Hour {
@@ -50,7 +49,6 @@ client:
 
 func TestLoadConfigEnvironmentOnly(t *testing.T) {
 	t.Setenv("AVALANCHE_CONFIG", filepath.Join(t.TempDir(), "missing.yaml"))
-	t.Setenv("AVALANCHE_CLIENT_LOCAL", "neko-sphere")
 	t.Setenv("AVALANCHE_CLIENT_TAILNET", "example.ts.net")
 	t.Setenv("AVALANCHE_CLIENT_TOKEN_FILE", "/tmp/token")
 	t.Setenv("AVALANCHE_CLIENT_PORT", "8080")
@@ -61,7 +59,7 @@ func TestLoadConfigEnvironmentOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Local != "neko-sphere" || cfg.Port != 8080 {
+	if cfg.Port != 8080 || cfg.Tailnet != "example.ts.net" {
 		t.Fatalf("unexpected config: %+v", cfg)
 	}
 }

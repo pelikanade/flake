@@ -19,8 +19,7 @@
       harmonia
       gh
       github-runner
-      deploy-target
-      deploy-client
+      avalanche
       tailscale-ingress
       probe-agent
       zswap

@@ -10,7 +10,6 @@ import (
 const DefaultConfigPath = "/etc/avalanche/client.yaml"
 
 type Config struct {
-	Local     string        `mapstructure:"local"`
 	Tailnet   string        `mapstructure:"tailnet"`
 	TokenFile string        `mapstructure:"token_file"`
 	Port      int           `mapstructure:"port"`
@@ -22,7 +21,6 @@ type Config struct {
 // variables override every key. The target is supplied on the command line.
 func LoadConfig() (*Config, error) {
 	loader, path, err := configutil.Load(DefaultConfigPath, map[string]any{
-		"client.local":      "",
 		"client.tailnet":    "",
 		"client.token_file": "/run/secrets/deploy_trigger_token",
 		"client.port":       8080,
@@ -41,8 +39,8 @@ func LoadConfig() (*Config, error) {
 	}
 	cfg := root.Client
 
-	if cfg.Local == "" || cfg.Tailnet == "" {
-		return nil, fmt.Errorf("%s: client.local and client.tailnet are required", path)
+	if cfg.Tailnet == "" {
+		return nil, fmt.Errorf("%s: client.tailnet is required", path)
 	}
 	if cfg.TokenFile == "" {
 		return nil, fmt.Errorf("%s: client.token_file is required", path)

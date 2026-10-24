@@ -15,15 +15,6 @@ import (
 	"avalanche/internal/protocol"
 )
 
-type deployFailedError struct {
-	target  string
-	message string
-}
-
-func (e *deployFailedError) Error() string {
-	return fmt.Sprintf("%s: %s", e.target, e.message)
-}
-
 // Run builds and deploys one target supplied by the workflow matrix.
 func Run(target string) error {
 	if target == "" {
@@ -46,17 +37,7 @@ func Run(target string) error {
 	slog.Info("built target", "target", target, "path", path)
 
 	httpClient := &http.Client{Timeout: cfg.Timeout}
-	err = postDeploy(httpClient, cfg, token, target, path)
-	if err != nil && target == cfg.Local {
-		var failed *deployFailedError
-		if !errors.As(err, &failed) {
-			// A lost connection usually means the local switch restarted the
-			// runner; the transient activation unit keeps going.
-			slog.Warn("local trigger lost", "target", target, "error", err)
-			return nil
-		}
-	}
-	return err
+	return postDeploy(httpClient, cfg, token, target, path)
 }
 
 func buildTarget(flake, target string) (string, error) {
@@ -94,10 +75,7 @@ func postDeploy(httpClient *http.Client, cfg *Config, token, target, storePath s
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return &deployFailedError{
-			target:  target,
-			message: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body))),
-		}
+		return fmt.Errorf("%s: HTTP %d: %s", target, resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	decoder := json.NewDecoder(resp.Body)
@@ -121,7 +99,7 @@ func postDeploy(httpClient *http.Client, cfg *Config, token, target, storePath s
 				if message == "" {
 					message = "deployment failed"
 				}
-				return &deployFailedError{target: target, message: message}
+				return fmt.Errorf("%s: %s", target, message)
 			}
 			slog.Info("deployment complete", "target", target)
 			return nil

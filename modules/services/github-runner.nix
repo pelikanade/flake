@@ -1,11 +1,8 @@
 {
   flake.modules.nixos.github-runner =
-    { config, lib, ... }:
+    { config, ... }:
     let
-      runnerNames = [
-        "neko-sphere-1"
-        "neko-sphere-2"
-      ];
+      runnerName = "neko-sphere";
       deployUser = "github-runner";
     in
     {
@@ -24,17 +21,20 @@
         mode = "0400";
       };
 
-      services.github-runners = lib.genAttrs runnerNames (name: {
+      services.github-runners.${runnerName} = {
         enable = true;
         url = "https://github.com/pelikanade/flake";
-        inherit name;
+        name = runnerName;
         tokenFile = config.sops.secrets.github_runner_token.path;
         tokenType = "access";
         ephemeral = true;
         replace = true;
-        extraLabels = [ "neko-sphere" ];
+        extraLabels = [ runnerName ];
         user = deployUser;
         group = deployUser;
-      });
+        serviceOverrides = {
+          SupplementaryGroups = [ "deploy" ];
+        };
+      };
     };
 }

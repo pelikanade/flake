@@ -7,7 +7,7 @@
       server
       bios
       tailscale
-      deploy-target
+      avalanche
       caddy
       nvirellia-im
       gatus

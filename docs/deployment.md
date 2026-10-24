@@ -5,8 +5,8 @@ its target and asks it to activate the closure. No host pulls the repository on
 a timer, and the runners never get SSH access.
 
 ```text
-push main ──> Deploy workflow (two self-hosted runners on neko-sphere)
-                 └─ matrix: edge, neko-sphere
+push main ──> Deploy workflow (self-hosted runner on neko-sphere)
+                 └─ serial matrix: edge, neko-sphere
                       └─ avalanche-client --target <target>
                            ├─ nix build <target> toplevel
                            ├─ POST store path + bearer token
@@ -30,9 +30,10 @@ push main ──> Deploy workflow (two self-hosted runners on neko-sphere)
 - `workflow_dispatch` from `main`.
 
 A dispatch from another ref is skipped. The matrix runs with
-`fail-fast: false`, so each target job builds its own closure and sends its own
-trigger independently. A build failure leaves that target on its current
-generation while the other matrix jobs continue.
+`fail-fast: false` and `max-parallel: 1`, so the single runner processes one
+target at a time. Each job builds its own closure and sends its own trigger; a
+build failure leaves that target on its current generation while the other
+matrix jobs continue.
 
 The update workflow pushes its commits with `GITHUB_TOKEN`. GitHub does not
 start a new `push` workflow for that token, so
@@ -42,17 +43,18 @@ workflow needs the `actions: write` permission.
 
 ## Runner
 
-`modules/services/github-runner.nix` registers two repository-level runners,
-named `neko-sphere-1` and `neko-sphere-2`, both with the labels `self-hosted`
-and `neko-sphere`. Each is ephemeral: it registers, processes one job,
-deregisters, and is registered again by systemd for the next job. Two runners
-are required for the two matrix jobs to run concurrently on this host.
+`modules/services/github-runner.nix` registers one repository-level runner,
+named `neko-sphere`, with the labels `self-hosted` and `neko-sphere`. It is
+ephemeral: it registers, processes one job, deregisters, and is registered
+again by systemd for the next job. With one runner and `max-parallel: 1`, the
+matrix jobs run one after another.
 
-Each runner service runs as the static `github-runner` user. It has no root, no
-SSH key, and no deployment unit of its own. The deploy client is a separate
-aspect, `deploy-client`, imported only by `neko-sphere`; it installs the
-`avalanche` package, writes `/etc/avalanche/client.yaml`, and gives both runner
-services the `deploy` group needed to read the shared token.
+The runner service runs as the static `github-runner` user. It has no root, no
+SSH key, and no deployment unit of its own. The `avalanche` aspect, imported by
+`neko-sphere`, installs the `avalanche` package and writes
+`/etc/avalanche/client.yaml` only because a GitHub runner is present; the
+client is a command, not a service. The runner service has the `deploy` group
+as a supplementary group so that command can read the shared token.
 
 Each matrix job invokes:
 
@@ -71,12 +73,11 @@ The client:
 4. streams the target's phase and log events to the matrix job log, and fails
    the job if the target reports a failed deployment.
 
-The matrix includes `neko-sphere` itself. Activating it can restart both runner
-services and cancel the running matrix jobs; the transient activation unit is
-independent of the client and continues. A lost local connection is a warning,
-but a local target that reports a failed activation still fails the job.
-Because `fail-fast` is false, the other matrix entry is not cancelled by a
-failed job; it may still be canceled if the local switch restarts its runner.
+The matrix includes `neko-sphere` itself. Activating it can restart the runner
+and cancel the running job; the transient activation unit is independent of the
+client and continues. The client has no local-target special case: a failed or
+lost connection fails that matrix job. The other matrix entry is queued behind
+the single runner, so it normally runs after the runner re-registers.
 
 ### Registration token
 
@@ -95,25 +96,24 @@ Create a fine-grained PAT with:
 
 The value lives in `modules/secrets/github-runner.yaml`, encrypted to the
 maintainer and `neko-sphere`. Rotation: update the encrypted document, switch
-`neko-sphere` (or restart both `github-runner-neko-sphere-*` services); the next
-job registers with the new value.
+`neko-sphere` (or restart `github-runner-neko-sphere`); the next job registers
+with the new value.
 
 ## Targets
 
-A machine is a deployment target when it imports the `deploy-target` aspect.
+A machine is a deployment target when it imports the `avalanche` aspect.
 Importing it always enables the trigger; there is no separate enable toggle.
 Currently `neko-sphere` and `edge` import it; `asymmetry`, `parallax`, and the
 installer do not.
 
 The workflow matrix in `deploy.yml` is the source of target names. Keep it in
-sync with the machines that import `deploy-target`; currently that is `edge`
-and `neko-sphere`.
+sync with the machines that import `avalanche`; currently that is `edge` and
+`neko-sphere`.
 
 The generated client configuration is:
 
 ```yaml
 client:
-  local: neko-sphere
   tailnet: <tailnetDnsName>
   token_file: /run/secrets/deploy_trigger_token
   port: 8080
@@ -205,8 +205,8 @@ cache does not have a required path.
 
 `modules/secrets/deploy-trigger.yaml` holds one shared value,
 `deploy_trigger_token`, encrypted to the maintainer and every target. The
-module provisions it as `root:deploy` with mode `0440`; `github-runner` and
-`deploy-trigger` are both in the `deploy` group.
+module provisions it as `root:deploy` with mode `0440`; the runner service has
+`deploy` as a supplementary group, and the `deploy-trigger` user is in it.
 
 Rotation: replace the value with `sops`, then switch the targets (or restart
 `deploy-trigger.service`). The client reads the new value on its next job.
@@ -234,7 +234,7 @@ them has been activated. The first deployment is therefore manual:
    a trivial commit, and confirm the targets switch.
 
 The push that landed the change may already have queued a `Deploy` run. It
-stays queued until the manually installed runners come online.
+stays queued until the manually installed runner comes online.
 
 ## Rollback
 
@@ -246,25 +246,25 @@ workflow failure, run the normal switch from a workstation:
 nixos-rebuild switch --flake .#<machine> --target-host root@<host>
 ```
 
-A partial deployment is possible: each matrix job is independent, and the
-local switch can cancel the other job by restarting its runner. Every target
-remains on its last successfully activated revision after the next run.
+A partial deployment is possible: matrix jobs are serial, and the local switch
+can cancel its own job by restarting the runner. Every target remains on its
+last successfully activated revision after the next run.
 
 ## Troubleshooting
 
-- **Runner is offline:** `systemctl status github-runner-neko-sphere-1
-  github-runner-neko-sphere-2` and their journals. A missing or expired PAT
-  fails during runner registration.
+- **Runner is offline:** `systemctl status github-runner-neko-sphere` and
+  `journalctl -u github-runner-neko-sphere`. A missing or expired PAT fails
+  during runner registration.
 - **Trigger refused:** check `journalctl -u deploy-trigger`, the token file's
   group, and `tailscale serve status`. The tailnet policy must allow `tcp:8080`
-  from the runners to the target if it is not already open.
+  from the runner to the target if it is not already open.
 - **Deployment fails:** `journalctl -u nixos-deploy` shows the request; the
   transient unit is `avalanche-deploy-<nonce>`. Check that the target can reach
   `nsphere-cache` and that the store path is present there. The client's
   `target=<name>` lines include the activation output up to the failure.
-- **Local job is lost:** the `neko-sphere` switch can restart both runners
-  before the HTTP response arrives, canceling the matrix jobs. The transient
-  unit still completes; check it with `journalctl -u avalanche-deploy-<nonce>`.
+- **Local job is lost:** the `neko-sphere` switch can restart the runner before
+  the HTTP response arrives, canceling the local matrix job. The transient unit
+  still completes; check it with `journalctl -u avalanche-deploy-<nonce>`.
   Rerun the failed matrix job from the workflow run if needed.
 
 ## Security
@@ -274,7 +274,7 @@ public repositories. Keep **Require approval for all outside collaborators**
 enabled and do not approve workflows from untrusted pull requests: an approved
 job runs as `github-runner` on `neko-sphere`.
 
-The runners are ephemeral and unprivileged; they cannot SSH to a target. The
+The runner is ephemeral and unprivileged; it cannot SSH to a target. The
 target trigger is non-root and bound to loopback, its only public surface is
 `tailscale serve` with a bearer token, and the root work happens in a transient
 unit that validates the store path and only substitutes signed paths from
