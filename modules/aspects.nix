@@ -28,19 +28,6 @@ let
         description = "The Nix system for this machine.";
       };
 
-      tags = lib.mkOption {
-        type = lib.types.listOf (
-          lib.types.enum [
-            "workstation"
-            "server"
-            "installer"
-            "auto-deployable"
-          ]
-        );
-        default = [ ];
-        description = "Policy tags for the machine: workstation, server, installer, or auto-deployable.";
-      };
-
       diskoConfig = lib.mkOption {
         type = lib.types.nullOr lib.types.deferredModule;
         default = null;

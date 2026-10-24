@@ -61,3 +61,9 @@ creation_rules:
       - age:
           - *noa
           - *neko-sphere
+  - path_regex: ^modules/secrets/deploy-trigger\.yaml$
+    key_groups:
+      - age:
+          - *noa
+          - *neko-sphere
+          - *edge

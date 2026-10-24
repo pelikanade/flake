@@ -1,21 +1,22 @@
 # Deployment
 
-A push to `main` activates the servers instead of each host pulling the
-repository on a timer.
+A push to `main` makes the runner build the configured servers and ask each one
+to activate the closure. No host pulls the repository on a timer, and the
+runner never gets SSH access.
 
 ```text
 push main ──> Deploy workflow (self-hosted runner on neko-sphere)
-                 ├─ nixos-deploy-build: build every deploy target
-                 └─ nixos-deploy-request all
-                       ├─ remote targets: nixos-deploy@<target>.service
-                       │     └─ clone main + nixos-rebuild --target-host root@<target>…
-                       └─ runner host last: nixos-deploy@<host>.service
-                             └─ clone main + nixos-rebuild switch
+                 └─ nixos-deploy-trigger
+                      ├─ nix build every target toplevel
+                      ├─ POST store path + bearer token to each remote target
+                      │    └─ deploy-trigger.service (non-root)
+                      │         └─ nixos-deploy.path
+                      │              └─ transient root unit
+                      │                   ├─ nix-store --realise <path>   # from Harmonia
+                      │                   ├─ nix-env -p /nix/var/nix/profiles/system --set <path>
+                      │                   └─ switch-to-configuration switch
+                      └─ POST to neko-sphere last
 ```
-
-Only machines tagged `auto-deployable` are deployed; today that is
-`neko-sphere` and `edge`. `asymmetry`, `parallax`, and the installer have no
-automatic deployment path.
 
 ## Trigger
 
@@ -24,9 +25,8 @@ automatic deployment path.
 - a push to `main`;
 - `workflow_dispatch` from `main`.
 
-A dispatch from another ref is skipped. The workflow builds both toplevels
-before it starts either deployment; a build failure leaves both hosts on their
-current generation.
+A dispatch from another ref is skipped. The runner builds every target before
+it sends a trigger; a build failure leaves every host on its current generation.
 
 The update workflow pushes its commits with `GITHUB_TOKEN`. GitHub does not
 start a new `push` workflow for that token, so
@@ -39,35 +39,15 @@ workflow needs the `actions: write` permission.
 `modules/services/github-runner.nix` registers one repository-level runner,
 named `neko-sphere`, with the labels `self-hosted` and `neko-sphere`. It is
 ephemeral: it registers, processes one job, deregisters, and is registered
-again by systemd for the next job. `replace = true` removes a stale
-registration with the same name.
+again by systemd for the next job.
 
-The runner service runs as the static `github-runner` user. It is not root and
-cannot build or activate a system itself. It never gains privileges: a polkit
-rule lets it ask PID 1 to start the deployment units.
+The runner service runs as the static `github-runner` user. It has no root, no
+SSH key, and no deployment unit of its own. Its `nixos-deploy-trigger` command:
 
-## Machine tags and targets
-
-`machines.<name>.tags` labels a machine for policy. The deploy target list is
-every machine whose tags include `auto-deployable`; the current tags are:
-
-| Machine | Tags |
-| --- | --- |
-| `neko-sphere` | `server`, `auto-deployable` |
-| `edge` | `server`, `auto-deployable` |
-| `asymmetry` | `workstation` |
-| `parallax` | `workstation` |
-| `installer` | `installer` |
-
-The `server` and `workstation` tags describe the machine type; only
-`auto-deployable` drives the runner. Add the tag to a machine definition to
-include it. The same list generates the polkit units, the deploy script's
-target cases, the build loop, and the `all` request, so a new tagged machine
-needs no edit to the runner module.
-
-The runner's own host is deployed last; every other target is reached over
-Tailscale SSH at its MagicDNS name. Machine names and tailnet hostnames are the
-same in this repository.
+1. reads the shared trigger token from sops;
+2. builds every target with `nix build --no-link --print-out-paths`;
+3. POSTs the resulting toplevel store path to each target, remote targets
+   first and its own host last.
 
 ### Registration token
 
@@ -85,91 +65,94 @@ Create a fine-grained PAT with:
 - an expiry you are prepared to rotate.
 
 The value lives in `modules/secrets/github-runner.yaml`, encrypted to the
-maintainer and `neko-sphere`. The module provisions it for the
-`github-runner` user with mode `0400` and hides the path from job processes.
-Rotation: update the encrypted document, switch `neko-sphere` (or restart
-`github-runner-neko-sphere`); the next job registers with the new value.
+maintainer and `neko-sphere`. Rotation: update the encrypted document, switch
+`neko-sphere` (or restart `github-runner-neko-sphere`); the next job registers
+with the new value.
 
-A short-lived registration token from the repository's **Add new self-hosted
-runner** page is not suitable: it expires after one hour, while an ephemeral
-runner registers repeatedly. A GitHub App installation token would work but
-needs an additional token-minting service.
+## Targets
 
-## Deploy path
+A machine is a deployment target when it imports the `deploy-target` aspect.
+The option `services.deploy-target.enable` defaults to true and can be set to
+false to keep the aspect imported while disabling the service. Currently
+`neko-sphere` and `edge` import it; `asymmetry`, `parallax`, and the installer
+do not.
 
-The runner invokes one request command as itself:
+The runner derives the target list by reading
+`services.deploy-target.enable` from each materialized configuration. Add the
+aspect to a machine to include it; remove it or disable the option to exclude
+it.
 
-```sh
-/run/current-system/sw/bin/nixos-deploy-request <all|target>
-```
+## Deploy trigger
 
-The same request wrapper validates the target against the derived list. With
-`all`, it starts every remote target first and the runner's own host last. A
-polkit rule allows `github-runner` to start exactly those
-`nixos-deploy@…` units, and only with the `start` verb. The runner keeps the
-module's `NoNewPrivileges=true`; no setuid helper, `sudo`, or capability grant is
-involved. Each unit runs as root, outside the runner's sandbox, so activation
-does not inherit the runner's filesystem or capability restrictions.
-
-The unit clones `https://github.com/pelikanade/flake.git` at `main` into
-`/var/lib/nixos-deploy/<machine>` and runs:
+Each target runs `deploy-trigger.service` as the non-root `deploy-trigger` user.
+It listens on `127.0.0.1:8080`; `tailscale-serve-deploy.service` publishes that
+port with:
 
 ```sh
-nixos-rebuild switch --flake /var/lib/nixos-deploy/<machine>#<machine>
+tailscale serve --bg --http=8080 8080
 ```
 
-For `edge` it adds `--target-host root@edge.dwelf-hoki.ts.net`; the build stays
-local on `neko-sphere` and the closure is copied over Tailscale SSH. The clone
-preserves `.git`, so `inputs.self.rev` remains available to the probe.
+The runner calls `http://<machine>.<tailnetDnsName>:8080/deploy`, so this uses
+the node's own MagicDNS name. No Tailscale Service is needed in the admin
+console, and Tailscale SSH is not used.
 
-The workflow's `nixos-deploy-build` runs as the runner user and builds every
-target toplevel; it is the gate and a store warmer. The deploy unit does not
-trust the runner's working tree: it deploys the current `main` revision from
-GitHub. A job can trigger a deployment of `main`; it cannot point the unit at a
-modified flake.
+The request carries `Authorization: Bearer <token>` and a toplevel store path.
+The handler validates both, writes a request file, and waits for a result file.
+A `systemd.path` unit starts `nixos-deploy.service`, which starts a **transient**
+`systemd-run` unit. That unit:
 
-`TimeoutStartSec` is two hours. `all` starts every remote target first and the
-runner's own host last: the local switch can restart the runner, but the root
-unit keeps running independently, so the deployment finishes even if the job is
-reported as lost.
+```sh
+nix-store --realise <store-path> --option max-jobs 0
+nix-env -p /nix/var/nix/profiles/system --set <store-path>
+<store-path>/bin/switch-to-configuration switch
+```
 
-## Tailscale SSH
+The transient unit is outside the NixOS configuration, so the switch cannot
+restart it mid-activation. If the runner is restarted by the local switch, the
+transient unit keeps going; the workflow may report the job as lost.
 
-A machine tagged `auto-deployable` is a deploy target. The server role sets
-`services.tailscale.extraSetFlags = [ "--ssh" ]` when the tailscale option
-exists and is enabled, so both current targets advertise Tailscale SSH. The
-deployment uses it for remote targets only; the runner's host is switched
-locally.
+## Cache
 
-The tailnet policy needs an `accept` SSH rule for the deployment source as
-`root`; the default `check` action would require interactive re-authentication.
-See [Tailscale SSH for deployment](tailscale.md#tailscale-ssh-for-deployment).
+Harmonia on `neko-sphere` serves the host's Nix store and signs with the
+`freezer-cache-1` key. Every tailnet host already trusts
+`http://nsphere-cache…` through `modules/system/nix/default.nix`. The runner
+builds on `neko-sphere`, so the closure is already in that cache; there is no
+separate upload step.
 
-The root unit accepts the edge host key on first use in
-`/var/lib/nixos-deploy/known_hosts`. After reinstalling `edge`, remove that file
-so the next deployment learns the new key.
+`max-jobs 0` on the target makes the activation fail rather than build if the
+cache does not have a required path.
+
+## Token
+
+`modules/secrets/deploy-trigger.yaml` holds one shared value,
+`deploy_trigger_token`, encrypted to the maintainer and every target. The
+module provisions it as `root:deploy` with mode `0440`; `github-runner` and
+`deploy-trigger` are both in the `deploy` group.
+
+Rotation: replace the value with `sops`, then switch the targets (or restart
+`deploy-trigger.service`). The runner reads the new value on its next job.
+
+A shared token means any compromised target can trigger another target. Each
+target still validates the store path against its own hostname and can only
+pull signed paths from Harmonia. If that blast radius is unacceptable, use one
+token per target.
 
 ## Bootstrap
 
-The runner does not exist until the configuration that adds it has been
-activated. The first deployment is therefore manual:
+The target service and token do not exist until the configuration that adds
+them has been activated. The first deployment is therefore manual:
 
-1. Create the PAT and encrypt `modules/secrets/github-runner.yaml` as described
-   above.
-2. Add the tailnet SSH rule.
-3. Land the change.
-4. From a workstation, deploy both hosts once with the normal privileged path,
+1. Land the change.
+2. From a workstation, deploy both hosts once with the normal privileged path,
    for example `just rdeploy neko-sphere root@<neko-sphere>` and
-   `just rdeploy edge root@<edge>`. This installs the runner and enables
-   Tailscale SSH.
-5. Verify:
+   `just rdeploy edge root@<edge>`.
+3. Verify on each target:
    ```sh
-   systemctl status github-runner-neko-sphere
-   journalctl -u github-runner-neko-sphere
-   ssh root@edge.dwelf-hoki.ts.net true
+   systemctl status deploy-trigger tailscale-serve-deploy nixos-deploy.path
+   tailscale serve status
    ```
-6. Run the workflow once with `gh workflow run deploy.yml --ref main`, or push
-   a trivial commit, and confirm both hosts switch.
+4. Run the workflow once with `gh workflow run deploy.yml --ref main`, or push
+   a trivial commit, and confirm the targets switch.
 
 The push that landed the change may already have queued a `Deploy` run. It
 stays queued until the manually installed runner comes online.
@@ -177,36 +160,41 @@ stays queued until the manually installed runner comes online.
 ## Rollback
 
 Revert the offending commit on `main`; the resulting push triggers the workflow
-and returns both hosts to the previous configuration. For a single host or a
-workflow failure, run the same switch from a workstation:
+and returns every target to the previous configuration. For a single host or a
+workflow failure, run the normal switch from a workstation:
 
 ```sh
 nixos-rebuild switch --flake .#<machine> --target-host root@<host>
 ```
 
-A partial deployment is possible: `edge` can succeed while `neko-sphere` fails.
-Both hosts remain on the same revision after the next successful run.
+A partial deployment is possible. Remote targets are triggered first; the
+runner's own host is triggered last. Both remain on the last successfully
+activated revision after the next run.
 
 ## Troubleshooting
 
 - **Runner is offline:** `systemctl status github-runner-neko-sphere` and
   `journalctl -u github-runner-neko-sphere`. A missing or expired PAT fails
   during runner registration.
-- **Deployment fails:** `systemctl status nixos-deploy@<machine>` and, as root,
-  `journalctl -u nixos-deploy@<machine>`. The workflow reports the request
-  wrapper's exit status.
-- **Tailscale SSH hangs or is denied:** `tailscale status` on both hosts,
-  `ssh root@edge.dwelf-hoki.ts.net true`, and confirm the tailnet policy has an
-  `accept` rule for `root`. `check` mode requires an interactive login.
-- **Host key mismatch:** remove `/var/lib/nixos-deploy/known_hosts` after
-  reinstalling `edge`.
+- **Trigger refused:** check `journalctl -u deploy-trigger`, the token file's
+  group, and `tailscale serve status`. The tailnet policy must allow `tcp:8080`
+  from the runner to the target if it is not already open.
+- **Deployment fails:** `journalctl -u nixos-deploy` shows the request; the
+  transient unit is `nixos-deploy-run-<nonce>`. Check that the target can reach
+  `nsphere-cache` and that the store path is present there.
+- **Local job is lost:** the `neko-sphere` switch can restart the runner before
+  the HTTP response arrives. The transient unit still completes; check it with
+  `journalctl -u nixos-deploy-run-<nonce>`.
 
 ## Security
 
 The repository is public, and GitHub warns against self-hosted runners on
 public repositories. Keep **Require approval for all outside collaborators**
 enabled and do not approve workflows from untrusted pull requests: an approved
-job runs as `github-runner` on `neko-sphere`. The runner is ephemeral, the
-secret is hidden from job processes, and the only privileged action is the
-polkit-authorized start of the derived deployment units, which can deploy
-`main` but cannot supply a flake.
+job runs as `github-runner` on `neko-sphere`.
+
+The runner is ephemeral and unprivileged; it cannot SSH to a target. The target
+trigger is non-root and bound to loopback, its only public surface is
+`tailscale serve` with a bearer token, and the root work happens in a transient
+unit that validates the store path and only substitutes signed paths from
+Harmonia.

@@ -1,10 +1,4 @@
-{
-  config,
-  ...
-}:
-let
-  inherit (config) machines;
-in
+{ inputs, ... }:
 {
   flake.modules.nixos.github-runner =
     {
@@ -17,142 +11,69 @@ in
       runnerName = "neko-sphere";
       deployUser = "github-runner";
 
-      # The `auto-deployable` machine tag marks a host as a deployment target.
-      # Derive the list from the machine definitions so the polkit rule and the
-      # deploy script do not repeat names.
-      deployTargets = lib.filter (name: lib.elem "auto-deployable" machines.${name}.tags) (
-        builtins.attrNames machines
-      );
+      # Every machine that imports the deploy-target aspect is a target. The
+      # runner's own configuration is read locally; the others are independent
+      # evaluations. Add the aspect to a machine to include it.
+      configurations = inputs.self.nixosConfigurations;
+      targetNames = lib.filter (
+        name:
+        if name == runnerName then
+          config.services.deploy-target.enable or false
+        else
+          configurations.${name}.config.services.deploy-target.enable or false
+      ) (builtins.attrNames configurations);
 
       targetInfo = name: {
         inherit name;
-        local = name == config.networking.hostName;
-        fqdn = config.constants.getTailnetFqdn name;
+        url = "http://${name}.${config.constants.tailnetDnsName}:8080/deploy";
       };
 
-      targets = map targetInfo deployTargets;
+      targets = map targetInfo targetNames;
       targetList = lib.concatStringsSep " " (map (target: target.name) targets);
-      targetPattern = lib.concatStringsSep " | " (map (target: target.name) targets);
+      targetUrls = lib.concatStringsSep " " (map (target: ''[${target.name}]="${target.url}"'') targets);
+      localName = config.networking.hostName;
 
-      targetCase = lib.concatStringsSep "\n" (
-        map (
-          target:
-          if target.local then
-            ''
-              ${target.name})
-                exec /run/current-system/sw/bin/nixos-rebuild switch --flake "$src#${target.name}" -L
-                ;;
-            ''
-          else
-            ''
-              ${target.name})
-                exec /run/current-system/sw/bin/nixos-rebuild switch \
-                  --flake "$src#${target.name}" \
-                  --target-host "root@${target.fqdn}" \
-                  -L
-                ;;
-            ''
-        ) targets
-      );
-
-      polkitUnits = lib.concatMapStringsSep " ||\n" (
-        target: ''action.lookup("unit") == "nixos-deploy@${target.name}.service"''
-      ) targets;
-
-      # The deploy itself runs in the root unit below, outside the runner's
-      # sandbox. It clones main from GitHub rather than trusting the runner's
-      # working tree, so a job can trigger a deployment of main but cannot inject
-      # a flake of its own.
-      deployScript = pkgs.writeShellApplication {
-        name = "nixos-deploy";
+      trigger = pkgs.writeShellApplication {
+        name = "nixos-deploy-trigger";
         runtimeInputs = [
           config.nix.package
           pkgs.coreutils
-          pkgs.git
-          pkgs.openssh
+          pkgs.curl
         ];
         text = ''
           set -euo pipefail
 
-          machine="''${1:?machine required}"
-          case "$machine" in
-            ${targetPattern}) ;;
-            *)
-              echo "unsupported machine: $machine" >&2
-              exit 2
-              ;;
-          esac
+          token=$(cat /run/secrets/deploy_trigger_token)
+          read -r -a targets <<< "${targetList}"
+          local_machine="${localName}"
+          declare -A paths
+          declare -A urls=( ${targetUrls} )
 
-          root=/var/lib/nixos-deploy
-          src="$root/$machine"
-          install -d -m 0700 "$root"
-          rm -rf "$src"
-          git clone --depth 1 --branch main \
-            https://github.com/pelikanade/flake.git "$src"
-
-          # Tailscale SSH authenticates the peer through the tailnet. The host
-          # key is accepted on first use and kept beside the checkout; removing
-          # the store after a reinstall lets the next deploy learn the new key.
-          export HOME=/root
-          export NIX_SSHOPTS="-o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=$root/known_hosts"
-
-          case "$machine" in
-          ${targetCase}
-          esac
-        '';
-      };
-
-      # Run as the runner user before the root units: it is the build gate and
-      # warms the store for every target.
-      deployBuild = pkgs.writeShellApplication {
-        name = "nixos-deploy-build";
-        runtimeInputs = [
-          config.nix.package
-          pkgs.coreutils
-          pkgs.git
-        ];
-        text = ''
-          set -euo pipefail
-
-          for machine in ${targetList}; do
-            nix build --no-link ".#nixosConfigurations.$machine.config.system.build.toplevel"
+          for target in "''${targets[@]}"; do
+            paths[$target]=$(nix build --no-link --print-out-paths ".#nixosConfigurations.$target.config.system.build.toplevel")
           done
-        '';
-      };
 
-      # The runner may start any deploy target, or all of them in the safe
-      # order: every remote target first, the runner's own host last.
-      deployRequest = pkgs.writeShellApplication {
-        name = "nixos-deploy-request";
-        runtimeInputs = [ pkgs.systemd ];
-        text = ''
-          set -euo pipefail
+          post() {
+            local target="$1"
+            curl --fail --silent --show-error --max-time 7200 \
+              --request POST \
+              --header "Authorization: Bearer $token" \
+              --data-binary "''${paths[$target]}" \
+              "''${urls[$target]}"
+          }
 
-          machine="''${1:?machine required}"
-          case "$machine" in
-            all | ${targetPattern}) ;;
-            *)
-              echo "unsupported machine: $machine" >&2
-              exit 2
-              ;;
+          for target in "''${targets[@]}"; do
+            if [ "$target" = "$local_machine" ]; then
+              continue
+            fi
+            post "$target"
+          done
+
+          # The local switch can restart this runner; the target's transient
+          # deploy unit keeps running even if the request is cut off.
+          case " ''${targets[*]} " in
+            *" $local_machine "*) post "$local_machine" || true ;;
           esac
-
-          targets="${targetList}"
-          local_machine="${config.networking.hostName}"
-
-          if [ "$machine" = all ]; then
-            for target in $targets; do
-              if [ "$target" = "$local_machine" ]; then
-                continue
-              fi
-              systemctl start --wait --no-ask-password "nixos-deploy@$target.service"
-            done
-            case " $targets " in
-              *" $local_machine "*) systemctl start --wait --no-ask-password "nixos-deploy@$local_machine.service" ;;
-            esac
-          else
-            systemctl start --wait --no-ask-password "nixos-deploy@$machine.service"
-          fi
         '';
       };
     in
@@ -160,7 +81,7 @@ in
       assertions = [
         {
           assertion = targets != [ ];
-          message = "github-runner: tag at least one machine auto-deployable";
+          message = "github-runner: no machine imports deploy-target";
         }
       ];
 
@@ -169,6 +90,7 @@ in
       users.users.${deployUser} = {
         isSystemUser = true;
         group = deployUser;
+        extraGroups = [ "deploy" ];
         description = "GitHub Actions runner and deployment requester";
       };
 
@@ -190,52 +112,11 @@ in
         extraLabels = [ runnerName ];
         user = deployUser;
         group = deployUser;
-      };
-
-      systemd.services."nixos-deploy@" = {
-        description = "Deploy NixOS configuration %i from GitHub main";
-        wants = [ "network-online.target" ];
-        after = [
-          "network-online.target"
-          "tailscaled.service"
-        ];
-        serviceConfig = {
-          Type = "oneshot";
-          TimeoutStartSec = "2h";
-          ExecStart = "${deployScript}/bin/nixos-deploy %i";
-          Environment = [
-            "HOME=/root"
-            "PATH=/run/current-system/sw/bin:${
-              lib.makeBinPath [
-                config.nix.package
-                pkgs.coreutils
-                pkgs.git
-                pkgs.openssh
-              ]
-            }"
-          ];
+        serviceOverrides = {
+          SupplementaryGroups = [ "deploy" ];
         };
       };
 
-      environment.systemPackages = [
-        deployBuild
-        deployRequest
-      ];
-
-      # The runner never gains privileges. Polkit lets it ask PID 1 to start the
-      # derived deployment units; the runner keeps NoNewPrivileges=true.
-      security.polkit = {
-        enable = true;
-        extraConfig = ''
-          polkit.addRule(function(action, subject) {
-            if (action.id == "org.freedesktop.systemd1.manage-units" &&
-                subject.user == "${deployUser}" &&
-                action.lookup("verb") == "start" &&
-                (${polkitUnits})) {
-              return polkit.Result.YES;
-            }
-          });
-        '';
-      };
+      environment.systemPackages = [ trigger ];
     };
 }

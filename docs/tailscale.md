@@ -42,12 +42,8 @@ interface: peers reach that port on the host's own addresses, not through the
 tunnel. It accepts subnet routes advertised by other nodes, matching the policy the
 sing-box endpoint had; it advertises no exit node and does not use one. It omits
 `hostname`, so each host registers under its system hostname, and its state
-lives under `/var/lib/tailscale`.
-
-A host that imports the `server` role and has `services.tailscale.enable` set
-advertises Tailscale SSH, so the deployment runner can reach it as root;
-workstations do not. See
-[Tailscale SSH for deployment](#tailscale-ssh-for-deployment).
+lives under `/var/lib/tailscale`. Tailscale SSH is not enabled; deployment uses
+`tailscale serve` over HTTP instead (see below).
 
 A peer's connection arrives on `tailscale0`, which the module adds to
 `networking.firewall.trustedInterfaces`. That is the whole firewall story on this
@@ -122,40 +118,21 @@ whatever addresses the proxy exits from, so peers could never establish a direct
 path to it. The tailnet would fall back to relaying every connection through a
 public DERP server, through the proxy on this side.
 
-## Tailscale SSH for deployment
+## Deployment trigger
 
-A host that imports the `server` role and has `services.tailscale.enable` set
-advertises Tailscale SSH: the server role assigns
-`services.tailscale.extraSetFlags = [ "--ssh" ]` when the option exists and is
-enabled, and `tailscaled-set.service` runs `tailscale set --ssh`. The deployment
-runner selects targets by the `auto-deployable` machine tag instead; add that
-tag in the machine definition to make a server a target. The daemon claims port
-22 only on the tailnet address; the regular `sshd` still serves the other
-interfaces. Workstations and the installer do not import the server role, so
-they are not targets and do not advertise it.
-
-The tailnet policy must grant both network access to port 22 and an SSH rule
-that accepts the deployment runner as `root`. The default `check` action
-requires interactive re-authentication and breaks automation. When both hosts
-are user-owned devices:
-
-```json
-"ssh": [{
-  "action": "accept",
-  "src": ["autogroup:member"],
-  "dst": ["autogroup:self"],
-  "users": ["root"]
-}]
-```
-
-A tagged source cannot use `autogroup:self`; use the corresponding tags in
-`src` and `dst` instead. Verify from `neko-sphere`:
+Each deploy target publishes its loopback trigger with:
 
 ```sh
-ssh root@edge.dwelf-hoki.ts.net true
+tailscale serve --bg --http=8080 8080
 ```
 
-The deployment workflow and the root unit are described in
+The runner calls `http://<target>.<tailnetDnsName>:8080/deploy`. This uses the
+node's own MagicDNS name, not a Tailscale Service, so nothing needs to be
+created in the admin console. The tailnet policy only needs to allow
+`tcp:8080` from the runner to the targets if it is not already open; the request
+carries a bearer token from sops. Tailscale SSH is not enabled or used.
+
+The target service, token, and activation path are described in
 [deployment](deployment.md).
 
 ## DNS

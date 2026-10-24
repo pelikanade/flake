@@ -45,8 +45,7 @@
         # as it was when the endpoint carried it.
         openFirewall = true;
         # Reuses the tailnet's subnet routes, matching the endpoint's policy; the
-        # node advertises no exit node. The server role adds Tailscale SSH
-        # through `extraSetFlags` when this module is enabled.
+        # node advertises no exit node.
         extraUpFlags = [ "--accept-routes" ];
         authKeyFile = config.sops.secrets.tailscale_auth_key.path;
       };

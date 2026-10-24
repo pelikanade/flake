@@ -28,10 +28,5 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build deploy targets
-        run: /run/current-system/sw/bin/nixos-deploy-build
-
-      # Remote targets first; the runner's own host is deployed last by the
-      # request wrapper.
-      - name: Deploy all targets
-        run: /run/current-system/sw/bin/nixos-deploy-request all
+      - name: Build and trigger deploy targets
+        run: /run/current-system/sw/bin/nixos-deploy-trigger

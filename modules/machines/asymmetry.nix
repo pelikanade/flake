@@ -2,7 +2,6 @@
 {
   machines.asymmetry = {
     system = "x86_64-linux";
-    tags = [ "workstation" ];
     imports = with inputs.self.modules.aspects; [
       base
       workstation
