@@ -20,7 +20,6 @@
       gh
       avalanche-runner
       avalanche-server
-      avalanche-client
       tailscale-ingress
       probe-agent
       zswap

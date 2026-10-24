@@ -49,10 +49,10 @@ again by systemd for the next job. With one runner, the matrix jobs run one
 after another.
 
 The runner service runs as the static `github-runner` user. It has no root, no
-SSH key, and no deployment unit of its own. The `avalanche-client` aspect,
-imported by `neko-sphere`, only installs the `avalanche` package; the client is
-a command, not a service. The workflow supplies its token from the
-`AVALANCHE_TOKEN` Actions secret.
+SSH key, and no deployment unit of its own. The `avalanche-runner` module
+installs the `avalanche` package and gives the runner service the `avalanche`
+group, so the client reads `/run/secrets/avalanche_token` directly. The client
+is a command, not a service; the workflow carries no trigger token.
 
 Each matrix job invokes:
 
@@ -62,8 +62,8 @@ avalanche-client --target <machine>
 
 The client:
 
-1. reads `AVALANCHE_CLIENT_*` environment variables (the workflow sets
-   `AVALANCHE_CLIENT_TOKEN` from the `AVALANCHE_TOKEN` Actions secret); an
+1. reads `AVALANCHE_CLIENT_*` environment variables; the trigger token comes
+   from `client.token_file`, defaulting to `/run/secrets/avalanche_token`; an
    optional `/etc/avalanche/client.yaml` or `AVALANCHE_CONFIG` file is also
    read, with environment variables taking precedence;
 2. builds only its target with
@@ -114,7 +114,6 @@ The workflow passes the client configuration through the environment:
 ```yaml
 env:
   AVALANCHE_CLIENT_TAILNET: <tailnetDnsName>
-  AVALANCHE_CLIENT_TOKEN: ${{ secrets.AVALANCHE_TOKEN }}
   AVALANCHE_CLIENT_PORT: "8080"
   AVALANCHE_CLIENT_FLAKE: "."
   AVALANCHE_CLIENT_TIMEOUT: 2h
@@ -122,6 +121,8 @@ env:
 
 There is no generated client YAML. Viper still accepts an optional
 `/etc/avalanche/client.yaml` for manual use; the workflow does not create one.
+The trigger token is not an environment value: the client reads the default
+`/run/secrets/avalanche_token` file.
 
 The generated server configuration on each target is:
 
@@ -208,18 +209,17 @@ cache does not have a required path.
 the maintainer, `neko-sphere`, and `edge`:
 
 - `token`: the shared trigger token, provisioned as `root:avalanche` with mode
-  `0440`. The same value is stored as the repository Actions secret
-  `AVALANCHE_TOKEN`, which the deploy workflow passes to the client;
+  `0440`. The runner service has `avalanche` as a supplementary group, so the
+  client reads this file directly;
 - `pat`: the runner PAT, provisioned as `github-runner:github-runner` with mode
   `0400`.
 
-The runner never reads the target's `token` file; it receives the secret from
-the workflow. The `avalanche` server user's primary group is `avalanche`.
+No Actions secret carries the trigger token. The `avalanche` server user's
+primary group is `avalanche`.
 
-Rotation: replace the affected value with `sops`, update the matching
-`AVALANCHE_TOKEN` Actions secret when rotating `token`, then switch the targets
-(or restart `avalanche-server.service` / `github-runner-neko-sphere`). The next
-job uses the new value.
+Rotation: replace the affected value with `sops`, then switch the targets (or
+restart `avalanche-server.service` / `github-runner-neko-sphere`). The next job
+uses the new value.
 
 A shared token means any compromised target can trigger another target. Each
 target still validates the store path against its own hostname and can only
@@ -240,9 +240,7 @@ them has been activated. The first deployment is therefore manual:
    systemctl status avalanche-server tailscale-serve-deploy avalanche-deploy.path
    tailscale serve status
    ```
-4. Set the repository Actions secret `AVALANCHE_TOKEN` to the same value as
-   `token` in `modules/secrets/avalanche.yaml`.
-5. Run the workflow once with `gh workflow run deploy.yml --ref main`, or push
+4. Run the workflow once with `gh workflow run deploy.yml --ref main`, or push
    a trivial commit, and confirm the targets switch.
 
 The push that landed the change may already have queued a `Deploy` run. It
@@ -267,10 +265,9 @@ last successfully activated revision after the next run.
 - **Runner is offline:** `systemctl status github-runner-neko-sphere` and
   `journalctl -u github-runner-neko-sphere`. A missing or expired PAT fails
   during runner registration.
-- **Trigger refused:** check `journalctl -u avalanche-server`, that the
-  `AVALANCHE_TOKEN` Actions secret matches `token` in `avalanche.yaml`, and
-  `tailscale serve status`. The tailnet policy must allow `tcp:8080` from the
-  runner to the target if it is not already open.
+- **Trigger refused:** check `journalctl -u avalanche-server`, the token file's
+  group, and `tailscale serve status`. The tailnet policy must allow `tcp:8080`
+  from the runner to the target if it is not already open.
 - **Deployment fails:** `journalctl -u avalanche-deploy` shows the request; the
   transient unit is `avalanche-deploy-transient-<nonce>`. Check that the target can reach
   `nsphere-cache` and that the store path is present there. The client's
@@ -289,6 +286,6 @@ job runs as `github-runner` on `neko-sphere`.
 
 The runner is ephemeral and unprivileged; it cannot SSH to a target. The
 target trigger is non-root and bound to loopback, its only public surface is
-`tailscale serve` with the bearer token held in the `AVALANCHE_TOKEN` Actions
-secret, and the root work happens in a transient unit that validates the store
-path and only substitutes signed paths from Harmonia.
+`tailscale serve` with the bearer token read from sops by the runner, and the
+root work happens in a transient unit that validates the store path and only
+substitutes signed paths from Harmonia.
