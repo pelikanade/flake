@@ -62,9 +62,9 @@
         '';
       };
 
-      # The runner is allowed to start only these two deployments. The wait makes
-      # the job fail when the unit fails; the unit itself keeps running if the
-      # runner is restarted by the neko-sphere switch.
+      # The runner is allowed to start only these two deployments. Polkit
+      # authorizes the start; the runner never gains privileges itself. The
+      # unit keeps running if the runner is restarted by the neko-sphere switch.
       deployRequest = pkgs.writeShellApplication {
         name = "nixos-deploy-request";
         runtimeInputs = [ pkgs.systemd ];
@@ -80,10 +80,7 @@
               ;;
           esac
 
-          status=0
-          systemctl start --wait "nixos-deploy@$machine.service" || status=$?
-          journalctl -u "nixos-deploy@$machine.service" --no-pager -n 200 || true
-          exit "$status"
+          systemctl start --wait --no-ask-password "nixos-deploy@$machine.service"
         '';
       };
     in
@@ -114,18 +111,6 @@
         extraLabels = [ runnerName ];
         user = deployUser;
         group = deployUser;
-
-        # `sudo` must change credentials and talk to PID 1; the filesystem and
-        # network sandbox stays as the module sets it. The switch itself runs in
-        # the unsandboxed root unit, so no job builds or activates as root.
-        serviceOverrides = {
-          NoNewPrivileges = false;
-          PrivateUsers = false;
-          ProtectSystem = "full";
-          CapabilityBoundingSet = lib.mkForce [ ];
-          AmbientCapabilities = lib.mkForce [ ];
-          SystemCallFilter = lib.mkForce [ ];
-        };
       };
 
       systemd.services."nixos-deploy@" = {
@@ -155,16 +140,19 @@
 
       environment.systemPackages = [ deployRequest ];
 
-      security.sudo.extraRules = [
-        {
-          users = [ deployUser ];
-          commands = [
-            {
-              command = "/run/current-system/sw/bin/nixos-deploy-request";
-              options = [ "NOPASSWD" ];
+      security.polkit = {
+        enable = true;
+        extraConfig = ''
+          polkit.addRule(function(action, subject) {
+            if (action.id == "org.freedesktop.systemd1.manage-units" &&
+                subject.user == "${deployUser}" &&
+                action.lookup("verb") == "start" &&
+                (action.lookup("unit") == "nixos-deploy@neko-sphere.service" ||
+                 action.lookup("unit") == "nixos-deploy@edge.service")) {
+              return polkit.Result.YES;
             }
-          ];
-        }
-      ];
+          });
+        '';
+      };
     };
 }

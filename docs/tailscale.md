@@ -44,9 +44,10 @@ sing-box endpoint had; it advertises no exit node and does not use one. It omits
 `hostname`, so each host registers under its system hostname, and its state
 lives under `/var/lib/tailscale`.
 
-A host that imports the `server` role and the `tailscale` aspect advertises
-Tailscale SSH, so the deployment runner can reach it as root; workstations do
-not. See [Tailscale SSH for deployment](#tailscale-ssh-for-deployment).
+A host that imports the `server` role and has `services.tailscale.enable` set
+advertises Tailscale SSH, so the deployment runner can reach it as root;
+workstations do not. See
+[Tailscale SSH for deployment](#tailscale-ssh-for-deployment).
 
 A peer's connection arrives on `tailscale0`, which the module adds to
 `networking.firewall.trustedInterfaces`. That is the whole firewall story on this
@@ -123,13 +124,13 @@ public DERP server, through the proxy on this side.
 
 ## Tailscale SSH for deployment
 
-A host that imports the `server` role and the `tailscale` aspect advertises
-Tailscale SSH. `services.tailscale-ssh.enable` defaults to
-`services.tailscale.enable && roles.server.imported`, and
-`tailscaled-set.service` runs `tailscale set --ssh`. The daemon claims port 22
-only on the tailnet address; the regular `sshd` still serves the other
-interfaces. Workstations and the installer do not import the server role, so
-they do not advertise it.
+A host that imports the `server` role and has `services.tailscale.enable` set
+advertises Tailscale SSH: the server role assigns
+`services.tailscale.extraSetFlags = [ "--ssh" ]` when the option exists and is
+enabled, and `tailscaled-set.service` runs `tailscale set --ssh`. The daemon
+claims port 22 only on the tailnet address; the regular `sshd` still serves the
+other interfaces. Workstations and the installer do not import the server role,
+so they do not advertise it.
 
 The tailnet policy must grant both network access to port 22 and an SSH rule
 that accepts the deployment runner as `root`. The default `check` action

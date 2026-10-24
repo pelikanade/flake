@@ -43,7 +43,7 @@ jobs:
       # Edge first: the neko-sphere switch can restart this runner. The root
       # unit keeps running even if the job is killed at that point.
       - name: Deploy edge
-        run: /run/wrappers/bin/sudo /run/current-system/sw/bin/nixos-deploy-request edge
+        run: /run/current-system/sw/bin/nixos-deploy-request edge
 
       - name: Deploy neko-sphere
-        run: /run/wrappers/bin/sudo /run/current-system/sw/bin/nixos-deploy-request neko-sphere
+        run: /run/current-system/sw/bin/nixos-deploy-request neko-sphere
