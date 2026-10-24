@@ -40,9 +40,10 @@ restart of the daemon.
 The daemon listens for peer traffic on UDP `41641`, which the module opens on every
 interface: peers reach that port on the host's own addresses, not through the
 tunnel. It accepts subnet routes advertised by other nodes, matching the policy the
-sing-box endpoint had; it advertises no exit node and neither uses one nor enables
-Tailscale SSH. It omits `hostname`, so each host registers under its system
-hostname, and its state lives under `/var/lib/tailscale`.
+sing-box endpoint had; it advertises no exit node and does not use one. It omits
+`hostname`, so each host registers under its system hostname, and its state
+lives under `/var/lib/tailscale`. Tailscale SSH is not enabled; deployment uses
+`tailscale serve` over HTTP instead (see below).
 
 A peer's connection arrives on `tailscale0`, which the module adds to
 `networking.firewall.trustedInterfaces`. That is the whole firewall story on this
@@ -116,6 +117,23 @@ sounds: the node's observed endpoint, the address peers are told to dial, would 
 whatever addresses the proxy exits from, so peers could never establish a direct
 path to it. The tailnet would fall back to relaying every connection through a
 public DERP server, through the proxy on this side.
+
+## Deployment trigger
+
+Each deploy target publishes its loopback trigger with:
+
+```sh
+tailscale serve --bg --http=8080 8080
+```
+
+The runner calls `http://<target>.<tailnetDnsName>:8080/deploy`. This uses the
+node's own MagicDNS name, not a Tailscale Service, so nothing needs to be
+created in the admin console. The tailnet policy only needs to allow
+`tcp:8080` from the runner to the targets if it is not already open; the request
+carries a bearer token from sops. Tailscale SSH is not enabled or used.
+
+The target service, token, and activation path are described in
+[deployment](deployment.md).
 
 ## DNS
 

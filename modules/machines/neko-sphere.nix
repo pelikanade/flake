@@ -18,6 +18,8 @@
       freezer
       harmonia
       gh
+      avalanche-runner
+      avalanche-server
       tailscale-ingress
       probe-agent
       zswap

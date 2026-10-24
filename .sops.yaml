@@ -56,3 +56,9 @@ creation_rules:
           - *noa
           - *edge
           - *neko-sphere
+  - path_regex: ^modules/secrets/avalanche\.yaml$
+    key_groups:
+      - age:
+          - *noa
+          - *neko-sphere
+          - *edge

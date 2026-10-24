@@ -2,7 +2,6 @@
   flake.modules.nixos.installer =
     {
       config,
-      lib,
       modulesPath,
       pkgs,
       ...
@@ -11,10 +10,6 @@
       imports = [
         "${modulesPath}/installer/cd-dvd/installation-cd-minimal.nix"
       ];
-
-      # The live medium is rebuilt from a workstation and holds no persistent
-      # system, so the base role's daily upgrade does not apply.
-      system.autoUpgrade.enable = lib.mkForce false;
 
       users.users.root.openssh.authorizedKeys.keys = [ config.constants.nvirellia.sshPubKey ];
 

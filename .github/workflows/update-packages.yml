@@ -2,13 +2,14 @@ name: Update packages
 
 on:
   schedule:
-    # 02:00 in Asia/Shanghai. The run must finish before the machines' 05:00
-    # automatic upgrade follows main, and GitHub cron is UTC.
+    # 02:00 in Asia/Shanghai. GitHub cron is UTC. The deploy workflow follows
+    # the push immediately.
     - cron: "0 18 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: update-packages
@@ -278,6 +279,7 @@ jobs:
       # 6. Publish. Without the ok marker, reset to clean-tip: the failed pins
       # and repairs are dropped, but the clean update commits still land.
       - name: Push updates
+        id: push
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -299,6 +301,7 @@ jobs:
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           if [ "$(git rev-list --count origin/main..HEAD)" -gt 0 ]; then
             git push origin HEAD:main
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
           else
             echo "nothing to push"
           fi
@@ -307,6 +310,14 @@ jobs:
           if [ ! -f .update-agent/ok ]; then
             exit 1
           fi
+
+      # A push made with GITHUB_TOKEN does not trigger a `push` workflow.
+      # Dispatch the deploy for the revision that was just pushed.
+      - name: Dispatch deployment
+        if: always() && steps.push.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
 
       - name: Upload update artifacts
         if: always()

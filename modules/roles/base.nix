@@ -3,7 +3,6 @@
   flake.modules.aspects.base = {
     imports = with inputs.self.modules.aspects; [
       nix
-      auto-upgrade
       secrets
       disko
     ];
