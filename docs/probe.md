@@ -27,6 +27,22 @@ services.probe.targets = [
 Each target becomes a `node` job entry with a `host` label. The label is the
 display name the site uses, so keep it short and stable.
 
+## Revision and update time
+
+Each agent also publishes two metrics that node_exporter cannot derive from the
+kernel, through its textfile collector. A `probe-metrics` oneshot writes
+`/run/probe/nixos.prom` before the exporter starts, and a five-minute timer
+refreshes the timestamp from the running system:
+
+| Metric | Meaning |
+| --- | --- |
+| `nixos_flake_info{revision="…"}` | Full revision of this repository that built the running system, suffixed `-dirty` when the tree had uncommitted changes. A tree without Nix revision metadata reports `unknown`. |
+| `nixos_system_update_time_seconds` | Unix time at which the running generation was activated, taken from the `/nix/var/nix/profiles/system` symlink. A reboot leaves it unchanged. |
+
+The revision is fixed in the unit when the system is built; the timestamp is
+read from the machine. The timer covers a switch that keeps the same revision,
+which does not change the unit and therefore does not restart it.
+
 ## API used by the site
 
 The aspect sets `services.nvirellia-im.prometheus.url = "http://127.0.0.1:9090"`
@@ -42,9 +58,13 @@ firewall, and the tailnet interface is trusted. Nothing here needs a secret.
 ## Verification
 
 ```sh
-systemctl status prometheus prometheus-node-exporter
+systemctl status prometheus prometheus-node-exporter probe-metrics
+systemctl list-timers probe-metrics.timer
+cat /run/probe/nixos.prom
+curl -s http://127.0.0.1:9100/metrics | grep '^nixos_'
 curl -s 'http://127.0.0.1:9090/api/v1/query?query=up%7Bjob%3D%22node%22%7D' | jq
 curl -s 'http://127.0.0.1:9090/api/v1/query?query=time()%20-%20node_boot_time_seconds%7Bjob%3D%22node%22%7D' | jq
+curl -s 'http://127.0.0.1:9090/api/v1/query?query=nixos_flake_info%7Bjob%3D%22node%22%7D' | jq
 ss -ltn | grep -E '9090|9100'
 ```
 
