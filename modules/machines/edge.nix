@@ -7,7 +7,7 @@
       server
       bios
       tailscale
-      avalanche
+      avalanche-server
       caddy
       nvirellia-im
       gatus

@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"avalanche/internal/deploy"
 	"avalanche/internal/protocol"
 )
 
@@ -25,11 +24,6 @@ func Run(target string) error {
 	if err != nil {
 		return err
 	}
-	token, err := deploy.ReadToken(cfg.TokenFile)
-	if err != nil {
-		return err
-	}
-
 	path, err := buildTarget(cfg.Flake, target)
 	if err != nil {
 		return err
@@ -37,7 +31,7 @@ func Run(target string) error {
 	slog.Info("built target", "target", target, "path", path)
 
 	httpClient := &http.Client{Timeout: cfg.Timeout}
-	return postDeploy(httpClient, cfg, token, target, path)
+	return postDeploy(httpClient, cfg, cfg.Token, target, path)
 }
 
 func buildTarget(flake, target string) (string, error) {

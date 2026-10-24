@@ -19,7 +19,8 @@
       harmonia
       gh
       github-runner
-      avalanche
+      avalanche-server
+      avalanche-client
       tailscale-ingress
       probe-agent
       zswap

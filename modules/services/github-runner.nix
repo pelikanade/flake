@@ -1,39 +1,39 @@
 {
   flake.modules.nixos.github-runner =
-    { lib, ... }:
+    { config, ... }:
     let
       runnerName = "neko-sphere";
       runnerUser = "github-runner";
     in
     {
-      options.github-runner.imported = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        readOnly = true;
-        internal = true;
-        description = "Whether the GitHub runner module is imported.";
+      users.groups.${runnerUser} = { };
+
+      users.users.${runnerUser} = {
+        isSystemUser = true;
+        group = runnerUser;
+        description = "GitHub Actions runner";
       };
 
-      config = {
-        users.groups.${runnerUser} = { };
+      sops.secrets.github_runner_pat = {
+        sopsFile = ../secrets/avalanche.yaml;
+        key = "pat";
+        owner = runnerUser;
+        group = runnerUser;
+        mode = "0400";
+        restartUnits = [ "github-runner-${runnerName}.service" ];
+      };
 
-        users.users.${runnerUser} = {
-          isSystemUser = true;
-          group = runnerUser;
-          description = "GitHub Actions runner";
-        };
-
-        services.github-runners.${runnerName} = {
-          enable = true;
-          url = "https://github.com/pelikanade/flake";
-          name = runnerName;
-          tokenType = "access";
-          ephemeral = true;
-          replace = true;
-          extraLabels = [ runnerName ];
-          user = runnerUser;
-          group = runnerUser;
-        };
+      services.github-runners.${runnerName} = {
+        enable = true;
+        url = "https://github.com/pelikanade/flake";
+        name = runnerName;
+        tokenType = "access";
+        tokenFile = config.sops.secrets.github_runner_pat.path;
+        ephemeral = true;
+        replace = true;
+        extraLabels = [ runnerName ];
+        user = runnerUser;
+        group = runnerUser;
       };
     };
 }
