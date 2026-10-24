@@ -48,15 +48,18 @@ Two repository-level runners run on `neko-sphere`, each ephemeral: a runner
 registers, processes one job, deregisters, and systemd registers it again for
 the next job.
 
-- `modules/services/runners/avalanche-runner.nix` registers `avalanche` with
+- `modules/services/github-runners/avalanche-runner.nix` registers `avalanche` with
   the labels `self-hosted` and `avalanche`. `deploy.yml` targets it, and the
   matrix jobs run one after another.
-- `modules/services/runners/update-packages-runner.nix` registers
+- `modules/services/github-runners/update-packages-runner.nix` registers
   `update-packages` with the labels `self-hosted` and `update-packages`.
   `update-packages.yml` targets it. Its `extraPackages` put python3, jq, gh,
   ripgrep, openssh, nix-update, nixfmt, and omp on the job `PATH`, so the
   workflow calls them directly, enters no Nix shell, and runs the repair and
   review agents with the installed omp instead of building `.#omp` per run.
+  The module also renders the Magpie endpoint and key into the runner's
+  persistent `~/.omp/agent/magpie.yaml` and exports `PI_CONFIG_FILES` for the
+  `omp-magpie` extension, so the agents use the gateway on this host.
 
 The `avalanche` runner service runs as the static `avalanche-runner` user. It
 has no root, no SSH key, and no deployment unit of its own. The
@@ -100,9 +103,9 @@ The runner daemon needs a credential before any job exists. A workflow's
 `GITHUB_TOKEN` is issued only after a runner has picked up a job and does not
 have the `administration` permission required by the runner registration API.
 The NixOS modules therefore read a long-lived fine-grained PAT:
-`modules/services/runners/avalanche-runner.nix` installs it at
+`modules/services/github-runners/avalanche-runner.nix` installs it at
 `/run/secrets/avalanche_runner_pat`, and
-`modules/services/runners/update-packages-runner.nix` installs the same
+`modules/services/github-runners/update-packages-runner.nix` installs the same
 document key at `/run/secrets/update_packages_runner_pat`.
 
 Create a fine-grained PAT with:

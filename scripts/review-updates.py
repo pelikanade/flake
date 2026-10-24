@@ -116,7 +116,6 @@ def main(argv: list[str]) -> int:
         default=os.environ.get("OMP_BIN") or shutil.which("omp"),
     )
     parser.add_argument("--model", default=os.environ.get("OMP_REVIEW_MODEL"))
-    parser.add_argument("--api-key", default=None)
     parser.add_argument("--base", required=True)
     parser.add_argument("--updates", default=".update-agent/updates.json")
     parser.add_argument("--repair", default=".update-agent/report.json")
@@ -141,11 +140,7 @@ def main(argv: list[str]) -> int:
         build_summary=build_summary,
     )
 
-    try:
-        model, api_key = omp_agent.configure(args.model, args.api_key)
-    except omp_agent.ConfigError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
+    model = omp_agent.resolve_model(args.model)
 
     if not args.omp:
         print("error: omp is not on PATH; pass --omp or set OMP_BIN", file=sys.stderr)
@@ -156,11 +151,10 @@ def main(argv: list[str]) -> int:
         repo=repo,
         prompt=prompt,
         model=model,
-        api_key=api_key,
         session_dir=log_dir / "omp-sessions",
         max_time=args.max_time,
     )
-    print("agent command:", " ".join(omp_agent.redacted(command)))
+    print("agent command:", " ".join(command))
     if args.dry_run:
         print(f"prompt: {prompt}")
         return 0

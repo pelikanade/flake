@@ -17,9 +17,10 @@ concurrency:
 
 jobs:
   update:
-    # This runner, its Nix and its tools are defined by
-    # modules/services/runners/update-packages-runner.nix. It is a separate
-    # label from the deploy runner so an update cannot occupy the deploy queue.
+    # This runner, its Nix, omp and its Magpie configuration are defined by
+    # modules/services/github-runners/update-packages-runner.nix. It is a
+    # separate label from the deploy runner so an update cannot occupy the
+    # deploy queue.
     runs-on:
       - self-hosted
       - update-packages
@@ -140,7 +141,6 @@ jobs:
         continue-on-error: true
         env:
           OMP_MODEL: ${{ vars.OMP_MODEL }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: python3 scripts/repair-updates.py --log-dir .update-agent
 
       - name: Check repair
@@ -212,7 +212,6 @@ jobs:
         continue-on-error: true
         env:
           OMP_REVIEW_MODEL: ${{ vars.OMP_REVIEW_MODEL }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           python3 scripts/review-updates.py \
             --base "$(cat .update-agent/clean-tip)" \
