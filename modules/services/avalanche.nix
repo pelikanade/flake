@@ -8,14 +8,14 @@
       ...
     }:
     let
-      triggerDir = "/run/deploy-trigger";
+      triggerDir = "/run/avalanche";
       triggerPort = 8080;
       avalanche = pkgs.selfPackages.avalanche;
 
       serverYaml = (pkgs.formats.yaml { }).generate "server.yaml" {
         server = {
           hostname = config.networking.hostName;
-          token_file = config.sops.secrets.deploy_trigger_token.path;
+          token_file = config.sops.secrets.avalanche_token.path;
           dir = triggerDir;
           port = triggerPort;
           timeout = "2h";
@@ -25,15 +25,14 @@
       clientYaml = (pkgs.formats.yaml { }).generate "client.yaml" {
         client = {
           tailnet = config.constants.tailnetDnsName;
-          token_file = "/run/secrets/deploy_trigger_token";
+          token_file = config.sops.secrets.avalanche_token.path;
           port = 8080;
           flake = ".";
           timeout = "2h";
         };
       };
 
-      hasRunner =
-        builtins.hasAttr "github-runners" config.services && config.services.github-runners != { };
+      hasRunner = builtins.hasAttr "github-runner" config;
     in
     {
       config = lib.mkMerge [
@@ -42,15 +41,15 @@
 
           users.groups.avalanche = { };
 
-          users.users.deploy-trigger = {
+          users.users.avalanche = {
             isSystemUser = true;
             group = "avalanche";
-            description = "Deployment trigger service";
+            description = "Avalanche server";
           };
 
-          sops.secrets.deploy_trigger_token = {
-            sopsFile = ../secrets/deploy-trigger.yaml;
-            key = "deploy_trigger_token";
+          sops.secrets.avalanche_token = {
+            sopsFile = ../secrets/avalanche.yaml;
+            key = "token";
             owner = "root";
             group = "avalanche";
             mode = "0440";
@@ -62,9 +61,9 @@
             wantedBy = [ "multi-user.target" ];
             after = [ "network.target" ];
             serviceConfig = {
-              User = "deploy-trigger";
+              User = "avalanche";
               Group = "avalanche";
-              RuntimeDirectory = "deploy-trigger";
+              RuntimeDirectory = "avalanche";
               RuntimeDirectoryMode = "0700";
               ExecStart = "${avalanche}/bin/avalanche-server serve";
               Restart = "always";
@@ -137,6 +136,23 @@
         (lib.mkIf hasRunner {
           environment.etc."avalanche/client.yaml".source = clientYaml;
           environment.systemPackages = [ avalanche ];
+
+          sops.secrets.github_runner_pat = {
+            sopsFile = ../secrets/avalanche.yaml;
+            key = "pat";
+            owner = "github-runner";
+            group = "github-runner";
+            mode = "0400";
+          };
+
+          services.github-runners.neko-sphere.tokenFile = config.sops.secrets.github_runner_pat.path;
+
+          systemd.services = lib.mapAttrs' (
+            runnerName: _:
+            lib.nameValuePair "github-runner-${runnerName}" {
+              serviceConfig.SupplementaryGroups = [ "avalanche" ];
+            }
+          ) config.services.github-runners;
         })
       ];
     };

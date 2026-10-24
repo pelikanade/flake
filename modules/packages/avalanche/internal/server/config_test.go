@@ -14,7 +14,7 @@ func TestLoadConfigYAMLAndEnvironment(t *testing.T) {
 server:
   hostname: neko-sphere
   token_file: /tmp/token
-  dir: /run/deploy-trigger
+  dir: /run/avalanche
   port: 8080
   timeout: 2h
 `), 0o644); err != nil {
@@ -56,7 +56,7 @@ func TestLoadConfigEnvironmentOnly(t *testing.T) {
 	t.Setenv("AVALANCHE_CONFIG", filepath.Join(t.TempDir(), "missing.yaml"))
 	t.Setenv("AVALANCHE_SERVER_HOSTNAME", "edge")
 	t.Setenv("AVALANCHE_SERVER_TOKEN_FILE", "/tmp/token")
-	t.Setenv("AVALANCHE_SERVER_DIR", "/run/deploy-trigger")
+	t.Setenv("AVALANCHE_SERVER_DIR", "/run/avalanche")
 	t.Setenv("AVALANCHE_SERVER_PORT", "8080")
 	t.Setenv("AVALANCHE_SERVER_TIMEOUT", "2h")
 
@@ -64,7 +64,7 @@ func TestLoadConfigEnvironmentOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Hostname != "edge" || cfg.Dir != "/run/deploy-trigger" {
+	if cfg.Hostname != "edge" || cfg.Dir != "/run/avalanche" {
 		t.Fatalf("unexpected config: %+v", cfg)
 	}
 }

@@ -8,7 +8,7 @@ import (
 )
 
 // DefaultDir is the runtime directory shared by the trigger and root units.
-const DefaultDir = "/run/deploy-trigger"
+const DefaultDir = "/run/avalanche"
 
 // ValidStorePath accepts a NixOS system toplevel for the given hostname.
 func ValidStorePath(hostname, path string) bool {

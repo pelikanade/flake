@@ -25,7 +25,7 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	loader, path, err := config.Load(DefaultConfigPath, map[string]any{
 		"server.hostname":   "",
-		"server.token_file": "/run/secrets/deploy_trigger_token",
+		"server.token_file": "/run/secrets/avalanche_token",
 		"server.dir":        deploy.DefaultDir,
 		"server.port":       8080,
 		"server.timeout":    "2h",

@@ -22,7 +22,7 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	loader, path, err := configutil.Load(DefaultConfigPath, map[string]any{
 		"client.tailnet":    "",
-		"client.token_file": "/run/secrets/deploy_trigger_token",
+		"client.token_file": "/run/secrets/avalanche_token",
 		"client.port":       8080,
 		"client.flake":      ".",
 		"client.timeout":    "2h",

@@ -52,7 +52,7 @@ The runner service runs as the static `github-runner` user. It has no root, no
 SSH key, and no deployment unit of its own. The `avalanche` aspect, imported by
 `neko-sphere`, installs the `avalanche` package and writes
 `/etc/avalanche/client.yaml` only because a GitHub runner is present; the
-client is a command, not a service. The runner service has the `deploy` group
+client is a command, not a service. The runner service has the `avalanche` group
 as a supplementary group so that command can read the shared token.
 
 Each matrix job invokes:
@@ -84,7 +84,7 @@ The runner daemon needs a credential before any job exists. A workflow's
 `GITHUB_TOKEN` is issued only after a runner has picked up a job and does not
 have the `administration` permission required by the runner registration API.
 The NixOS module therefore reads a long-lived fine-grained PAT from
-`/run/secrets/github_runner_token`.
+`/run/secrets/github_runner_pat`.
 
 Create a fine-grained PAT with:
 
@@ -93,10 +93,10 @@ Create a fine-grained PAT with:
   `Metadata: Read` is added automatically;
 - an expiry you are prepared to rotate.
 
-The value lives in `modules/secrets/github-runner.yaml`, encrypted to the
-maintainer and `neko-sphere`. Rotation: update the encrypted document, switch
-`neko-sphere` (or restart `github-runner-neko-sphere`); the next job registers
-with the new value.
+The value lives in `modules/secrets/avalanche.yaml` as `pat`, encrypted to the
+maintainer, `neko-sphere`, and `edge`. Rotation: update the encrypted document,
+switch `neko-sphere` (or restart `github-runner-neko-sphere`); the next job
+registers with the new value.
 
 ## Targets
 
@@ -114,7 +114,7 @@ The generated client configuration is:
 ```yaml
 client:
   tailnet: <tailnetDnsName>
-  token_file: /run/secrets/deploy_trigger_token
+  token_file: /run/secrets/avalanche_token
   port: 8080
   flake: "."
   timeout: 2h
@@ -125,8 +125,8 @@ The generated server configuration on each target is:
 ```yaml
 server:
   hostname: <hostname>
-  token_file: /run/secrets/deploy_trigger_token
-  dir: /run/deploy-trigger
+  token_file: /run/secrets/avalanche_token
+  dir: /run/avalanche
   port: 8080
   timeout: 2h
 ```
@@ -138,7 +138,7 @@ works.
 
 ## Deploy trigger
 
-Each target runs `avalanche-server.service` as the non-root `deploy-trigger`
+Each target runs `avalanche-server.service` as the non-root `avalanche`
 user. It runs `avalanche-server serve`, which listens on `127.0.0.1:8080`;
 `tailscale-serve-deploy.service` publishes that port with:
 
@@ -202,14 +202,20 @@ cache does not have a required path.
 
 ## Token
 
-`modules/secrets/deploy-trigger.yaml` holds one shared value,
-`deploy_trigger_token`, encrypted to the maintainer and every target. The
-module provisions it as `root:avalanche` with mode `0440`; the runner service
-has `avalanche` as a supplementary group, and the `deploy-trigger` service
-user's primary group is `avalanche`.
+`modules/secrets/avalanche.yaml` holds both avalanche secrets, encrypted to
+the maintainer, `neko-sphere`, and `edge`:
 
-Rotation: replace the value with `sops`, then switch the targets (or restart
-`avalanche-server.service`). The client reads the new value on its next job.
+- `token`: the shared trigger token, provisioned as `root:avalanche` with mode
+  `0440`;
+- `pat`: the runner PAT, provisioned as `github-runner:github-runner` with mode
+  `0400`.
+
+The runner service has `avalanche` as a supplementary group so the client can
+read `token`; the `avalanche` server user's primary group is `avalanche`.
+
+Rotation: replace the affected value with `sops`, then switch the targets (or
+restart `avalanche-server.service` / `github-runner-neko-sphere`). The next job
+uses the new value.
 
 A shared token means any compromised target can trigger another target. Each
 target still validates the store path against its own hostname and can only
