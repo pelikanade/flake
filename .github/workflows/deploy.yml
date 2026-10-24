@@ -1,0 +1,49 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # A dispatch from any other ref must not activate this repository's
+    # configuration on the servers.
+    if: github.ref == 'refs/heads/main'
+    runs-on:
+      - self-hosted
+      - neko-sphere
+    timeout-minutes: 240
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Build both systems before touching either host. The deploy unit
+      # clones the same main revision and reuses the store paths.
+      - name: Build neko-sphere
+        run: >-
+          nix build --no-link
+          .#nixosConfigurations.neko-sphere.config.system.build.toplevel
+
+      - name: Build edge
+        run: >-
+          nix build --no-link
+          .#nixosConfigurations.edge.config.system.build.toplevel
+
+      # Edge first: the neko-sphere switch can restart this runner. The root
+      # unit keeps running even if the job is killed at that point.
+      - name: Deploy edge
+        run: /run/wrappers/bin/sudo /run/current-system/sw/bin/nixos-deploy-request edge
+
+      - name: Deploy neko-sphere
+        run: /run/wrappers/bin/sudo /run/current-system/sw/bin/nixos-deploy-request neko-sphere

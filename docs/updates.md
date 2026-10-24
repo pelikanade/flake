@@ -1,6 +1,6 @@
 # Updates
 
-One workflow, `Update packages`, runs daily at 02:00 Asia/Shanghai. It updates
+The `Update packages` workflow runs daily at 02:00 Asia/Shanghai. It updates
 the flake lock, updates every locally packaged tool, builds them, repairs
 failures with an omp agent, reviews the repairs with a second omp agent, and
 then commits. There is no separate repair workflow and no pull request.
@@ -51,7 +51,9 @@ then commits. There is no separate repair workflow and no pull request.
    ```
    packages: adapt updates (strata)
    ```
-10. **Publish.** All commits are pushed to `main`.
+10. **Publish.** All commits are pushed to `main`. The push then dispatches
+    the `Deploy` workflow: a push made with `GITHUB_TOKEN` does not trigger a
+    `push` workflow by itself. See [deployment](deployment.md).
 
 If the initial build does not complete, an update command fails, or any of the
 repair, final build, review, or commit steps fails, the workflow resets to

@@ -40,9 +40,13 @@ restart of the daemon.
 The daemon listens for peer traffic on UDP `41641`, which the module opens on every
 interface: peers reach that port on the host's own addresses, not through the
 tunnel. It accepts subnet routes advertised by other nodes, matching the policy the
-sing-box endpoint had; it advertises no exit node and neither uses one nor enables
-Tailscale SSH. It omits `hostname`, so each host registers under its system
-hostname, and its state lives under `/var/lib/tailscale`.
+sing-box endpoint had; it advertises no exit node and does not use one. It omits
+`hostname`, so each host registers under its system hostname, and its state
+lives under `/var/lib/tailscale`.
+
+A host that imports the `server` role and the `tailscale` aspect advertises
+Tailscale SSH, so the deployment runner can reach it as root; workstations do
+not. See [Tailscale SSH for deployment](#tailscale-ssh-for-deployment).
 
 A peer's connection arrives on `tailscale0`, which the module adds to
 `networking.firewall.trustedInterfaces`. That is the whole firewall story on this
@@ -116,6 +120,40 @@ sounds: the node's observed endpoint, the address peers are told to dial, would 
 whatever addresses the proxy exits from, so peers could never establish a direct
 path to it. The tailnet would fall back to relaying every connection through a
 public DERP server, through the proxy on this side.
+
+## Tailscale SSH for deployment
+
+A host that imports the `server` role and the `tailscale` aspect advertises
+Tailscale SSH. `services.tailscale-ssh.enable` defaults to
+`services.tailscale.enable && roles.server.imported`, and
+`tailscaled-set.service` runs `tailscale set --ssh`. The daemon claims port 22
+only on the tailnet address; the regular `sshd` still serves the other
+interfaces. Workstations and the installer do not import the server role, so
+they do not advertise it.
+
+The tailnet policy must grant both network access to port 22 and an SSH rule
+that accepts the deployment runner as `root`. The default `check` action
+requires interactive re-authentication and breaks automation. When both hosts
+are user-owned devices:
+
+```json
+"ssh": [{
+  "action": "accept",
+  "src": ["autogroup:member"],
+  "dst": ["autogroup:self"],
+  "users": ["root"]
+}]
+```
+
+A tagged source cannot use `autogroup:self`; use the corresponding tags in
+`src` and `dst` instead. Verify from `neko-sphere`:
+
+```sh
+ssh root@edge.dwelf-hoki.ts.net true
+```
+
+The deployment workflow and the root unit are described in
+[deployment](deployment.md).
 
 ## DNS
 

@@ -46,7 +46,7 @@ The site compares each host's revision with the head of
 `pelikanade/flake` through GitHub's public API and labels it up to date,
 outdated, modified or unknown. That is the upstream default for
 `services.nvirellia-im.prometheus.flakeRepository`, which is also the
-repository the machines auto-upgrade from; the answer is cached for five
+repository the servers deploy from; the answer is cached for five
 minutes and needs no token.
 
 When either upstream has no data the tab's corresponding frame is omitted; when

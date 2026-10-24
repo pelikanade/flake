@@ -18,6 +18,7 @@
       freezer
       harmonia
       gh
+      github-runner
       tailscale-ingress
       probe-agent
       zswap

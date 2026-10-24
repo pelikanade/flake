@@ -13,7 +13,6 @@
       probe-hub
       probe-agent
       zswap
-      auto-upgrade-no-build
     ];
     diskoConfig = inputs.self.diskoConfigurations.ext4-server-bios;
     hardware =
