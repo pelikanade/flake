@@ -8,10 +8,10 @@ every repaired package with `nix build`, and writes `.update-agent/report.json`
 plus a report body. The repair changes stay uncommitted; the workflow commits
 them only after an independent review.
 
-The agent uses omp's built-in DeepSeek provider and the model named
-"DeepSeek V4.1 Flash 1017" (`deepseek/deepseek-flash`). The key comes from the
-`DEEPSEEK_API_KEY` environment variable, which the workflow maps from the
-repository secret of the same name.
+The agent runs through the Magpie gateway with omp's `magpie` provider and the
+default model `magpie/deepseek/deepseek-flash`. The omp-magpie extension comes
+from `PI_CONFIG_FILES`, and its endpoint and key come from
+`$HOME/.omp/agent/magpie.yaml`, which the update runner provisions.
 
 Use --dry-run to write the prompt and the command without calling the agent or
 building anything.
@@ -231,7 +231,6 @@ def main(argv: list[str]) -> int:
         default=os.environ.get("OMP_BIN") or shutil.which("omp"),
     )
     parser.add_argument("--model", default=os.environ.get("OMP_MODEL"))
-    parser.add_argument("--api-key", default=None)
     parser.add_argument("--max-time", default="45m")
     parser.add_argument("--build-timeout", type=int, default=3600)
     parser.add_argument("--dry-run", action="store_true")
@@ -254,19 +253,7 @@ def main(argv: list[str]) -> int:
 
     prompt = write_prompt(log_dir, failures)
 
-    try:
-        model, api_key = omp_agent.configure(args.model, args.api_key)
-    except omp_agent.ConfigError as exc:
-        reason = str(exc)
-        report = {
-            "agent": {"ran": False, "exit": None, "reason": reason, "model": None},
-            "repaired": [],
-            "unresolved": failures,
-        }
-        (log_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-        (log_dir / "report-body.md").write_text(report_body(report, prompt))
-        error(reason)
-        return 0
+    model = omp_agent.resolve_model(args.model)
 
     if not args.omp:
         reason = "omp is not on PATH; pass --omp or set OMP_BIN"
@@ -285,12 +272,10 @@ def main(argv: list[str]) -> int:
         repo=repo,
         prompt=prompt,
         model=model,
-        api_key=api_key,
         session_dir=log_dir / "omp-sessions",
         max_time=args.max_time,
     )
-    redacted_command = omp_agent.redacted(command)
-    print("agent command:", " ".join(redacted_command))
+    print("agent command:", " ".join(command))
 
     if args.dry_run:
         report = {
@@ -299,7 +284,7 @@ def main(argv: list[str]) -> int:
                 "exit": None,
                 "reason": "dry run",
                 "model": model,
-                "command": redacted_command,
+                "command": command,
             },
             "repaired": [],
             "unresolved": failures,
@@ -368,7 +353,7 @@ def main(argv: list[str]) -> int:
             "exit": exit_code,
             "reason": None,
             "model": model,
-            "command": redacted_command,
+            "command": command,
         },
         "repaired": repaired,
         "unresolved": unresolved,

@@ -17,14 +17,19 @@ concurrency:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    # This runner, its Nix, omp and its Magpie configuration are defined by
+    # modules/services/github-runners/update-packages-runner.nix. It is a
+    # separate label from the deploy runner so an update cannot occupy the
+    # deploy queue.
+    runs-on:
+      - self-hosted
+      - update-packages
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v7
         with:
           # The agents run before the final push and have no git credentials.
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
@@ -42,10 +47,7 @@ jobs:
       - name: Update packages
         id: packages
         continue-on-error: true
-        run: >-
-          nix shell nixpkgs#nix-update nixpkgs#nixfmt-rfc-style
-          -c ./scripts/update-packages.py --keep-failed
-          --log-dir=.update-agent
+        run: ./scripts/update-packages.py --keep-failed --log-dir=.update-agent
 
       - name: Stop on a fatal updater failure
         if: steps.packages.outcome == 'failure'
@@ -139,12 +141,7 @@ jobs:
         continue-on-error: true
         env:
           OMP_MODEL: ${{ vars.OMP_MODEL }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        run: |
-          omp=$(nix build --no-link --print-out-paths .#omp)
-          python3 scripts/repair-updates.py \
-            --log-dir .update-agent \
-            --omp "$omp/bin/omp"
+        run: python3 scripts/repair-updates.py --log-dir .update-agent
 
       - name: Check repair
         if: >-
@@ -215,13 +212,10 @@ jobs:
         continue-on-error: true
         env:
           OMP_REVIEW_MODEL: ${{ vars.OMP_REVIEW_MODEL }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
-          omp=$(nix build --no-link --print-out-paths .#omp)
           python3 scripts/review-updates.py \
             --base "$(cat .update-agent/clean-tip)" \
-            --log-dir .review \
-            --omp "$omp/bin/omp"
+            --log-dir .review
 
       - name: Check review
         if: always() && steps.changes.outputs.changed == 'true'

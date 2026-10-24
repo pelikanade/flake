@@ -35,7 +35,7 @@ On an already managed host, `just build` builds the local system and `just deplo
 
 A scheduled workflow updates the flake lock and every exported package that declares `passthru.update` metadata, then builds every updated package. A package that fails is repaired by an omp agent; a second omp agent reviews the repair, including a security check. The workflow commits only after the repair builds and the review approves. Update commits and the repair commit are separate. If a gate fails, the clean updates still land and the failed package keeps its previous version. See [updates](docs/updates.md).
 
-The agents use omp's built-in DeepSeek model. Set the `DEEPSEEK_API_KEY` repository secret as described in that document; without it, a failed build is not repaired and the run fails.
+The agents call the Magpie gateway on `neko-sphere` through the `omp-magpie` extension; the update runner holds the endpoint and key, so GitHub stores no provider secret. The workflow runs on a dedicated `update-packages` self-hosted runner, separate from the deploy runner.
 
 A push to `main`, or the update workflow's explicit dispatch after pushing its
 own commits, triggers the `Deploy` workflow on the `avalanche` self-hosted

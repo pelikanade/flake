@@ -21,7 +21,7 @@
       # registration PAT from the avalanche document and may read the trigger
       # token through the avalanche group.
       sops.secrets.avalanche_runner_pat = {
-        sopsFile = ../secrets/avalanche.yaml;
+        sopsFile = ../../secrets/avalanche.yaml;
         key = "pat";
         owner = runnerUser;
         group = runnerUser;

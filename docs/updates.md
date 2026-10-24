@@ -5,6 +5,14 @@ the flake lock, updates every locally packaged tool, builds them, repairs
 failures with an omp agent, reviews the repairs with a second omp agent, and
 then commits. There is no separate repair workflow and no pull request.
 
+It runs on the `update-packages` self-hosted runner on `neko-sphere`.
+`modules/services/github-runners/update-packages-runner.nix` puts the tools its
+steps call (python3, jq, gh, ripgrep, openssh, nix-update, nixfmt, and omp) on
+the job `PATH`, so the steps invoke the scripts and `gh` directly, and the
+repair and review agents run with the installed omp instead of building
+`.#omp`. The same module renders the Magpie endpoint and key into the runner's
+`~/.omp/agent/magpie.yaml`.
+
 ## Sequence
 
 1. **Flake inputs.** `nix flake update` runs for every input, then every
@@ -78,37 +86,15 @@ confirms that the pin now builds without a repair.
 
 ## Credentials
 
-Both agents use omp's built-in DeepSeek provider and the model named
-"DeepSeek V4.1 Flash 1017", selected as `deepseek/deepseek-flash`. omp reads
-the key from `DEEPSEEK_API_KEY`; the workflow maps the repository secret of
-that name to it.
-
-Create the secret once, either in the repository UI under **Settings >
-Secrets and variables > Actions > New repository secret**, or with the
-authenticated `gh` CLI:
-
-```sh
-gh secret set DEEPSEEK_API_KEY --repo pelikanade/flake
-```
-
-`gh` prompts for the value without echoing it. To pipe it from an existing
-credential instead:
-
-```sh
-printf '%s' "$DEEPSEEK_API_KEY" |
-  gh secret set DEEPSEEK_API_KEY --repo pelikanade/flake
-```
-
-Confirm the name is present (the value is never shown):
-
-```sh
-gh secret list --repo pelikanade/flake
-```
+Both agents run omp against the Magpie gateway on `neko-sphere` through the
+`omp-magpie` extension, using Magpie's `deepseek/deepseek-flash` model. The
+update runner installs omp, exports `PI_CONFIG_FILES` for the extension, and
+renders the gateway endpoint and key into the runner's persistent
+`~/.omp/agent/magpie.yaml`. No provider secret is stored in GitHub Actions.
 
 `OMP_MODEL` and `OMP_REVIEW_MODEL` are optional repository variables for
 overriding the repair and review models; both default to
-`deepseek/deepseek-flash`. Do not store the key in a variable: variables are
-plaintext.
+`magpie/deepseek/deepseek-flash`.
 
 Neither agent receives a git token. The workflow pushes only after both agents
 have exited.
@@ -137,12 +123,16 @@ git rev-parse HEAD > .update-agent/clean-tip
 python3 scripts/commit-updates.py --phase failed --report .update-agent/updates.json
 
 omp=$(nix build --no-link --print-out-paths .#omp)
-DEEPSEEK_API_KEY=... python3 scripts/repair-updates.py --omp "$omp/bin/omp"
+python3 scripts/repair-updates.py --omp "$omp/bin/omp"
 python3 scripts/verify-packages.py --updates .update-agent/updates.json --log-dir .ci
 python3 scripts/review-updates.py \
   --base "$(cat .update-agent/clean-tip)" --log-dir .review --omp "$omp/bin/omp"
 python3 scripts/commit-updates.py --phase repair --report .update-agent/updates.json
 ```
+
+`repair-updates.py` and `review-updates.py` load the omp-magpie extension
+through `PI_CONFIG_FILES` and read `~/.omp/agent/magpie.yaml`, so run them from
+the desktop session, where Home Manager provides both.
 
 `repair-updates.py` and `review-updates.py` support `--dry-run`, which writes
 the prompt and prints the command without calling the agent.
