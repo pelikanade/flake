@@ -167,6 +167,13 @@ let
         substituteInPlace internal/gateway/claude_client_cache_test.go \
           --replace-fail '\\u003cexternal_system_instructions\\u003e\nshared\n\\u003c/external_system_instructions\\u003e\n\n' \
           '\\u003cexternal_system_instructions\\u003e\\nshared\\n\\u003c/external_system_instructions\\u003e\\n\\n'
+        # A command is read for RSS as soon as Start returns, before its
+        # dynamic loader must have faulted a page in; on a busy sandbox the
+        # first read sees the bare image. Retry, keeping the same bounds.
+        substituteInPlace internal/proc/rss_test.go \
+          --replace-fail $'\t"testing"\n' $'\t"testing"\n\t"time"\n' \
+          --replace-fail $'\trss, ok := tree.RSS()\n\tif !ok || rss < 64<<10 || rss > 1<<30 {\n\t\tt.Fatalf("a running %s holds %d bytes (%v)", name, rss, ok)\n\t}' \
+          $'\tvar rss int64\n\tvar ok bool\n\tfor deadline := time.Now().Add(5 * time.Second); ; {\n\t\trss, ok = tree.RSS()\n\t\tif ok && rss >= 64<<10 || time.Now().After(deadline) {\n\t\t\tbreak\n\t\t}\n\t\ttime.Sleep(10 * time.Millisecond)\n\t}\n\tif !ok || rss < 64<<10 || rss > 1<<30 {\n\t\tt.Fatalf("a running %s holds %d bytes (%v)", name, rss, ok)\n\t}'
       '';
       checkPhase = ''
         runHook preCheck
