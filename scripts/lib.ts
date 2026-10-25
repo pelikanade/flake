@@ -66,6 +66,7 @@ export async function capture(
   return { status, stdout: await stdout, stderr: await stderr, timedOut };
 }
 
+/** `timeout` is in seconds. */
 export async function runLogged(
   command: string[],
   { log, cwd, timeout = 3600 }: { log: string; cwd?: string; timeout?: number },
