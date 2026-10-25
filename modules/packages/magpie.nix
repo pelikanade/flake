@@ -97,6 +97,16 @@ let
         substituteInPlace internal/autostart/autostart.go \
           --replace-fail 'exe, err := os.Executable()' \
           'exe, err := os.Executable(); if filepath.Base(exe) == ".magpie-wrapped" { exe = filepath.Join(filepath.Dir(exe), "magpie") }'
+
+        # The background gateway's serve went straight to os/exec, which
+        # TestNoCommandBypassesProc rejects: on Windows it would open a
+        # console window for every command not made through proc.Command.
+        substituteInPlace internal/tui/keep.go \
+          --replace-fail $'\t"os/exec"\n' "" \
+          --replace-fail $'\t"github.com/yetone/magpie/internal/daemon"\n' \
+          $'\t"github.com/yetone/magpie/internal/daemon"\n\t"github.com/yetone/magpie/internal/proc"\n' \
+          --replace-fail 'cmd := exec.Command(exe, "serve")' \
+          'cmd := proc.Command(exe, "serve")'
       '';
 
       nativeCheckInputs = [
