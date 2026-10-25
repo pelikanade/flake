@@ -30,9 +30,9 @@ concurrency:
 # run resets to so the clean updates still land, and `ok` means the phase
 # verified everything it owns — a run with no `ok` is never published.
 #
-# The agent runtime is `.github/actions/omp-agent`, a vendored copy of the
-# `omp-agent` repository; see its VENDORED.md for the one-line change that
-# replaces it once that repository is published.
+# The agent runtime is `pelikanade/omp-action`, a composite action that runs its
+# TypeScript with `bun` and streams the agent into the step log. The steps below
+# run this repository's scripts the same way: `bun`, no Python, no bundle.
 jobs:
   update:
     # This runner, its Nix, omp and its Magpie configuration are defined by
@@ -56,7 +56,7 @@ jobs:
       # 1. Flake inputs. This evaluates every machine toplevel; it does not
       # build them.
       - name: Update flake inputs
-        run: ./scripts/update-packages.py --build --commit flake
+        run: bun scripts/update-packages.ts --build --commit flake
 
       # 2. Package updates. Every package is updated and built before a pin is
       # eligible to commit. `--keep-failed` leaves the pins that fail in the
@@ -64,7 +64,7 @@ jobs:
       # nothing is committed yet.
       - name: Update packages
         id: packages
-        run: ./scripts/update-packages.py --keep-failed --log-dir=.update-agent
+        run: bun scripts/update-packages.ts --keep-failed --log-dir=.update-agent
 
       # 3. Build every updated package and commit what may be committed: the
       # pins whose build passed, then the pins that need repair. A build
@@ -76,14 +76,14 @@ jobs:
         if: steps.packages.outcome == 'success'
         run: |
           if [ -f .update-agent/updates.json ]; then
-            python3 scripts/verify-packages.py \
+            bun scripts/verify-packages.ts \
               --updates .update-agent/updates.json \
               --log-dir .ci || true
           else
             echo "no package updates to build"
           fi
-          python3 scripts/commit-updates.py --phase clean
-          python3 scripts/commit-updates.py --phase failed
+          bun scripts/commit-updates.ts --phase clean
+          bun scripts/commit-updates.ts --phase failed
 
       # 4. Repair failed updates. The agent reads the failure data itself; a
       # repair that cannot be made is reported rather than forced.
@@ -93,7 +93,7 @@ jobs:
           steps.build.outcome == 'success' && steps.build.outputs.gate == '' &&
           steps.build.outputs.ok == '' &&
           hashFiles('.update-agent/failures.json') != ''
-        uses: ./.github/actions/omp-agent
+        uses: pelikanade/omp-action@v1
         continue-on-error: true
         with:
           prompt: |
@@ -165,7 +165,7 @@ jobs:
 
           git add --all -- modules/packages
           if [ -z "$gate" ] &&
-            ! python3 scripts/repair-updates.py --log-dir .update-agent; then
+            ! bun scripts/repair-updates.ts --log-dir .update-agent; then
             echo "::error::a package update still does not build"
             gate=repair
           fi
@@ -179,7 +179,7 @@ jobs:
             gate=outside
           fi
 
-          if [ -z "$gate" ] && ! python3 scripts/verify-packages.py \
+          if [ -z "$gate" ] && ! bun scripts/verify-packages.ts \
             --updates .update-agent/updates.json --log-dir .ci; then
             echo "::error::the final build of the updated packages failed"
             gate=build
@@ -210,7 +210,7 @@ jobs:
       - name: Review changes
         id: review-agent
         if: steps.repair-diff.outputs.changed == 'true'
-        uses: ./.github/actions/omp-agent
+        uses: pelikanade/omp-action@v1
         continue-on-error: true
         with:
           prompt: |
@@ -321,7 +321,7 @@ jobs:
           fi
 
           if [ -z "$gate" ]; then
-            if python3 scripts/check-verdict.py --log-dir .review; then
+            if bun scripts/check-verdict.ts --log-dir .review; then
               echo "ok=true" >> "$GITHUB_OUTPUT"
             else
               gate=review
@@ -349,7 +349,7 @@ jobs:
           verified=true
           if [ -n "$GATE" ] || [ -z "$OK" ]; then
             verified=false
-          elif ! python3 scripts/commit-updates.py --phase repair; then
+          elif ! bun scripts/commit-updates.ts --phase repair; then
             GATE=repair
             verified=false
           fi

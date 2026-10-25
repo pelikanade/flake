@@ -191,7 +191,7 @@ rewrap-secret file +args:
 # Update discovered packages, or every flake input with `flake`; pass --build or --commit.
 [group('repository')]
 update-packages *args:
-    ./scripts/update-packages.py {{ args }}
+    bun scripts/update-packages.ts {{ args }}
 
 # Remove system generations older than a week and the store paths they kept.
 [group('repository')]

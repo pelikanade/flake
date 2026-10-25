@@ -7,21 +7,19 @@ then commits. There is no separate repair workflow and no pull request.
 
 It runs on the `update-packages` self-hosted runner on `neko-sphere`.
 `modules/services/github-runners/update-packages-runner.nix` puts the tools its
-steps call (python3, jq, gh, ripgrep, openssh, nix-update, nixfmt, awk, curl,
-and omp) on the job `PATH`, so the steps invoke the scripts and `gh` directly,
-and the repair and review agents run with the installed omp instead of
+steps call (bun, jq, gh, ripgrep, openssh, nix-update, nixfmt, awk, curl,
+util-linux, and omp) on the job `PATH`, so the steps invoke the scripts and `gh`
+directly, and the repair and review agents run with the installed omp instead of
 building `.#omp`. The same module renders the Magpie endpoint and key into the
 runner's `~/.omp/agent/magpie.yaml`.
 
-Both agents run through `.github/actions/omp-agent`, which builds the omp
-invocation, asks for the thinking (`--print-thoughts`), and streams every line
-of the agent's output into the step log — that log is the transcript. The
-prompts themselves are in the workflow, next to the steps that run them: an
-agent reads the failure data, the logs and the build summary from the files
-those steps have already written. That directory is a byte-identical copy of the
-`omp-agent` repository, vendored because a local action needs no repository
-reference; `VENDORED.md` in it describes the one-line change that replaces it
-once `omp-agent` is published.
+Both agents run through `pelikanade/omp-action@v1`: a composite action whose
+TypeScript (`bun`, standard library only, no build step) builds the omp
+invocation, asks for the thinking (`--print-thoughts`), and lets the agent write
+straight into the step log — that log is the transcript. The prompts themselves
+are in the workflow, next to the steps that run them: an agent reads the failure
+data, the logs and the build summary from the files those steps have already
+written.
 
 ## Sequence
 
@@ -54,7 +52,7 @@ whether `main` receives the repairs.
 3. **Build updated packages.** Every updated package is built, with its
    `passthru.update.verify` targets. A build failure is recorded in
    `failures.json` and marks the pin in `updates.json`; it is a repair, not an
-   error. `commit-updates.py --phase clean` then commits each package that
+   error. `commit-updates.ts --phase clean` then commits each package that
    built, separately:
 
    ```
@@ -70,7 +68,7 @@ whether `main` receives the repairs.
    package expressions, adapts the local patches and substitutions, and rebuilds
    every failed package. It has no git credentials and cannot commit. The check
    after it then stages the repair, rebuilds every failed package itself with
-   `repair-updates.py` (including the pinned-version guard, so a no-op repair
+   `repair-updates.ts` (including the pinned-version guard, so a no-op repair
    cannot pass), builds every updated package again from the final working tree
    as the build gate the reviewer reads (`.ci/build-summary.json`), and
    publishes the gate for an agent that never started, a package that still does
@@ -111,10 +109,10 @@ whether `main` receives the repairs.
    worked on, the review, and the gate. `.update-agent/`, `.ci/`, and `.review/` are uploaded
    as the `update-agent` artifact either way.
 
-The agent steps run `.github/actions/omp-agent`, which asks for the thinking
-(`--print-thoughts`), echoes the prompt the workflow gave it, and streams the
-agent's output into the step log as it arrives. That log is the transcript: the
-agent writes no transcript file and no session directory inside the workspace.
+The agent steps run `pelikanade/omp-action@v1`, which asks for the thinking
+(`--print-thoughts`), echoes the prompt the workflow gave it, and lets the agent
+write into the step log as it works. That log is the transcript: the agent writes
+no transcript file and no session directory inside the workspace.
 
 ## Commit separation
 
@@ -157,6 +155,9 @@ have exited.
 
 ## Local use
 
+Work from the repository's development shell (`nix develop`), which provides
+`bun` for the scripts and the Justfile entry point.
+
 ```sh
 just update-packages --build
 ```
@@ -165,27 +166,28 @@ Add `--keep-failed` to leave a failed pin in the working tree and write
 `.update-agent/updates.json` and `.update-agent/failures.json`. Then:
 
 ```sh
-python3 scripts/verify-packages.py --updates .update-agent/updates.json --log-dir .ci
-python3 scripts/commit-updates.py --phase clean
-python3 scripts/commit-updates.py --phase failed
+bun scripts/verify-packages.ts --updates .update-agent/updates.json --log-dir .ci
+bun scripts/commit-updates.ts --phase clean
+bun scripts/commit-updates.ts --phase failed
 
 # the repair agent; its prompt is the `prompt:` block of the workflow's
-# "Repair failed updates" step — copy it into a file to reuse it here
-python3 .github/actions/omp-agent/omp_agent.py \
+# "Repair failed updates" step — copy it into a file to reuse it here. The
+# agent script is the checkout of pelikanade/omp-action, run with bun.
+bun /path/to/omp-action/omp_agent.ts \
   --prompt "$(cat /tmp/repair-prompt.md)" --cwd "$PWD" \
   --model magpie/deepseek/deepseek-flash --max-time 45m --approval-mode yolo
 git add --all -- modules/packages
-python3 scripts/repair-updates.py --log-dir .update-agent
-python3 scripts/verify-packages.py --updates .update-agent/updates.json --log-dir .ci
+bun scripts/repair-updates.ts --log-dir .update-agent
+bun scripts/verify-packages.ts --updates .update-agent/updates.json --log-dir .ci
 
 # the review agent, then the verdict check; the diff against HEAD is the repair
 mkdir -p .review
 { git diff HEAD --binary; git status --porcelain --untracked-files=all; } |
   sha256sum | cut -d' ' -f1 > .review/tree.sha
-python3 .github/actions/omp-agent/omp_agent.py \
+bun /path/to/omp-action/omp_agent.ts \
   --prompt "$(cat /tmp/review-prompt.md)" --cwd "$PWD" \
   --model magpie/deepseek/deepseek-flash --max-time 20m --approval-mode yolo
-python3 scripts/check-verdict.py --log-dir .review
+bun scripts/check-verdict.ts --log-dir .review
 ```
 
 The checks the workflow runs around the agents are in the workflow itself, so a
@@ -195,5 +197,5 @@ decided.
 
 Both agents load the omp-magpie extension through `PI_CONFIG_FILES` and read
 `~/.omp/agent/magpie.yaml`, so run them — directly, or through
-`.github/actions/omp-agent/omp_agent.py` — from the desktop session, where Home
-Manager provides both.
+`omp-action`'s `omp_agent.ts` — from the desktop session, where Home Manager
+provides both.
