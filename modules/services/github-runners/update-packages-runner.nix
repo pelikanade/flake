@@ -98,11 +98,15 @@
         # The workflow calls these directly instead of entering a nix shell:
         # the scripts run under python3 and use git and jq, nix-update formats
         # with nixfmt, the repair and review agents are omp, the agent reaches
-        # for ripgrep and openssh, and the deploy dispatch uses gh. Nix and
-        # git come from the runner service itself. omp is this flake's locked
-        # output, so the workflow does not build .#omp per run.
+        # for ripgrep and openssh, and the deploy dispatch uses gh. A
+        # package-provided update script reads release tags with awk and
+        # fetches upstream files with curl. Nix and git come from the runner
+        # service itself. omp is this flake's locked output, so the workflow
+        # does not build .#omp per run.
         extraPackages = with pkgs; [
+          curl
           gh
+          gawk
           jq
           nix-update
           nixfmt-rfc-style

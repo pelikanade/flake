@@ -54,9 +54,10 @@ the next job.
 - `modules/services/github-runners/update-packages-runner.nix` registers
   `update-packages` with the labels `self-hosted` and `update-packages`.
   `update-packages.yml` targets it. Its `extraPackages` put python3, jq, gh,
-  ripgrep, openssh, nix-update, nixfmt, and omp on the job `PATH`, so the
-  workflow calls them directly, enters no Nix shell, and runs the repair and
-  review agents with the installed omp instead of building `.#omp` per run.
+  ripgrep, openssh, nix-update, nixfmt, awk, curl, and omp on the job
+  `PATH`, so the workflow calls them directly, enters no Nix shell, and runs
+  the repair and review agents with the installed omp instead of building
+  `.#omp` per run.
   The module also renders the Magpie endpoint and key into the runner's
   persistent `~/.omp/agent/magpie.yaml` and exports `PI_CONFIG_FILES` for the
   `omp-magpie` extension, so the agents use the gateway on this host.

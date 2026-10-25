@@ -7,11 +7,11 @@ then commits. There is no separate repair workflow and no pull request.
 
 It runs on the `update-packages` self-hosted runner on `neko-sphere`.
 `modules/services/github-runners/update-packages-runner.nix` puts the tools its
-steps call (python3, jq, gh, ripgrep, openssh, nix-update, nixfmt, and omp) on
-the job `PATH`, so the steps invoke the scripts and `gh` directly, and the
-repair and review agents run with the installed omp instead of building
-`.#omp`. The same module renders the Magpie endpoint and key into the runner's
-`~/.omp/agent/magpie.yaml`.
+steps call (python3, jq, gh, ripgrep, openssh, nix-update, nixfmt, awk, curl,
+and omp) on the job `PATH`, so the steps invoke the scripts and `gh` directly,
+and the repair and review agents run with the installed omp instead of
+building `.#omp`. The same module renders the Magpie endpoint and key into the
+runner's `~/.omp/agent/magpie.yaml`.
 
 ## Sequence
 
