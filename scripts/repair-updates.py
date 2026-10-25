@@ -4,14 +4,22 @@
 `update-packages.py --build --keep-failed` writes `.update-agent/failures.json`
 and leaves each failed pin in the working tree. The workflow commits those
 pins, then runs this script. It gives the failures to an omp agent, verifies
-every repaired package with `nix build`, and writes `.update-agent/report.json`
-plus a report body. The repair changes stay uncommitted; the workflow commits
-them only after an independent review.
+every repaired package with `nix build`, builds every updated package again as
+the build gate the reviewer reads, and writes `.update-agent/report.json` plus
+a report body. The repair changes stay uncommitted; the workflow commits them
+only after an independent review.
 
-The agent runs through the Magpie gateway with omp's `magpie` provider and the
-default model `magpie/deepseek/deepseek-flash`. The omp-magpie extension comes
-from `PI_CONFIG_FILES`, and its endpoint and key come from
-`$HOME/.omp/agent/magpie.yaml`, which the update runner provisions.
+The script publishes its outcome as step outputs: `gate` (`repair` when the
+agent did not leave every package building, `outside` when it changed files
+outside `modules/packages`, `build` when the final build fails) or `ok` when
+the repair changed nothing and left nothing to review. It reports nothing when
+no package needs repair.
+
+The agent's output, thinking included, is streamed to the workflow log and kept
+in `.update-agent/logs/omp.log`. It runs through the Magpie gateway with omp's
+`magpie` provider and the default model `magpie/deepseek/deepseek-flash`. The
+omp-magpie extension comes from `PI_CONFIG_FILES`, and its endpoint and key
+come from `$HOME/.omp/agent/magpie.yaml`, which the update runner provisions.
 
 Use --dry-run to write the prompt and the command without calling the agent or
 building anything.
@@ -29,6 +37,7 @@ import sys
 from pathlib import Path
 
 import omp_agent
+import update_state
 
 
 def say(message: str) -> None:
@@ -45,7 +54,7 @@ def run_logged(
     *,
     cwd: Path,
     env: dict[str, str] | None = None,
-    timeout: int,
+    timeout: int | None,
 ) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("wb") as handle:
@@ -223,9 +232,15 @@ def report_body(report: dict, prompt: Path) -> str:
     return "\n".join(lines)
 
 
+def write_report(log_dir: Path, report: dict, prompt: Path) -> None:
+    (log_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+    (log_dir / "report-body.md").write_text(report_body(report, prompt))
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--log-dir", default=".update-agent")
+    parser.add_argument("--build-log-dir", default=".ci")
     parser.add_argument(
         "--omp",
         default=os.environ.get("OMP_BIN") or shutil.which("omp"),
@@ -238,17 +253,17 @@ def main(argv: list[str]) -> int:
 
     repo = Path(__file__).resolve().parent.parent
     log_dir = (repo / args.log_dir).resolve()
+    build_log_dir = (repo / args.build_log_dir).resolve()
     log_dir.mkdir(parents=True, exist_ok=True)
+
+    gate: str | None = None
     failures_path = log_dir / "failures.json"
+    if not failures_path.exists():
+        print("no package update needs repair")
+        return 0
     failures = load_failures(failures_path)
     if not failures:
-        report = {
-            "agent": {"ran": False, "exit": None, "reason": "no failures", "model": None},
-            "repaired": [],
-            "unresolved": [],
-        }
-        (log_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-        print("no failures to repair")
+        print("no package update needs repair")
         return 0
 
     prompt = write_prompt(log_dir, failures)
@@ -262,8 +277,8 @@ def main(argv: list[str]) -> int:
             "repaired": [],
             "unresolved": failures,
         }
-        (log_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-        (log_dir / "report-body.md").write_text(report_body(report, prompt))
+        write_report(log_dir, report, prompt)
+        update_state.output("gate", "repair")
         error(reason)
         return 0
 
@@ -289,13 +304,12 @@ def main(argv: list[str]) -> int:
             "repaired": [],
             "unresolved": failures,
         }
-        (log_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-        (log_dir / "report-body.md").write_text(report_body(report, prompt))
+        write_report(log_dir, report, prompt)
         print(f"prompt: {prompt}")
         return 0
 
     say(f"repairing {len(failures)} package update(s) with {model}")
-    exit_code = run_logged(
+    exit_code = omp_agent.run_streaming(
         command,
         log_dir / "logs" / "omp.log",
         cwd=repo,
@@ -313,6 +327,7 @@ def main(argv: list[str]) -> int:
     )
     if staged.returncode != 0:
         error(staged.stderr.strip() or "could not stage package changes")
+        update_state.output("gate", "repair")
         return 1
 
     repaired: list[dict] = []
@@ -358,12 +373,45 @@ def main(argv: list[str]) -> int:
         "repaired": repaired,
         "unresolved": unresolved,
     }
-    (log_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-    (log_dir / "report-body.md").write_text(report_body(report, prompt))
+    write_report(log_dir, report, prompt)
     print(f"\nrepaired: {len(repaired)}")
     print(f"unresolved: {len(unresolved)}")
-    if unresolved:
+
+    if not report["agent"]["ran"] or unresolved:
         error("some package updates still fail; see report.json")
+        gate = "repair"
+    outside = update_state.outside_changes(repo)
+    if outside:
+        print("::error::the repair agent changed files outside modules/packages")
+        print(outside)
+        gate = "outside"
+
+    if gate is None:
+        say("building every updated package")
+        code = run_logged(
+            [
+                sys.executable,
+                str(repo / "scripts" / "verify-packages.py"),
+                "--updates",
+                str(log_dir / "updates.json"),
+                "--log-dir",
+                str(build_log_dir),
+            ],
+            build_log_dir / "final-build.log",
+            cwd=repo,
+            timeout=None,
+        )
+        if code != 0:
+            print("::error::the final build of the updated packages failed")
+            gate = "build"
+
+    if gate:
+        update_state.output("gate", gate)
+    elif update_state.repair_changes(repo).strip():
+        print("repair changes are waiting for review")
+    else:
+        print("the repair changed nothing to review")
+        update_state.output("ok", "true")
     return 0
 
 
