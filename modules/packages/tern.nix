@@ -24,6 +24,9 @@ let
       libxcb,
       wayland,
       webkitgtk_4_1,
+      # The libwayland-client shadow whose requests keep Tern's input method
+      # alive across focus changes; see the wrapper below and shim.c.
+      waylandIme,
     }:
     stdenv.mkDerivation (finalAttrs: {
       pname = "tern";
@@ -95,9 +98,25 @@ let
       # git serves `tern plugin install`, `tern register` shells out to the
       # desktop entry, icon and MIME caches, and the settings portal is read
       # through `gdbus` from glib.
+      #
+      # The shim is what makes Tern's input method survive a focus change. Tern
+      # speaks text-input-v3 on Wayland and never sends the `disable()` the
+      # protocol asks for when its surface loses focus; Hyprland activates the
+      # input method only on a false -> true edge of that state, so fcitx5 never
+      # re-arms its keyboard grab after the first focus change and CJK input
+      # dies for the window's lifetime (docs/tern.md, upstream
+      # stencil-hq/tern-sdk#95, still open on 0.9.5). `tern-wayland-ime` is a
+      # libwayland-client shadow that sends that request in Tern's place. Tern
+      # resolves libwayland by name after dlopen("libwayland-client.so.0"), and
+      # LD_LIBRARY_PATH is searched before the RUNPATH that names the real
+      # library, so the dlopen lands on the shadow. Children inherit the
+      # variable; the shadow is inert for a client that never asks for
+      # text-input-v3, and for one that disables correctly it adds a redundant
+      # second disable.
       postFixup = ''
         mv $out/bin/tern $out/bin/.tern-wrapped
         makeWrapper $out/bin/.tern-wrapped $out/bin/tern \
+          --prefix LD_LIBRARY_PATH : ${waylandIme}/lib \
           --prefix PATH : ${
             lib.makeBinPath [
               desktop-file-utils
@@ -130,10 +149,12 @@ let
 in
 {
   perSystem =
-    { pkgsUnstable, ... }:
+    { pkgsUnstable, self', ... }:
     {
       # pkgsUnstable is the one perSystem set that allows unfree packages, and
       # Tern has no free variant to take from the stable set.
-      packages.tern = pkgsUnstable.callPackage package { };
+      packages.tern = pkgsUnstable.callPackage package {
+        waylandIme = self'.packages."tern-wayland-ime";
+      };
     };
 }
