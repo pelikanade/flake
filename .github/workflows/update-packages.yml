@@ -22,8 +22,8 @@ concurrency:
 # The prompts live here, not in a script: the agents read the failure data
 # (`.update-agent/failures.json`), the build logs (`.ci/logs`) and the build
 # summary (`.ci/build-summary.json`) themselves. The checks around them are
-# plain shell, so the only Python is what cannot be written here: the per
-# package `nix build` loop, the verdict check, and the updater itself.
+# plain shell, so only what needs it lives in a script: the updater and the
+# per package `nix build` loop.
 #
 # Each phase decides its own outcome and publishes it as step outputs: `gate`
 # names the phase that rejected the run, `clean-tip` is the commit a rejected
@@ -43,25 +43,28 @@ jobs:
       - self-hosted
       - update-packages
     timeout-minutes: 300
+    env:
+      # The steps below commit as the bot. Git takes this identity from the
+      # environment, so there is no `git config` step to keep in sync.
+      GIT_AUTHOR_NAME: github-actions[bot]
+      GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+      GIT_COMMITTER_NAME: github-actions[bot]
+      GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
     steps:
       - uses: actions/checkout@v7
         with:
           # The agents run before the final push and have no git credentials.
           persist-credentials: false
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       # 1. Flake inputs. This evaluates every machine toplevel; it does not
       # build them.
       - name: Update flake inputs
         run: bun scripts/update-packages.ts --build --commit flake
 
-      # 2. Package updates. Every package is updated and built before a pin is
-      # eligible to commit. `--keep-failed` leaves the pins that fail in the
-      # working tree and writes updates.json/failures.json; without --commit
-      # nothing is committed yet.
+      # 2. Package updates. Every discovered package is updated here; the build
+      # that decides whether a pin may be committed is the next phase.
+      # `--keep-failed` leaves the pins that fail in the working tree and writes
+      # updates.json/failures.json; without --commit nothing is committed yet.
       - name: Update packages
         id: packages
         run: bun scripts/update-packages.ts --keep-failed --log-dir=.update-agent
@@ -148,7 +151,8 @@ jobs:
       # The repair phase's gates: the agent started, every failed package builds
       # again, it stayed inside modules/packages, and the final build of every
       # updated package — the one the reviewer reads — passes. A repair that
-      # changed nothing leaves nothing to review, so it is `ok`.
+      # changed nothing leaves nothing to review, so it is `ok`; one that did
+      # change something records the tree the reviewer must leave as it is.
       - name: Verify the repair
         id: repair
         if: always() && steps.repair-agent.outcome != 'skipped'
@@ -163,12 +167,8 @@ jobs:
               ;;
           esac
 
+          # Nix's git source only sees staged content.
           git add --all -- modules/packages
-          if [ -z "$gate" ] &&
-            ! bun scripts/repair-updates.ts --log-dir .update-agent; then
-            echo "::error::a package update still does not build"
-            gate=repair
-          fi
 
           outside=$(git status --porcelain -- . \
             ':(exclude)modules/packages' ':(exclude).update-agent' \
@@ -179,37 +179,34 @@ jobs:
             gate=outside
           fi
 
+          # One build of every updated package, the repaired pins included: it
+          # is the summary the reviewer reads, and the script refuses a pin
+          # whose repair reverted the update instead of adapting to it.
           if [ -z "$gate" ] && ! bun scripts/verify-packages.ts \
             --updates .update-agent/updates.json --log-dir .ci; then
-            echo "::error::the final build of the updated packages failed"
-            gate=build
+            echo "::error::an updated package does not build"
+            gate=repair
           fi
 
           if [ -n "$gate" ]; then echo "gate=$gate" >> "$GITHUB_OUTPUT"; fi
-          if [ -z "$gate" ] &&
-            [ -z "$(git status --porcelain -- modules/packages)" ]; then
-            echo "ok=true" >> "$GITHUB_OUTPUT"
+          # The reviewer must leave the tree as it found it, so record it here,
+          # before the review agent starts; a repair that staged nothing is `ok`.
+          if [ -z "$gate" ]; then
+            if [ -n "$(git status --porcelain -- modules/packages)" ]; then
+              mkdir -p .review
+              { git diff HEAD --binary; git status --porcelain --untracked-files=all; } |
+                sha256sum | cut -d' ' -f1 > .review/tree.sha
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
-      # 5. Review changes. The reviewer must leave the tree as it found it, so
-      # the tree is recorded first and compared after.
-      - name: Record the repair
-        id: repair-diff
-        if: >-
-          always() && steps.repair.outcome == 'success' &&
-          steps.repair.outputs.gate == ''
-        run: |
-          set -euo pipefail
-          mkdir -p .review
-          { git diff HEAD --binary; git status --porcelain --untracked-files=all; } |
-            sha256sum | cut -d' ' -f1 > .review/tree.sha
-          if [ -n "$(git status --porcelain -- modules/packages)" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
+      # 5. Review changes. The verify step recorded the tree; the reviewer must
+      # leave it as it found it, which the verdict step compares.
       - name: Review changes
         id: review-agent
-        if: steps.repair-diff.outputs.changed == 'true'
+        if: steps.repair.outputs.changed == 'true'
         uses: pelikanade/omp-action@v1
         continue-on-error: true
         with:
@@ -292,7 +289,7 @@ jobs:
       # lets the push commit the repair.
       - name: Check the verdict
         id: review
-        if: always() && steps.repair-diff.outputs.changed == 'true'
+        if: always() && steps.repair.outputs.changed == 'true'
         run: |
           set -euo pipefail
           gate=''
@@ -320,10 +317,42 @@ jobs:
             gate=review
           fi
 
+          # The reviewer's contract: a JSON object with a boolean `approve` and
+          # a list of string findings, and approval means no findings at all.
           if [ -z "$gate" ]; then
-            if bun scripts/check-verdict.ts --log-dir .review; then
+            verdict=.review/verdict.json
+            review=.review/review.md
+            if [ ! -s "$verdict" ]; then
+              echo "::error::the review agent did not write $verdict"
+              gate=review
+            elif ! jq -e '
+                (.approve | type == "boolean")
+                and (.security_findings | type == "array")
+                and (.security_findings | all(type == "string"))
+              ' "$verdict" > /dev/null 2>&1; then
+              echo "::error::$verdict has no boolean approve and list of findings"
+              gate=review
+            elif jq -e '.approve == true and (.security_findings | length == 0)' \
+              "$verdict" > /dev/null; then
+              echo "verdict: approve"
+              jq -r '.summary // ""' "$verdict"
               echo "ok=true" >> "$GITHUB_OUTPUT"
             else
+              echo "::error::the reviewer rejected the repair"
+              echo "verdict: reject"
+              jq -r '.summary // ""' "$verdict"
+              jq -r '.security_findings[]? | "security finding: " + .' "$verdict"
+              # The report reads this file; a rejection must leave it behind.
+              if [ ! -s "$review" ]; then
+                {
+                  jq -r '.summary // ""' "$verdict"
+                  jq -r '.security_findings[]? | "\n- " + .' "$verdict"
+                } > "$review"
+              fi
+              gate=review
+            fi
+            if [ ! -s "$review" ]; then
+              echo "::error::the review agent did not write $review"
               gate=review
             fi
           fi

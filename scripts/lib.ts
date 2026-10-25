@@ -9,7 +9,7 @@
 import { appendFileSync, closeSync, mkdirSync, openSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 
-export const TIMEOUT_STATUS = 124;
+const TIMEOUT_STATUS = 124;
 
 /** A failed update; a non-empty message is reported as an error. */
 export class UpdateError extends Error {}
@@ -89,7 +89,7 @@ export async function runLogged(
   return killed ? TIMEOUT_STATUS : status;
 }
 
-export function killGroup(pid: number): void {
+function killGroup(pid: number): void {
   try {
     process.kill(-pid, "SIGKILL");
   } catch {

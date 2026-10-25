@@ -67,17 +67,18 @@ whether `main` receives the repairs.
 4. **Repair failed updates.** The first omp agent reads the failure logs and
    package expressions, adapts the local patches and substitutions, and rebuilds
    every failed package. It has no git credentials and cannot commit. The check
-   after it then stages the repair, rebuilds every failed package itself with
-   `repair-updates.ts` (including the pinned-version guard, so a no-op repair
-   cannot pass), builds every updated package again from the final working tree
-   as the build gate the reviewer reads (`.ci/build-summary.json`), and
-   publishes the gate for an agent that never started, a package that still does
-   not build, a change outside `modules/packages`, or a failed final build; a
-   repair that changed nothing has nothing to review, so it publishes `ok`. The
-   phase does not run when the build phase already rejected the run.
-5. **Review changes.** If the repair changed files, the workflow records the
-   working tree in `.review/tree.sha`, and a second, independent omp agent
-   reviews the repair diff, the update manifest, `failures.json`, and the final
+   after it stages the repair, then builds every updated package — the repaired
+   pins included — from the final working tree; that
+   `.ci/build-summary.json` is the build the reviewer reads.
+   `verify-packages.ts` refuses a pin whose repair reverted the update instead
+   of adapting to it. The step publishes the gate for an agent that never
+   started, an updated package that does not build, or a change outside
+   `modules/packages`. A repair that changed nothing has nothing to review, so
+   the step publishes `ok`; one that did change something records the working
+   tree in `.review/tree.sha` and publishes `changed`. The phase does not run
+   when the build phase already rejected the run.
+5. **Review changes.** If the repair changed files, a second, independent omp
+   agent reviews the repair diff, the update manifest, `failures.json`, and the
    build summary. It writes `.review/verdict.json` with:
 
    ```json
@@ -88,11 +89,11 @@ whether `main` receives the repairs.
    }
    ```
 
-   Any security finding forces a rejection. The check after the agent rejects a
-   verdict that is missing or unusable, a non-empty `security_findings`, an
-   agent that did not finish, an agent that changed files outside
-   `modules/packages`, and a tree that does not match the recorded one. It
-   publishes `ok` on approval, and the gate otherwise.
+   Any security finding forces a rejection. The `jq` check after the agent
+   rejects a verdict that is missing or unusable, a non-empty
+   `security_findings`, an agent that did not finish, an agent that changed
+   files outside `modules/packages`, and a tree that does not match the recorded
+   one. It publishes `ok` on approval, and the gate otherwise.
 6. **Push updates.** Every commit is pushed to `main`. With a gate, or without
    `ok`, the working tree resets to `clean-tip` first, so the failed pins and
    the repairs are dropped and only the clean update commits land; the run
@@ -176,8 +177,10 @@ bun scripts/commit-updates.ts --phase failed
 bun /path/to/omp-action/omp_agent.ts \
   --prompt "$(cat /tmp/repair-prompt.md)" --cwd "$PWD" \
   --model magpie/deepseek/deepseek-flash --max-time 45m --approval-mode yolo
+
+# Nix's git source only sees staged content, and this is the build the reviewer
+# reads; it refuses a pin whose repair reverted the update.
 git add --all -- modules/packages
-bun scripts/repair-updates.ts --log-dir .update-agent
 bun scripts/verify-packages.ts --updates .update-agent/updates.json --log-dir .ci
 
 # the review agent, then the verdict check; the diff against HEAD is the repair
@@ -187,7 +190,7 @@ mkdir -p .review
 bun /path/to/omp-action/omp_agent.ts \
   --prompt "$(cat /tmp/review-prompt.md)" --cwd "$PWD" \
   --model magpie/deepseek/deepseek-flash --max-time 20m --approval-mode yolo
-bun scripts/check-verdict.ts --log-dir .review
+jq -e '.approve == true and (.security_findings | length == 0)' .review/verdict.json
 ```
 
 The checks the workflow runs around the agents are in the workflow itself, so a

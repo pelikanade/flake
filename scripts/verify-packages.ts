@@ -4,10 +4,11 @@
  *
  * With `--updates`, the package names come from the updater's `updates.json`;
  * build failures are appended to `--failures-file` and the manifest is marked so
- * the commit phases can separate clean updates from pins needing repair. The
- * manifest is rewritten even when a previously failed pin now builds. Without
- * `--updates`, the packages are selected from a git diff, which is useful when
- * checking a branch by hand.
+ * the commit phases can separate clean updates from pins needing repair. A
+ * previously failed pin that now builds is a clean update again — unless its
+ * file no longer pins the updated version, because a repair that reverted the
+ * update is a failure, not a pass. Without `--updates`, the packages are
+ * selected from a git diff, which is useful when checking a branch by hand.
  *
  * Packages that declare `passthru.update.verify` bring those dependents with
  * them. If a `modules/packages/` diff matches no update metadata, every
@@ -15,7 +16,7 @@
  * the gate.
  */
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { parseArgs } from "node:util";
 import { capture, error, readJson, runLogged, writeJson } from "./lib.ts";
@@ -80,6 +81,34 @@ function packagePaths(metadata: Metadata): { files: Set<string>; directories: Se
     }
   }
   return { files, directories };
+}
+
+/**
+ * The version a package file pins. A repair that reverted the update instead of
+ * adapting to it would build, so the build alone cannot decide; a file this
+ * cannot read says nothing, and returns null.
+ */
+function packageVersion(files: string[]): string | null {
+  for (const name of files) {
+    const path = join(repo, name);
+    if (!existsSync(path)) continue;
+    const text = readFileSync(path, "utf8");
+    if (path.endsWith(".json")) {
+      let data: unknown;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        continue;
+      }
+      if (data && typeof data === "object" && "version" in data) {
+        return String(data.version);
+      }
+      continue;
+    }
+    const match = text.match(/^[ \t]*version = "([^"]*)";/m);
+    if (match) return match[1];
+  }
+  return null;
 }
 
 async function changedPaths(base: string, head: string): Promise<string[]> {
@@ -168,6 +197,7 @@ async function main(): Promise<number> {
 
   const results: { target: string; passed: boolean; log: string }[] = [];
   const buildFailures: Failure[] = [];
+  const reverted: string[] = [];
   let entryChanged = false;
 
   for (const [name, metadata] of Object.entries(selected)) {
@@ -185,13 +215,24 @@ async function main(): Promise<number> {
       const entry = entriesByName[name];
       if (status === 0) {
         // A pin whose update command failed but now builds is a clean update,
-        // not a repair. Keep the failure log for the repair pass, but put the
-        // pin in the clean commit.
+        // not a repair — unless its file no longer pins the updated version,
+        // because then the repair reverted the update instead of adapting to it.
         if (primary && entry?.failed && entry.phase === "build") {
-          entry.failed = false;
-          entry.phase = null;
-          entry.target = null;
-          entryChanged = true;
+          const pinned = packageVersion(entry.files ?? []);
+          if (pinned !== null && pinned !== entry.new) {
+            error(
+              `${entry.label ?? name}: the repair reverted the update (pinned ${pinned}, expected ${entry.new})`,
+            );
+            entry.phase = "revert";
+            entry.target = null;
+            entryChanged = true;
+            reverted.push(name);
+          } else {
+            entry.failed = false;
+            entry.phase = null;
+            entry.target = null;
+            entryChanged = true;
+          }
         }
         continue;
       }
@@ -233,11 +274,12 @@ async function main(): Promise<number> {
     await writeJson(updatesPath, (await readJson<Entry[]>(updatesPath, [])));
   }
 
-  const passed = results.every((result) => result.passed);
+  const passed = results.every((result) => result.passed) && reverted.length === 0;
   await writeJson(join(logDir, "build-summary.json"), {
     changed,
     packages: Object.keys(selected).sort(),
     results,
+    reverted,
     passed,
   });
 
@@ -251,6 +293,7 @@ async function main(): Promise<number> {
     ...results.map((result) => `| \`${result.target}\` | ${result.passed ? "passed" : "failed"} |`),
   ];
   if (results.length === 0) lines.push("", "No updatable package changed.");
+  if (reverted.length > 0) lines.push("", `**Reverted updates:** ${reverted.join(", ")}`);
   const markdown = `${lines.join("\n")}\n`;
   await Bun.write(join(logDir, "build-summary.md"), markdown);
   console.log(`\n${markdown}`);
