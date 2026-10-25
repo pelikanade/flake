@@ -1,29 +1,13 @@
 #!/usr/bin/env python3
-"""Adapt package updates that failed to build with an omp agent.
+"""Rebuild the packages a repair touched, and fail when one still does not build.
 
-`update-packages.py --build --keep-failed` writes `.update-agent/failures.json`
-and leaves each failed pin in the working tree. The workflow commits those
-pins, runs two steps of this script with the agent step
-(`.github/actions/omp-agent`) between them, and leaves the repair uncommitted
-until an independent review approves it:
-
-  --mode prepare   give the failures to the agent: write
-                   `.update-agent/prompt.md` and publish `needs-repair` and
-                   `prompt` for the agent step
-  --mode verify    verify what the agent did: stage the repair, rebuild every
-                   failed package with `nix build`, write
-                   `.update-agent/report.json` plus a report body, build every
-                   updated package again as the build gate the reviewer reads,
-                   and publish `gate` or `ok`
-
-`--agent-exit` carries the agent step's status (from the action's `exit-code`
-output) into the verify phase; 127 and 2 mean the agent never ran, which is a
-gate.
-
-The verify phase publishes `gate` — `repair` when the agent did not leave every
-package building, `outside` when it changed files outside `modules/packages`,
-`build` when the final build fails — or `ok` when the repair changed nothing
-and left nothing to review.
+The workflow runs the repair agent first — its prompt lives in the workflow —
+and stages the repair, because Nix's git source only sees staged content. This
+script then walks `.update-agent/failures.json` and, for each package, checks
+that the pinned version is the updated one (a no-op repair must not pass) and
+runs `nix build --no-link .#<target>` for the package and any dependent target.
+It prints what it rebuilt and exits 1 when something still fails; the workflow
+turns that status into the phase's gate.
 """
 
 from __future__ import annotations
@@ -35,8 +19,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import update_state
-
 
 def say(message: str) -> None:
     print(f"\n==> {message}")
@@ -46,29 +28,13 @@ def error(message: str) -> None:
     print(f"error: {message}", file=sys.stderr)
 
 
-def agent_status(value: str) -> int | None:
-    """The agent step's status, or None when the step never reported one."""
-    try:
-        return int(value)
-    except ValueError:
-        return None
-
-
-def run_logged(
-    command: list[str],
-    path: Path,
-    *,
-    cwd: Path,
-    env: dict[str, str] | None = None,
-    timeout: int | None,
-) -> int:
+def run_logged(command: list[str], path: Path, *, cwd: Path, timeout: int) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("wb") as handle:
         try:
             code = subprocess.run(
                 command,
                 cwd=cwd,
-                env=env,
                 stdout=handle,
                 stderr=subprocess.STDOUT,
                 timeout=timeout,
@@ -85,78 +51,13 @@ def run_logged(
 def load_failures(path: Path) -> list[dict]:
     try:
         data = json.loads(path.read_text())
-    except FileNotFoundError as exc:
+    except FileNotFoundError:
         raise SystemExit(f"error: {path} does not exist; run the updater with --keep-failed")
     except json.JSONDecodeError as exc:
         raise SystemExit(f"error: could not parse {path}: {exc}")
     if not isinstance(data, list):
         raise SystemExit(f"error: {path} must contain a JSON list")
     return data
-
-
-def write_prompt(log_dir: Path, failures: list[dict]) -> Path:
-    lines = [
-        "# Repair failed package updates",
-        "",
-        "The scheduled updater changed the package pins below and their builds",
-        "failed. Adapt this repository's local patches and substitutions to the",
-        "new upstream revisions. The version bumps are intentional; do not undo",
-        "them, restore the old files, or change unrelated packages.",
-        "",
-        "Read `AGENTS.md` and the package expression before editing. Keep the",
-        "Nix-specific behavior the patch or substitution provides. If upstream",
-        "made a workaround unnecessary, remove it deliberately and say why.",
-        "",
-        "Do not commit, push, open a pull request, or run deployment, secret,",
-        "garbage-collection, or remote-machine commands. The workflow commits",
-        "the verified result. Do not introduce credentials, network downloads,",
-        "disabled sandboxes, or privilege escalation; if the fix would require",
-        "one, stop and explain instead.",
-        "",
-        "## Failing updates",
-        "",
-    ]
-    for failure in failures:
-        name = failure["name"]
-        label = failure["label"]
-        lines += [
-            f"### {label} (`{name}`), {failure['old']} -> {failure['new']}",
-            "",
-            f"- Files changed by the updater: {', '.join(failure['files'])}",
-            f"- Failure phase: {failure['phase']}",
-            f"- Build log: `{failure['log']}`",
-        ]
-        if failure.get("target"):
-            lines += [
-                f"- The package itself built; dependent `{failure['target']}` failed.",
-                f"- Verify with: `nix build --no-link .#{failure['target']}`",
-            ]
-        else:
-            lines += [f"- Verify with: `nix build --no-link .#{name}`"]
-        lines.append("")
-
-    lines += [
-        "## What to do",
-        "",
-        "1. Read the failing package expression and every patch or substitution",
-        "   it applies.",
-        "2. Reproduce the failure with the verify command above and read the log.",
-        "3. Edit only files that belong to the failing packages. New files must",
-        "   stay beside their package; run `git add` on a new file so Nix sees",
-        "   it during the build.",
-        "4. Re-run every verify command until it succeeds. A successful build is",
-        "   the only completion criterion.",
-        "5. Finish with a short summary: what changed, why, and the exact",
-        "   commands you ran.",
-        "",
-        "If the repair needs an upstream change outside this repository, say so",
-        "clearly instead of weakening the package.",
-        "",
-    ]
-    path = log_dir / "prompt.md"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines))
-    return path
 
 
 def build_target(repo: Path, target: str, log: Path, timeout: int) -> bool:
@@ -191,208 +92,43 @@ def package_version(repo: Path, failure: dict) -> str | None:
     return None
 
 
-def report_body(report: dict, prompt: Path) -> str:
-    lines = [
-        "## Automated package update repair",
-        "",
-        "The scheduled updater could not build these package updates, so an omp",
-        "agent adapted the repository's local patches and substitutions.",
-        "",
-        "| Package | Update | Result |",
-        "| --- | --- | --- |",
-    ]
-    for entry in report["repaired"]:
-        lines.append(
-            f"| `{entry['label']}` | {entry['old']} -> {entry['new']} | "
-            "`nix build` passed |"
-        )
-    for entry in report["unresolved"]:
-        lines.append(
-            f"| `{entry['label']}` | {entry['old']} -> {entry['new']} | "
-            "still failing |"
-        )
-    lines += [
-        "",
-        f"The agent prompt is `{prompt}`.",
-    ]
-    if not report["agent"]["ran"]:
-        lines += [
-            "",
-            f"The agent did not run: {report['agent']['reason']}",
-        ]
-    if report["unresolved"]:
-        lines += [
-            "",
-            "At least one package still fails, so its pin is not committed.",
-            "Read the `update-agent` workflow artifact for the full build logs",
-            "before continuing.",
-        ]
-    lines += [
-        "",
-        "The workflow commits clean update pins first. These repair changes",
-        "are committed separately, only after an independent omp review",
-        "approves them with no security findings. The builds do not exercise",
-        "the applications at runtime.",
-        "",
-    ]
-    return "\n".join(lines)
-
-
-def write_report(log_dir: Path, report: dict, prompt: Path) -> None:
-    (log_dir / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-    (log_dir / "report-body.md").write_text(report_body(report, prompt))
-
-
-def prepare(log_dir: Path) -> int:
-    """Hand the failures to the agent step."""
-    if not (log_dir / "failures.json").exists():
-        print("no package update needs repair")
-        update_state.output("needs-repair", "false")
-        return 0
-    failures = load_failures(log_dir / "failures.json")
-    if not failures:
-        print("no package update needs repair")
-        update_state.output("needs-repair", "false")
-        return 0
-
-    prompt = write_prompt(log_dir, failures)
-    update_state.output("needs-repair", "true")
-    update_state.output("prompt", str(prompt))
-    print(f"repairing {len(failures)} package update(s): {prompt}")
-    return 0
-
-
-def verify(args: argparse.Namespace, repo: Path, log_dir: Path, build_log_dir: Path) -> int:
-    """Verify the repair and publish this phase's outcome."""
-    failures = load_failures(log_dir / "failures.json")
-    prompt = log_dir / "prompt.md"
-    exit_code = agent_status(args.agent_exit)
-    ran = exit_code is not None and exit_code not in (127, 2)
-    reason = None if ran else f"the agent step exited {args.agent_exit or 'nothing'}"
-    if not ran:
-        error(reason)
-
-    # Nix's git source includes staged content. The updater leaves tracked
-    # changes dirty and the agent may have created a new patch file; stage
-    # both before verifying so the build sees exactly what the PR will carry.
-    staged = subprocess.run(
-        ["git", "add", "--all", "--", "modules/packages"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-    )
-    if staged.returncode != 0:
-        error(staged.stderr.strip() or "could not stage package changes")
-        update_state.output("gate", "repair")
-        return 1
-
-    repaired: list[dict] = []
-    unresolved: list[dict] = []
-    for failure in failures:
-        actual = package_version(repo, failure)
-        if actual and actual != failure["new"]:
-            entry = dict(failure)
-            entry["reason"] = (
-                f"pinned version is {actual}, expected {failure['new']}"
-            )
-            unresolved.append(entry)
-            continue
-        targets = [failure["name"]]
-        if failure.get("target"):
-            targets.append(failure["target"])
-        after: list[str] = []
-        failed = False
-        for target in targets:
-            log = log_dir / "logs" / f"{target}-after.log"
-            say(f"verifying {target}")
-            if build_target(repo, target, log, args.build_timeout):
-                after.append(target)
-            else:
-                failed = True
-                entry = dict(failure)
-                entry["afterLog"] = str(log)
-                unresolved.append(entry)
-                break
-        if not failed:
-            entry = dict(failure)
-            entry["after"] = after
-            repaired.append(entry)
-
-    report = {
-        "agent": {
-            "ran": ran,
-            "exit": exit_code,
-            "reason": reason,
-            "log": str(log_dir / "logs" / "omp.log"),
-        },
-        "repaired": repaired,
-        "unresolved": unresolved,
-    }
-    write_report(log_dir, report, prompt)
-    print(f"\nrepaired: {len(repaired)}")
-    print(f"unresolved: {len(unresolved)}")
-
-    gate = None
-    if not ran or unresolved:
-        error("some package updates still fail; see report.json")
-        gate = "repair"
-    outside = update_state.outside_changes(repo)
-    if outside:
-        print("::error::the repair agent changed files outside modules/packages")
-        print(outside)
-        gate = "outside"
-
-    if gate is None:
-        say("building every updated package")
-        code = run_logged(
-            [
-                sys.executable,
-                str(repo / "scripts" / "verify-packages.py"),
-                "--updates",
-                str(log_dir / "updates.json"),
-                "--log-dir",
-                str(build_log_dir),
-            ],
-            build_log_dir / "final-build.log",
-            cwd=repo,
-            timeout=None,
-        )
-        if code != 0:
-            print("::error::the final build of the updated packages failed")
-            gate = "build"
-
-    if gate:
-        update_state.output("gate", gate)
-    elif update_state.repair_changes(repo).strip():
-        print("repair changes are waiting for review")
-    else:
-        print("the repair changed nothing to review")
-        update_state.output("ok", "true")
-    return 0
-
-
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--mode", required=True, choices=["prepare", "verify"])
     parser.add_argument("--log-dir", default=".update-agent")
-    parser.add_argument("--build-log-dir", default=".ci")
-    parser.add_argument(
-        "--agent-exit",
-        default="",
-        metavar="STATUS",
-        help="the agent step's status, from the action's exit-code output",
-    )
     parser.add_argument("--build-timeout", type=int, default=3600)
     args = parser.parse_args(argv)
 
     repo = Path(__file__).resolve().parent.parent
     log_dir = (repo / args.log_dir).resolve()
-    build_log_dir = (repo / args.build_log_dir).resolve()
-    log_dir.mkdir(parents=True, exist_ok=True)
+    failures = load_failures(log_dir / "failures.json")
 
-    if args.mode == "prepare":
-        return prepare(log_dir)
-    return verify(args, repo, log_dir, build_log_dir)
+    unresolved: list[str] = []
+    for failure in failures:
+        actual = package_version(repo, failure)
+        if actual and actual != failure["new"]:
+            error(
+                f"{failure['label']}: pinned version is {actual}, "
+                f"expected {failure['new']}"
+            )
+            unresolved.append(failure["label"])
+            continue
+        targets = [failure["name"]]
+        if failure.get("target"):
+            targets.append(failure["target"])
+        for target in targets:
+            say(f"verifying {target}")
+            if not build_target(repo, target, log_dir / "logs" / f"{target}-after.log", args.build_timeout):
+                error(f"{target}: nix build failed")
+                unresolved.append(failure["label"])
+                break
+        else:
+            say(f"{failure['label']} builds again")
+
+    if unresolved:
+        error(f"still failing: {', '.join(unresolved)}")
+        return 1
+    print(f"\nrepaired: {len(failures)}")
+    return 0
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ depend on a repository reference that does not exist yet. Publishing
 3. Update the "Repair failed updates" note in `docs/updates.md`.
 
 Nothing else changes: the local action and the published one are the same
-files, so the inputs, outputs and log paths stay as they are.
+files, so the inputs and outputs stay as they are.
 
 ## Keeping the copy honest
 

@@ -1,7 +1,6 @@
 name: omp agent
 description: >-
-  Run an omp agent unattended and stream its thinking into the job log, keeping
-  the full transcript in a file for the job artifact.
+  Run an omp agent unattended, streaming its thinking into the job log.
 author: pelikanade
 
 branding:
@@ -10,11 +9,8 @@ branding:
 
 inputs:
   prompt:
-    description: Prompt file the agent starts from.
+    description: The agent's prompt, as text.
     required: true
-  log:
-    description: File the whole transcript is written to.
-    default: omp-agent.log
   model:
     description: Model to run; empty uses omp's own default.
     default: ''
@@ -22,48 +18,36 @@ inputs:
     description: omp binary; empty uses $OMP_AGENT_BIN, then omp on PATH.
     default: ''
   cwd:
-    description: Directory the agent works in; empty uses the job's workspace.
+    description: Directory the agent works in; empty uses the job's working directory.
     default: ''
-  session-dir:
-    description: Where omp keeps the session; empty uses <log directory>/sessions.
+  skills:
+    description: >-
+      Skills to install with `omp skill install` before the agent starts, in
+      that command's spec format (@scope/name[@version]); whitespace separated.
     default: ''
   max-time:
     description: omp's own session limit.
     default: 45m
   timeout:
-    description: Kill the agent after this many seconds.
+    description: >-
+      Seconds after which the agent and the tools it started are killed (exit
+      124). Keep it above max-time: it is the backstop for a hung omp.
     default: '3600'
   approval-mode:
     description: Approval mode to pass to omp; an unattended step cannot answer prompts.
     default: yolo
   thoughts:
-    description: Include thinking blocks in the log (omp drops them without this).
-    default: 'true'
-  no-skills:
-    description: Do not load skills.
-    default: 'true'
-  no-pty:
-    description: Do not give bash a PTY.
-    default: 'true'
-  no-lsp:
-    description: Do not load LSP tools.
-    default: 'true'
-  no-title:
-    description: Do not generate a session title.
+    description: Include thinking blocks in the job log (omp drops them without this).
     default: 'true'
   extra-args:
     description: Extra arguments appended to the omp command, split on spaces.
     default: ''
 
 outputs:
-  log:
-    description: Path of the transcript.
-    value: ${{ steps.agent.outputs.log }}
-  session-dir:
-    description: Path of omp's session directory.
-    value: ${{ steps.agent.outputs.session-dir }}
   exit-code:
-    description: The agent's exit status; 124 means the timeout killed it.
+    description: >-
+      The agent's exit status: 124 when the timeout killed it, 127 when it never
+      started.
     value: ${{ steps.agent.outputs.exit-code }}
 
 runs:
@@ -73,18 +57,13 @@ runs:
       shell: bash
       env:
         INPUT_PROMPT: ${{ inputs.prompt }}
-        INPUT_LOG: ${{ inputs.log }}
         INPUT_MODEL: ${{ inputs.model }}
         INPUT_OMP: ${{ inputs.omp }}
         INPUT_CWD: ${{ inputs.cwd }}
-        INPUT_SESSION_DIR: ${{ inputs.session-dir }}
+        INPUT_SKILLS: ${{ inputs.skills }}
         INPUT_MAX_TIME: ${{ inputs.max-time }}
         INPUT_TIMEOUT: ${{ inputs.timeout }}
         INPUT_APPROVAL_MODE: ${{ inputs.approval-mode }}
         INPUT_THOUGHTS: ${{ inputs.thoughts }}
-        INPUT_NO_SKILLS: ${{ inputs.no-skills }}
-        INPUT_NO_PTY: ${{ inputs.no-pty }}
-        INPUT_NO_LSP: ${{ inputs.no-lsp }}
-        INPUT_NO_TITLE: ${{ inputs.no-title }}
         INPUT_EXTRA_ARGS: ${{ inputs.extra-args }}
       run: bash "$GITHUB_ACTION_PATH/action.sh"

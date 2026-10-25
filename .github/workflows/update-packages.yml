@@ -17,14 +17,18 @@ concurrency:
 
 # One step per phase: update flake inputs, update packages, build them, repair
 # the failed updates, review the repairs, push, dispatch the deployment, and
-# report. The two agent phases run as three steps each — prepare, the agent,
-# and verify — so the agent is visible on its own in the run graph.
+# report.
 #
-# Each phase decides its own outcome in its verify step and publishes it as
-# step outputs: `gate` names the phase that rejected the run, `clean-tip` is
-# the commit a rejected run resets to so the clean updates still land, and `ok`
-# means the phase verified everything it owns — a run with no `ok` is never
-# published.
+# The prompts live here, not in a script: the agents read the failure data
+# (`.update-agent/failures.json`), the build logs (`.ci/logs`) and the build
+# summary (`.ci/build-summary.json`) themselves. The checks around them are
+# plain shell, so the only Python is what cannot be written here: the per
+# package `nix build` loop, the verdict check, and the updater itself.
+#
+# Each phase decides its own outcome and publishes it as step outputs: `gate`
+# names the phase that rejected the run, `clean-tip` is the commit a rejected
+# run resets to so the clean updates still land, and `ok` means the phase
+# verified everything it owns — a run with no `ok` is never published.
 #
 # The agent runtime is `.github/actions/omp-agent`, a vendored copy of the
 # `omp-agent` repository; see its VENDORED.md for the one-line change that
@@ -81,77 +85,249 @@ jobs:
           python3 scripts/commit-updates.py --phase clean
           python3 scripts/commit-updates.py --phase failed
 
-      # 4. Repair failed updates: the prompt, the agent, then the verification.
-      - name: Prepare the repair
-        id: repair-prompt
-        if: >-
-          steps.build.outcome == 'success' &&
-          steps.build.outputs.gate == '' &&
-          steps.build.outputs.ok == ''
-        run: python3 scripts/repair-updates.py --mode prepare --log-dir .update-agent
-
+      # 4. Repair failed updates. The agent reads the failure data itself; a
+      # repair that cannot be made is reported rather than forced.
       - name: Repair failed updates
         id: repair-agent
-        if: steps.repair-prompt.outputs.needs-repair == 'true'
+        if: >-
+          steps.build.outcome == 'success' && steps.build.outputs.gate == '' &&
+          steps.build.outputs.ok == '' &&
+          hashFiles('.update-agent/failures.json') != ''
         uses: ./.github/actions/omp-agent
         continue-on-error: true
         with:
-          prompt: ${{ steps.repair-prompt.outputs.prompt }}
+          prompt: |
+            # Repair failed package updates
+
+            The scheduled updater changed the package pins below and their
+            builds failed. Adapt this repository's local patches and
+            substitutions to the new upstream revisions. The version bumps are
+            intentional; do not undo them, restore the old files, or change
+            unrelated packages.
+
+            Read `AGENTS.md` and the package expression before editing. Keep the
+            Nix-specific behavior the patch or substitution provides. If
+            upstream made a workaround unnecessary, remove it deliberately and
+            say why.
+
+            ## What failed
+
+            Read `.update-agent/failures.json`. Each entry names the package
+            (`name`, `label`), the pinned versions (`old`, `new`), the files the
+            updater changed (`files`), the phase that failed (`phase`), and the
+            build log (`log`). When `target` is set, the package itself built
+            and that dependent target failed.
+
+            ## What to do
+
+            1. Read the failing package expression and every patch or
+               substitution it applies.
+            2. Reproduce the failure with `nix build --no-link .#<name>` (or
+               `.#<target>`) and read the log.
+            3. Edit only files that belong to the failing packages. New files
+               must stay beside their package; run `git add` on a new file so
+               Nix sees it during the build.
+            4. Re-run every verify command until it succeeds. A successful build
+               is the only completion criterion.
+            5. Finish with a short summary: what changed, why, and the exact
+               commands you ran.
+
+            Do not commit, push, open a pull request, or run deployment, secret,
+            garbage-collection, or remote-machine commands. The workflow commits
+            the verified result. Do not introduce credentials, network
+            downloads, disabled sandboxes, or privilege escalation; if the fix
+            would require one, stop and explain instead.
+
+            If the repair needs an upstream change outside this repository, say
+            so clearly instead of weakening the package.
           model: ${{ vars.OMP_MODEL || 'magpie/deepseek/deepseek-flash' }}
-          log: .update-agent/logs/omp.log
           cwd: ${{ github.workspace }}
-          session-dir: .update-agent/omp-sessions
           max-time: 45m
           timeout: '3600'
 
-      # The repair phase's gates: the agent must have left every package
-      # building, must not have reached outside modules/packages, and the final
-      # build of every updated package, which the reviewer reads, must pass.
-      # A repair that changed nothing leaves nothing to review, so it is `ok`.
+      # The repair phase's gates: the agent started, every failed package builds
+      # again, it stayed inside modules/packages, and the final build of every
+      # updated package — the one the reviewer reads — passes. A repair that
+      # changed nothing leaves nothing to review, so it is `ok`.
       - name: Verify the repair
         id: repair
-        if: always() && steps.repair-prompt.outputs.needs-repair == 'true'
-        env:
-          AGENT_EXIT: ${{ steps.repair-agent.outputs.exit-code }}
-        run: >-
-          python3 scripts/repair-updates.py --mode verify --log-dir .update-agent
-          --agent-exit "$AGENT_EXIT"
+        if: always() && steps.repair-agent.outcome != 'skipped'
+        run: |
+          set -euo pipefail
+          gate=''
+          agent_exit='${{ steps.repair-agent.outputs.exit-code }}'
+          case "$agent_exit" in
+            127|2|'')
+              echo "::error::the repair agent never started (exit ${agent_exit:-nothing})"
+              gate=repair
+              ;;
+          esac
 
-      # 5. Review changes: the prompt, the second agent, then the verification.
-      - name: Prepare the review
-        id: review-prompt
+          git add --all -- modules/packages
+          if [ -z "$gate" ] &&
+            ! python3 scripts/repair-updates.py --log-dir .update-agent; then
+            echo "::error::a package update still does not build"
+            gate=repair
+          fi
+
+          outside=$(git status --porcelain -- . \
+            ':(exclude)modules/packages' ':(exclude).update-agent' \
+            ':(exclude).ci' ':(exclude).review')
+          if [ -n "$outside" ]; then
+            echo "::error::the repair agent changed files outside modules/packages"
+            printf '%s\n' "$outside"
+            gate=outside
+          fi
+
+          if [ -z "$gate" ] && ! python3 scripts/verify-packages.py \
+            --updates .update-agent/updates.json --log-dir .ci; then
+            echo "::error::the final build of the updated packages failed"
+            gate=build
+          fi
+
+          if [ -n "$gate" ]; then echo "gate=$gate" >> "$GITHUB_OUTPUT"; fi
+          if [ -z "$gate" ] &&
+            [ -z "$(git status --porcelain -- modules/packages)" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 5. Review changes. The reviewer must leave the tree as it found it, so
+      # the tree is recorded first and compared after.
+      - name: Record the repair
+        id: repair-diff
         if: >-
           always() && steps.repair.outcome == 'success' &&
           steps.repair.outputs.gate == ''
-        run: >-
-          python3 scripts/review-updates.py --mode prepare --log-dir .review
-          --base "${{ steps.build.outputs.clean-tip }}"
+        run: |
+          set -euo pipefail
+          mkdir -p .review
+          { git diff HEAD --binary; git status --porcelain --untracked-files=all; } |
+            sha256sum | cut -d' ' -f1 > .review/tree.sha
+          if [ -n "$(git status --porcelain -- modules/packages)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Review changes
         id: review-agent
-        if: steps.review-prompt.outputs.needs-review == 'true'
+        if: steps.repair-diff.outputs.changed == 'true'
         uses: ./.github/actions/omp-agent
         continue-on-error: true
         with:
-          prompt: ${{ steps.review-prompt.outputs.prompt }}
+          prompt: |
+            # Review package update repairs
+
+            You are the second reviewer of a unified package update. The workflow
+            committed the clean update pins, committed the pins whose first build
+            failed, and left the repair agent's changes uncommitted. The final
+            build of every updated package has already run.
+
+            - Failed pins and repair: `git diff ${{ steps.build.outputs.clean-tip }}`
+            - Repair only: `git diff HEAD`
+            - Untracked repair files: `git status --porcelain`
+            - Update manifest: `.update-agent/updates.json`
+            - Failed pins and their reports: `.update-agent/failures.json`
+            - Final build summary: `.ci/build-summary.json`
+            - Build logs: `.ci/logs`
+
+            Read `AGENTS.md`, the repair diff, every package expression it
+            touches, and the update manifest. Do not edit repository files; only
+            write the two output files named below.
+
+            Check all of the following:
+
+            1. The final build summary says every target passed. If it does not,
+               reject.
+            2. The repair preserves the Nix-specific behavior the package comments
+               describe. A workaround removed because upstream made it unnecessary
+               is fine only if the diff and comments agree.
+            3. The version and source hashes in the update manifest are consistent
+               with each other and with the upstream revision named in the
+               expression.
+            4. The repair touches only the failing packages and their patches. It
+               must not contain unrelated changes, weakened checks, or disabled
+               tests.
+
+            5. Security. Inspect the diff, the added patch lines, and the build
+               logs for any of these, and record every one in
+               `security_findings`:
+
+               - secrets, tokens, private keys, credentials, or unredacted logs;
+               - new network downloads, install scripts, or time-of-check races
+                 at build or run time that the package did not already document;
+               - disabled or weakened sandboxing, `--no-sandbox`, setuid/setgid,
+                 world-writable files, or privilege escalation;
+               - arbitrary shell execution or command injection from untrusted
+                 input, especially in a wrapper or install phase;
+               - new untrusted sources or dependencies, or hashes that do not
+                 match the pinned upstream revision;
+               - changes to CI workflows, repository permissions, secret
+                 handling, or anything that could exfiltrate data;
+               - hidden content in a patch (invisible characters, unexpected
+                 binary diffs, or hunks outside the package's stated purpose).
+
+               If you find any security risk, set `approve` to false even if
+               every build passed. A finding is a reason to stop, not a note to
+               ignore.
+
+            Write `.review/verdict.json` with exactly this shape:
+
+              {"approve": true, "summary": "one paragraph",
+               "security_findings": []}
+
+               `security_findings` must be a JSON list of concrete findings; it
+               must be empty for approval. Do not omit it.
+
+            Write `.review/review.md` with the review in Markdown: what changed,
+            what you verified, a **Security** section that says either "no
+            findings" or lists each finding, and any risk the merger should know.
+            Be specific and conservative. Approve only when you would commit it
+            yourself.
           model: ${{ vars.OMP_REVIEW_MODEL || 'magpie/deepseek/deepseek-flash' }}
-          log: .review/omp.log
           cwd: ${{ github.workspace }}
-          session-dir: .review/omp-sessions
           max-time: 20m
           timeout: '1800'
 
       # The reviewer approves with an empty `security_findings` and without
       # touching the working tree; anything else is the gate. `ok` here is what
       # lets the push commit the repair.
-      - name: Verify the review
+      - name: Check the verdict
         id: review
-        if: always() && steps.review-prompt.outputs.needs-review == 'true'
-        env:
-          AGENT_EXIT: ${{ steps.review-agent.outputs.exit-code }}
-        run: >-
-          python3 scripts/review-updates.py --mode verify --log-dir .review
-          --agent-exit "$AGENT_EXIT"
+        if: always() && steps.repair-diff.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          gate=''
+          agent_exit='${{ steps.review-agent.outputs.exit-code }}'
+          if [ "$agent_exit" != 0 ]; then
+            echo "::error::the review agent did not finish (exit ${agent_exit:-nothing})"
+            gate=review
+          fi
+
+          outside=$(git status --porcelain -- . \
+            ':(exclude)modules/packages' ':(exclude).update-agent' \
+            ':(exclude).ci' ':(exclude).review')
+          if [ -n "$outside" ]; then
+            echo "::error::the review agent changed files outside modules/packages"
+            printf '%s\n' "$outside"
+            gate=review
+          fi
+
+          after=$(
+            { git diff HEAD --binary; git status --porcelain --untracked-files=all; } |
+              sha256sum | cut -d' ' -f1
+          )
+          if [ "$after" != "$(cat .review/tree.sha)" ]; then
+            echo "::error::the review agent changed the working tree"
+            gate=review
+          fi
+
+          if [ -z "$gate" ]; then
+            if python3 scripts/check-verdict.py --log-dir .review; then
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+            else
+              gate=review
+            fi
+          fi
+          if [ -n "$gate" ]; then echo "gate=$gate" >> "$GITHUB_OUTPUT"; fi
 
       # 6. Without ok, or with a gate, reset to clean-tip: the failed pins and
       # the repairs are dropped, but the clean update commits still land.
@@ -231,9 +407,12 @@ jobs:
             else
               echo "No package changed."
             fi
-            if [ -f .update-agent/report-body.md ]; then
+            if [ -f .update-agent/failures.json ]; then
               echo
-              cat .update-agent/report-body.md
+              echo "### Repair"
+              echo
+              jq -r '.[] | "- \(.label) (`\(.name)`): \(.old) -> \(.new), \(.phase) failed"' \
+                .update-agent/failures.json
             fi
             if [ -f .review/review.md ]; then
               echo

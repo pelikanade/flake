@@ -20,11 +20,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
-import update_state
+
+def output(name: str, value: str) -> None:
+    """Publish a step output; outside GitHub Actions this does nothing."""
+    path = os.environ.get("GITHUB_OUTPUT")
+    if not path:
+        return
+    with open(path, "a", encoding="utf-8") as handle:
+        handle.write(f"{name}={value}\n")
 
 
 def commit(message: str, paths: list[str], *, add_all: bool = False) -> bool:
@@ -118,10 +126,10 @@ def phase_clean(state_dir: Path, build_summary: Path) -> None:
         commit_pins(read_json(manifest, []), failed=False)
 
     if gate:
-        update_state.output("gate", gate)
+        output("gate", gate)
     elif not (state_dir / "failures.json").exists():
-        update_state.output("ok", "true")
-    update_state.output("clean-tip", head())
+        output("ok", "true")
+    output("clean-tip", head())
 
 
 def phase_failed(state_dir: Path, build_summary: Path) -> None:
@@ -136,7 +144,14 @@ def phase_failed(state_dir: Path, build_summary: Path) -> None:
 
 
 def phase_repair(state_dir: Path) -> None:
-    if not update_state.repair_changes(Path.cwd()).strip():
+    changes = subprocess.run(
+        ["git", "status", "--porcelain", "--", "modules/packages"],
+        capture_output=True,
+        text=True,
+    )
+    if changes.returncode != 0:
+        raise SystemExit("error: could not inspect modules/packages")
+    if not changes.stdout.strip():
         print("no repair changes")
         return
     labels = sorted(
