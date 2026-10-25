@@ -15,7 +15,7 @@
 
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { capture, error, runLogged, say, UpdateError, writeJson } from "./lib.ts";
+import { capture, error, failure, runLogged, say, UpdateError, writeJson } from "./lib.ts";
 
 const DISCOVERY_EXPRESSION =
   "pkgs: builtins.mapAttrs (name: pkg: pkg.passthru.update or null) pkgs";
@@ -249,7 +249,8 @@ async function unchanged(...paths: string[]): Promise<boolean> {
 
 async function commitChanges(message: string, ...paths: string[]): Promise<void> {
   if (!state.commit) return;
-  if ((await capture(["git", "add", "--", ...paths])).status !== 0) throw new UpdateError();
+  const added = await capture(["git", "add", "--", ...paths]);
+  if (added.status !== 0) throw new UpdateError(failure(["git", "add", "--", ...paths], added));
   if ((await capture(["git", "diff", "--cached", "--quiet"])).status === 0) return;
   if ((await capture(["git", "commit", "-m", message])).status !== 0) {
     throw new UpdateError(`could not commit: ${message}`);
@@ -261,10 +262,7 @@ async function updateFlakeInputs(): Promise<void> {
   say("flake inputs: all");
   await requireClean("flake.lock");
   const updated = await capture(["nix", "flake", "update"], { timeout: 3600 });
-  if (updated.status !== 0) {
-    process.stderr.write(updated.stderr);
-    throw new UpdateError();
-  }
+  if (updated.status !== 0) throw new UpdateError(failure(["nix", "flake", "update"], updated));
   if (await unchanged("flake.lock")) {
     console.log("already current");
     return;
@@ -276,7 +274,9 @@ async function updateFlakeInputs(): Promise<void> {
       "(builtins.attrNames cs))";
     const evaluated = await capture(["nix", "eval", "--raw", ".#nixosConfigurations", "--apply", expression]);
     if (evaluated.status !== 0) {
-      error("updated flake inputs do not evaluate; reverting");
+      error(
+        `updated flake inputs do not evaluate; reverting\n${failure(["nix", "eval", ".#nixosConfigurations"], evaluated)}`,
+      );
       await restore("flake.lock");
       throw new UpdateError();
     }

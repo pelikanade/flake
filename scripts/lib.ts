@@ -23,8 +23,23 @@ export interface Result {
   status: number;
   stdout: string;
   stderr: string;
+  timedOut: boolean;
 }
 
+const SIGNALS: Record<number, string> = { 6: "ABRT", 9: "KILL", 11: "SEGV", 13: "PIPE", 15: "TERM" };
+
+/** Describe a failed command for the log; a non-zero status is never silent. */
+export function failure(command: string[], result: Result): string {
+  const why = result.timedOut
+    ? " (killed after the timeout)"
+    : result.status > 128
+      ? ` (SIG${SIGNALS[result.status - 128] ?? result.status - 128})`
+      : "";
+  const output = (result.stderr.trim() || result.stdout.trim()).slice(-600);
+  return `${command.join(" ")} exited ${result.status}${why}${output ? `:\n${output}` : ""}`;
+}
+
+/** `timeout` is in seconds. */
 export async function capture(
   command: string[],
   { cwd, timeout = 0 }: { cwd?: string; timeout?: number } = {},
@@ -36,12 +51,19 @@ export async function capture(
     stdout: "pipe",
     stderr: "pipe",
   });
-  const timer = timeout > 0 ? setTimeout(() => killGroup(child.pid), timeout) : undefined;
+  let timedOut = false;
+  const timer =
+    timeout > 0
+      ? setTimeout(() => {
+          timedOut = true;
+          killGroup(child.pid);
+        }, timeout * 1000)
+      : undefined;
   const stdout = new Response(child.stdout).text();
   const stderr = new Response(child.stderr).text();
   const status = await child.exited;
   clearTimeout(timer);
-  return { status, stdout: await stdout, stderr: await stderr };
+  return { status, stdout: await stdout, stderr: await stderr, timedOut };
 }
 
 export async function runLogged(
@@ -63,7 +85,7 @@ export async function runLogged(
       ? setTimeout(() => {
           killed = true;
           killGroup(child.pid);
-        }, timeout)
+        }, timeout * 1000)
       : undefined;
   const status = await child.exited;
   clearTimeout(timer);
