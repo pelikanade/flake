@@ -3,40 +3,38 @@
 
 `update-packages.py --build --keep-failed` writes `.update-agent/failures.json`
 and leaves each failed pin in the working tree. The workflow commits those
-pins, then runs this script. It gives the failures to an omp agent, verifies
-every repaired package with `nix build`, builds every updated package again as
-the build gate the reviewer reads, and writes `.update-agent/report.json` plus
-a report body. The repair changes stay uncommitted; the workflow commits them
-only after an independent review.
+pins, runs two steps of this script with the agent step
+(`.github/actions/omp-agent`) between them, and leaves the repair uncommitted
+until an independent review approves it:
 
-The script publishes its outcome as step outputs: `gate` (`repair` when the
-agent did not leave every package building, `outside` when it changed files
-outside `modules/packages`, `build` when the final build fails) or `ok` when
-the repair changed nothing and left nothing to review. It reports nothing when
-no package needs repair.
+  --mode prepare   give the failures to the agent: write
+                   `.update-agent/prompt.md` and publish `needs-repair` and
+                   `prompt` for the agent step
+  --mode verify    verify what the agent did: stage the repair, rebuild every
+                   failed package with `nix build`, write
+                   `.update-agent/report.json` plus a report body, build every
+                   updated package again as the build gate the reviewer reads,
+                   and publish `gate` or `ok`
 
-The agent's output, thinking included, is streamed to the workflow log and kept
-in `.update-agent/logs/omp.log`. It runs through the Magpie gateway with omp's
-`magpie` provider and the default model `magpie/deepseek/deepseek-flash`. The
-omp-magpie extension comes from `PI_CONFIG_FILES`, and its endpoint and key
-come from `$HOME/.omp/agent/magpie.yaml`, which the update runner provisions.
+`--agent-exit` carries the agent step's status (from the action's `exit-code`
+output) into the verify phase; 127 and 2 mean the agent never ran, which is a
+gate.
 
-Use --dry-run to write the prompt and the command without calling the agent or
-building anything.
+The verify phase publishes `gate` — `repair` when the agent did not leave every
+package building, `outside` when it changed files outside `modules/packages`,
+`build` when the final build fails — or `ok` when the repair changed nothing
+and left nothing to review.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-import omp_agent
 import update_state
 
 
@@ -46,6 +44,14 @@ def say(message: str) -> None:
 
 def error(message: str) -> None:
     print(f"error: {message}", file=sys.stderr)
+
+
+def agent_status(value: str) -> int | None:
+    """The agent step's status, or None when the step never reported one."""
+    try:
+        return int(value)
+    except ValueError:
+        return None
 
 
 def run_logged(
@@ -207,7 +213,7 @@ def report_body(report: dict, prompt: Path) -> str:
         )
     lines += [
         "",
-        f"The agent prompt is `.update-agent/prompt.md` (source `{prompt}`).",
+        f"The agent prompt is `{prompt}`.",
     ]
     if not report["agent"]["ran"]:
         lines += [
@@ -237,84 +243,34 @@ def write_report(log_dir: Path, report: dict, prompt: Path) -> None:
     (log_dir / "report-body.md").write_text(report_body(report, prompt))
 
 
-def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--log-dir", default=".update-agent")
-    parser.add_argument("--build-log-dir", default=".ci")
-    parser.add_argument(
-        "--omp",
-        default=os.environ.get("OMP_BIN") or shutil.which("omp"),
-    )
-    parser.add_argument("--model", default=os.environ.get("OMP_MODEL"))
-    parser.add_argument("--max-time", default="45m")
-    parser.add_argument("--build-timeout", type=int, default=3600)
-    parser.add_argument("--dry-run", action="store_true")
-    args = parser.parse_args(argv)
-
-    repo = Path(__file__).resolve().parent.parent
-    log_dir = (repo / args.log_dir).resolve()
-    build_log_dir = (repo / args.build_log_dir).resolve()
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    gate: str | None = None
-    failures_path = log_dir / "failures.json"
-    if not failures_path.exists():
+def prepare(log_dir: Path) -> int:
+    """Hand the failures to the agent step."""
+    if not (log_dir / "failures.json").exists():
         print("no package update needs repair")
+        update_state.output("needs-repair", "false")
         return 0
-    failures = load_failures(failures_path)
+    failures = load_failures(log_dir / "failures.json")
     if not failures:
         print("no package update needs repair")
+        update_state.output("needs-repair", "false")
         return 0
 
     prompt = write_prompt(log_dir, failures)
+    update_state.output("needs-repair", "true")
+    update_state.output("prompt", str(prompt))
+    print(f"repairing {len(failures)} package update(s): {prompt}")
+    return 0
 
-    model = omp_agent.resolve_model(args.model)
 
-    if not args.omp:
-        reason = "omp is not on PATH; pass --omp or set OMP_BIN"
-        report = {
-            "agent": {"ran": False, "exit": None, "reason": reason, "model": model},
-            "repaired": [],
-            "unresolved": failures,
-        }
-        write_report(log_dir, report, prompt)
-        update_state.output("gate", "repair")
+def verify(args: argparse.Namespace, repo: Path, log_dir: Path, build_log_dir: Path) -> int:
+    """Verify the repair and publish this phase's outcome."""
+    failures = load_failures(log_dir / "failures.json")
+    prompt = log_dir / "prompt.md"
+    exit_code = agent_status(args.agent_exit)
+    ran = exit_code is not None and exit_code not in (127, 2)
+    reason = None if ran else f"the agent step exited {args.agent_exit or 'nothing'}"
+    if not ran:
         error(reason)
-        return 0
-
-    command = omp_agent.command(
-        omp=args.omp,
-        repo=repo,
-        prompt=prompt,
-        model=model,
-        session_dir=log_dir / "omp-sessions",
-        max_time=args.max_time,
-    )
-    print("agent command:", " ".join(command))
-
-    if args.dry_run:
-        report = {
-            "agent": {
-                "ran": False,
-                "exit": None,
-                "reason": "dry run",
-                "model": model,
-                "command": command,
-            },
-            "repaired": [],
-            "unresolved": failures,
-        }
-        write_report(log_dir, report, prompt)
-        print(f"prompt: {prompt}")
-        return 0
-
-    say(f"repairing {len(failures)} package update(s) with {model}")
-    exit_code = omp_agent.run_streaming(
-        command,
-        log_dir / "logs" / "omp.log",
-        cwd=repo,
-        timeout=args.build_timeout,
-    )
 
     # Nix's git source includes staged content. The updater leaves tracked
     # changes dirty and the agent may have created a new patch file; stage
@@ -364,11 +320,10 @@ def main(argv: list[str]) -> int:
 
     report = {
         "agent": {
-            "ran": True,
+            "ran": ran,
             "exit": exit_code,
-            "reason": None,
-            "model": model,
-            "command": command,
+            "reason": reason,
+            "log": str(log_dir / "logs" / "omp.log"),
         },
         "repaired": repaired,
         "unresolved": unresolved,
@@ -377,7 +332,8 @@ def main(argv: list[str]) -> int:
     print(f"\nrepaired: {len(repaired)}")
     print(f"unresolved: {len(unresolved)}")
 
-    if not report["agent"]["ran"] or unresolved:
+    gate = None
+    if not ran or unresolved:
         error("some package updates still fail; see report.json")
         gate = "repair"
     outside = update_state.outside_changes(repo)
@@ -413,6 +369,30 @@ def main(argv: list[str]) -> int:
         print("the repair changed nothing to review")
         update_state.output("ok", "true")
     return 0
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--mode", required=True, choices=["prepare", "verify"])
+    parser.add_argument("--log-dir", default=".update-agent")
+    parser.add_argument("--build-log-dir", default=".ci")
+    parser.add_argument(
+        "--agent-exit",
+        default="",
+        metavar="STATUS",
+        help="the agent step's status, from the action's exit-code output",
+    )
+    parser.add_argument("--build-timeout", type=int, default=3600)
+    args = parser.parse_args(argv)
+
+    repo = Path(__file__).resolve().parent.parent
+    log_dir = (repo / args.log_dir).resolve()
+    build_log_dir = (repo / args.build_log_dir).resolve()
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.mode == "prepare":
+        return prepare(log_dir)
+    return verify(args, repo, log_dir, build_log_dir)
 
 
 if __name__ == "__main__":

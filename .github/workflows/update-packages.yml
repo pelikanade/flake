@@ -17,14 +17,18 @@ concurrency:
 
 # One step per phase: update flake inputs, update packages, build them, repair
 # the failed updates, review the repairs, push, dispatch the deployment, and
-# report. Each phase decides its own outcome and publishes it as step outputs:
-# `gate` names the phase that rejected the run, `clean-tip` is the commit a
-# rejected run resets to so the clean updates still land, and `ok` means the
-# phase verified everything it owns — a run with no `ok` is never published.
-# The conditions and the publish step below are the whole state machine.
+# report. The two agent phases run as three steps each — prepare, the agent,
+# and verify — so the agent is visible on its own in the run graph.
 #
-# The repair and review agents stream their output, thinking included, into
-# this log; their full transcripts land in the `update-agent` artifact.
+# Each phase decides its own outcome in its verify step and publishes it as
+# step outputs: `gate` names the phase that rejected the run, `clean-tip` is
+# the commit a rejected run resets to so the clean updates still land, and `ok`
+# means the phase verified everything it owns — a run with no `ok` is never
+# published.
+#
+# The agent runtime is `.github/actions/omp-agent`, a vendored copy of the
+# `omp-agent` repository; see its VENDORED.md for the one-line change that
+# replaces it once that repository is published.
 jobs:
   update:
     # This runner, its Nix, omp and its Magpie configuration are defined by
@@ -77,33 +81,77 @@ jobs:
           python3 scripts/commit-updates.py --phase clean
           python3 scripts/commit-updates.py --phase failed
 
-      # 4. If a package failed to build, one agent adapts the local patches.
-      # It also runs the final build of every updated package, and publishes
-      # `gate` (repair, outside, or build) or, when the repair changed nothing
-      # to review, `ok`.
-      - name: Repair failed updates
-        id: repair
+      # 4. Repair failed updates: the prompt, the agent, then the verification.
+      - name: Prepare the repair
+        id: repair-prompt
         if: >-
           steps.build.outcome == 'success' &&
           steps.build.outputs.gate == '' &&
           steps.build.outputs.ok == ''
-        env:
-          OMP_MODEL: ${{ vars.OMP_MODEL }}
-        run: python3 scripts/repair-updates.py --log-dir .update-agent
+        run: python3 scripts/repair-updates.py --mode prepare --log-dir .update-agent
 
-      # 5. A second, independent agent reviews the repair before the repair
-      # commit is created. Any security finding blocks the commit. It
-      # publishes `gate` on rejection and `ok` on approval.
-      - name: Review changes
-        id: review
-        if: >-
-          steps.repair.outcome == 'success' &&
-          steps.repair.outputs.gate == ''
+      - name: Repair failed updates
+        id: repair-agent
+        if: steps.repair-prompt.outputs.needs-repair == 'true'
+        uses: ./.github/actions/omp-agent
+        continue-on-error: true
+        with:
+          prompt: ${{ steps.repair-prompt.outputs.prompt }}
+          model: ${{ vars.OMP_MODEL || 'magpie/deepseek/deepseek-flash' }}
+          log: .update-agent/logs/omp.log
+          cwd: ${{ github.workspace }}
+          session-dir: .update-agent/omp-sessions
+          max-time: 45m
+          timeout: '3600'
+
+      # The repair phase's gates: the agent must have left every package
+      # building, must not have reached outside modules/packages, and the final
+      # build of every updated package, which the reviewer reads, must pass.
+      # A repair that changed nothing leaves nothing to review, so it is `ok`.
+      - name: Verify the repair
+        id: repair
+        if: always() && steps.repair-prompt.outputs.needs-repair == 'true'
         env:
-          OMP_REVIEW_MODEL: ${{ vars.OMP_REVIEW_MODEL }}
+          AGENT_EXIT: ${{ steps.repair-agent.outputs.exit-code }}
         run: >-
-          python3 scripts/review-updates.py --log-dir .review
+          python3 scripts/repair-updates.py --mode verify --log-dir .update-agent
+          --agent-exit "$AGENT_EXIT"
+
+      # 5. Review changes: the prompt, the second agent, then the verification.
+      - name: Prepare the review
+        id: review-prompt
+        if: >-
+          always() && steps.repair.outcome == 'success' &&
+          steps.repair.outputs.gate == ''
+        run: >-
+          python3 scripts/review-updates.py --mode prepare --log-dir .review
           --base "${{ steps.build.outputs.clean-tip }}"
+
+      - name: Review changes
+        id: review-agent
+        if: steps.review-prompt.outputs.needs-review == 'true'
+        uses: ./.github/actions/omp-agent
+        continue-on-error: true
+        with:
+          prompt: ${{ steps.review-prompt.outputs.prompt }}
+          model: ${{ vars.OMP_REVIEW_MODEL || 'magpie/deepseek/deepseek-flash' }}
+          log: .review/omp.log
+          cwd: ${{ github.workspace }}
+          session-dir: .review/omp-sessions
+          max-time: 20m
+          timeout: '1800'
+
+      # The reviewer approves with an empty `security_findings` and without
+      # touching the working tree; anything else is the gate. `ok` here is what
+      # lets the push commit the repair.
+      - name: Verify the review
+        id: review
+        if: always() && steps.review-prompt.outputs.needs-review == 'true'
+        env:
+          AGENT_EXIT: ${{ steps.review-agent.outputs.exit-code }}
+        run: >-
+          python3 scripts/review-updates.py --mode verify --log-dir .review
+          --agent-exit "$AGENT_EXIT"
 
       # 6. Without ok, or with a gate, reset to clean-tip: the failed pins and
       # the repairs are dropped, but the clean update commits still land.

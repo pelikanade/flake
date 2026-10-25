@@ -13,6 +13,13 @@ and the repair and review agents run with the installed omp instead of
 building `.#omp`. The same module renders the Magpie endpoint and key into the
 runner's `~/.omp/agent/magpie.yaml`.
 
+Both agents run through `.github/actions/omp-agent`, which builds the omp
+invocation, asks for the thinking (`--print-thoughts`), streams every line into
+the job log, and keeps the whole transcript in a file for the artifact. That
+directory is a byte-identical copy of the `omp-agent` repository, vendored
+because a local action needs no repository reference; `VENDORED.md` in it
+describes the one-line change that replaces it once `omp-agent` is published.
+
 ## Sequence
 
 The workflow has one step per phase, and every phase decides its own outcome.
@@ -25,6 +32,12 @@ that the next phase's condition and the publish step read:
 | `gate` | the reason this phase rejected the run: `update`, `build`, `repair`, `outside`, or `review` |
 | `ok` | this phase verified everything it owns; a run with no `ok` from any phase is never published |
 | `clean-tip` | the commit the clean update pins ended at; a rejected run resets to it |
+| `needs-repair`, `needs-review` | whether the agent step of that phase has anything to do |
+| `prompt` | the prompt file the agent step starts from |
+
+The agent phases are three steps each: prepare publishes `needs-repair` or
+`needs-review` and `prompt`, the agent step runs, and verify publishes that
+phase's `gate` or `ok` from what the agent did.
 
 A phase that publishes `gate` never publishes `ok`, so the two together decide
 whether `main` receives the repairs.
@@ -50,18 +63,22 @@ whether `main` receives the repairs.
    nothing needs repair or review. `--phase failed` commits the version/hash
    changes of the packages that need repair on top, with the same
    `<label>: update <old> -> <new>` message.
-4. **Repair failed updates.** The first omp agent reads the failure logs and
-   package expressions, adapts the local patches and substitutions, and
-   rebuilds every failed package. It has no git credentials and cannot commit.
-   Then it builds every updated package again from the final working tree
-   (including verify targets) as the build gate the reviewer reads, writing
-   `.ci/build-summary.json`. It publishes the gate for a package it could not
+4. **Repair failed updates.** `repair-updates.py --mode prepare` writes
+   `.update-agent/prompt.md` from `failures.json`; the first omp agent reads the
+   failure logs and package expressions, adapts the local patches and
+   substitutions, and rebuilds every failed package. It has no git credentials
+   and cannot commit. `--mode verify` then rebuilds every failed package itself,
+   builds every updated package again from the final working tree (including
+   verify targets) as the build gate the reviewer reads, writing
+   `.ci/build-summary.json`, and publishes the gate for a package it could not
    repair, for a change outside `modules/packages`, or for a failed final
    build; a repair that changed nothing has nothing to review, so it publishes
    `ok`. The phase does not run when the build phase already rejected the run.
-5. **Review changes.** If the repair changed files, a second, independent omp
-   agent reviews the repair diff, the update manifest, the repair report, and
-   the final build summary. It writes `.review/verdict.json` with:
+5. **Review changes.** If the repair changed files, `review-updates.py
+   --mode prepare` records the working tree and writes `.review/prompt.md`, and
+   a second, independent omp agent reviews the repair diff, the update manifest,
+   the repair report, and the final build summary. It writes
+   `.review/verdict.json` with:
 
    ```json
    {
@@ -71,9 +88,11 @@ whether `main` receives the repairs.
    }
    ```
 
-   Any security finding forces a rejection, and the script rejects a non-empty
-   `security_findings`, an agent that changed the working tree, and a changed
-   tree of its own. It publishes `ok` on approval, and the gate otherwise.
+   Any security finding forces a rejection, and `--mode verify` rejects a
+   non-empty `security_findings`, an agent that did not finish, an agent that
+   changed files outside `modules/packages`, and a tree that does not match the
+   one `--mode prepare` recorded. It publishes `ok` on approval, and the gate
+   otherwise.
 6. **Push updates.** Every commit is pushed to `main`. With a gate, or without
    `ok`, the working tree resets to `clean-tip` first, so the failed pins and
    the repairs are dropped and only the clean update commits land; the run
@@ -90,10 +109,10 @@ whether `main` receives the repairs.
    review, and the gate. `.update-agent/`, `.ci/`, and `.review/` are uploaded
    as the `update-agent` artifact either way.
 
-The repair and review agents print their thinking (`--print-thoughts`) and
-their output is streamed into the workflow log as it arrives. Their full
-transcripts are in the artifact, at `.update-agent/logs/omp.log` and
-`.review/omp.log`.
+The agent steps run `.github/actions/omp-agent`, which asks for the thinking
+(`--print-thoughts`) and streams the agent's output into the workflow log as it
+arrives. The full transcripts are in the artifact, at
+`.update-agent/logs/omp.log` and `.review/omp.log`.
 
 ## Commit separation
 
@@ -147,24 +166,36 @@ Add `--keep-failed` to leave a failed pin in the working tree and write
 python3 scripts/verify-packages.py --updates .update-agent/updates.json --log-dir .ci
 python3 scripts/commit-updates.py --phase clean
 
-omp=$(nix build --no-link --print-out-paths .#omp)
-python3 scripts/repair-updates.py --omp "$omp/bin/omp"
-python3 scripts/review-updates.py \
-  --log-dir .review --omp "$omp/bin/omp" \
-  --base "$(git rev-parse HEAD)"   # the clean-tip the build phase published
+# the repair: prompt, agent, verification (what the three steps run)
+python3 scripts/repair-updates.py --mode prepare --log-dir .update-agent
+python3 .github/actions/omp-agent/omp_agent.py \
+  --prompt .update-agent/prompt.md --log .update-agent/logs/omp.log \
+  --cwd "$PWD" --session-dir .update-agent/omp-sessions \
+  --model magpie/deepseek/deepseek-flash --max-time 45m \
+  --approval-mode yolo --no-skills --no-pty --no-lsp --no-title
+python3 scripts/repair-updates.py --mode verify --log-dir .update-agent --agent-exit $?
+
+# the review, the same way; --base is the clean-tip the build phase published
+python3 scripts/review-updates.py --mode prepare --log-dir .review --base "$(git rev-parse HEAD)"
+python3 .github/actions/omp-agent/omp_agent.py \
+  --prompt .review/prompt.md --log .review/omp.log --cwd "$PWD" \
+  --session-dir .review/omp-sessions --model magpie/deepseek/deepseek-flash \
+  --max-time 20m --approval-mode yolo --no-skills --no-pty --no-lsp --no-title
+python3 scripts/review-updates.py --mode verify --log-dir .review --agent-exit $?
+
 python3 scripts/commit-updates.py --phase failed
 python3 scripts/commit-updates.py --phase repair
 ```
 
-`scripts/update_state.py` documents the outputs each phase publishes, and
-`repair-updates.py` builds every updated package again before it finishes, so
-the local sequence does not call `verify-packages.py` twice. Outside GitHub
-Actions the outputs go nowhere: a phase prints its decision and the exit code
-carries it, and `review-updates.py --base` is passed by hand as above.
+`scripts/update_state.py` documents the outputs each phase publishes, and the
+verify phase builds every updated package again before it finishes, so the
+local sequence does not call `verify-packages.py` twice. Outside GitHub Actions
+the outputs go nowhere: a phase prints its decision, and `--agent-exit` and
+`--base` are passed by hand as above.
 
 `repair-updates.py` and `review-updates.py` load the omp-magpie extension
 through `PI_CONFIG_FILES` and read `~/.omp/agent/magpie.yaml`, so run them from
 the desktop session, where Home Manager provides both.
 
-`repair-updates.py` and `review-updates.py` support `--dry-run`, which writes
-the prompt and prints the command without calling the agent.
+`repair-updates.py --mode prepare` also writes the prompt on its own, which is
+what `--dry-run` used to do.
