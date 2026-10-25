@@ -1,17 +1,8 @@
-/**
- * Small helpers the update scripts share: subprocesses, step outputs, failures.
- *
- * Everything the scripts need is in Bun and Node's standard library — no
- * packages, no lockfile. A command runs in its own session (`setsid`), so a
- * timeout kills the tools it started rather than only the direct child.
- */
-
 import { appendFileSync, closeSync, mkdirSync, openSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 const TIMEOUT_STATUS = 124;
 
-/** A failed update; a non-empty message is reported as an error. */
 export class UpdateError extends Error {}
 
 export function error(message: string): void {
@@ -22,7 +13,6 @@ export function say(message: string): void {
   console.log(`\n==> ${message}`);
 }
 
-/** Publish a step output; outside GitHub Actions this does nothing. */
 export function output(name: string, value: string): void {
   const path = process.env.GITHUB_OUTPUT;
   if (!path) return;
@@ -35,7 +25,6 @@ export interface Result {
   stderr: string;
 }
 
-/** Run a command and collect its output. */
 export async function capture(
   command: string[],
   { cwd, timeout = 0 }: { cwd?: string; timeout?: number } = {},
@@ -55,7 +44,6 @@ export async function capture(
   return { status, stdout: await stdout, stderr: await stderr };
 }
 
-/** Run a command with its output in `log`, then show the tail, as the logs do. */
 export async function runLogged(
   command: string[],
   { log, cwd, timeout = 3600 }: { log: string; cwd?: string; timeout?: number },
@@ -96,12 +84,10 @@ function killGroup(pid: number): void {
     try {
       process.kill(pid, "SIGKILL");
     } catch {
-      // already gone
     }
   }
 }
 
-/** Read and parse a JSON file, or return `fallback` when it does not exist. */
 export async function readJson<T>(path: string, fallback: T): Promise<T> {
   const file = Bun.file(path);
   if (!(await file.exists())) return fallback;
@@ -112,7 +98,6 @@ export async function readJson<T>(path: string, fallback: T): Promise<T> {
   }
 }
 
-/** Write JSON the way the reports are written: two-space indent, final newline. */
 export async function writeJson(path: string, value: unknown): Promise<void> {
   mkdirSync(dirname(path), { recursive: true });
   await Bun.write(path, `${JSON.stringify(value, null, 2)}\n`);

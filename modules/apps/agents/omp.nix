@@ -24,9 +24,6 @@ let
 in
 {
   config = {
-    # The update runner installs the repair agent from this output, so CI runs
-    # the same locked omp the machines install. Keeping it out of the
-    # development shell avoids rebuilding its large closure for every shell.
     perSystem =
       { system, ... }:
       {

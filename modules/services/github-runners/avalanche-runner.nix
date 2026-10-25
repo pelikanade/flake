@@ -17,9 +17,6 @@
         description = "Avalanche GitHub Actions runner";
       };
 
-      # This runner exists to deploy the avalanche targets, so it owns its
-      # registration PAT from the avalanche document and may read the trigger
-      # token through the avalanche group.
       sops.secrets.avalanche_runner_pat = {
         sopsFile = ../../secrets/avalanche.yaml;
         key = "pat";

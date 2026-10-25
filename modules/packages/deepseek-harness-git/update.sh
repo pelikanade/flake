@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Export GITHUB_PAT (a GitHub personal access token) to authenticate GitHub
-# REST / raw requests and `git ls-remote`. GITHUB_TOKEN is honoured as fallback.
 gh_auth=()
 gh_git_auth=()
 if [ -n "${GITHUB_PAT:-}" ] || [ -n "${GITHUB_TOKEN:-}" ]; then
@@ -36,7 +34,6 @@ latest_tag() {
     rm -f "$tags"
     return 1
   fi
-  # Prefer the peeled ^{} line so annotated tags yield the commit hash.
   local rev
   rev="$(awk -v t="refs/tags/$best_tag^{}" '$2 == t { print $1 }' "$tags")"
   [ -n "$rev" ] || rev="$(awk -v t="refs/tags/$best_tag" '$2 == t { print $1 }' "$tags")"

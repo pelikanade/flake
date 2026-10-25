@@ -1,5 +1,3 @@
-# Standalone Nix package for the DeepSeek Harness desktop application.
-#
 # Copied from Mooling0602/nix-packages (pkgs/by-name/de/deepseek-harness-desktop)
 # by Mooling0602: https://github.com/Mooling0602/nix-packages
 #
@@ -14,31 +12,9 @@
 # Electron. (The two outputs' *runtime closures* are in fact independent; it is
 # the build cost, not closure size, that forces the split.)
 #
-# Only the desktop assembly is new here; this file documents the on-disk layout
-# and the five load-bearing details, each verified against the unmodified
-# upstream application. Note 6 is this package's one deliberate deviation from
-# that application.
-# Desktop assembly notes.
-#
-# Layout, relative to the output root:
-#
-#   deepseek-harness                            the Electron binary
-#   resources/app/                              app.getAppPath()
-#   resources/app/dsh/                          the bundled dsh runtime
-#   resources/app/dsh/desktop-runtime.json      runtime descriptor
-#   resources/runtime/office-skills/            boot-required skill assets
-#   resources/runtime/bin/node                  standalone Node for skill-office
-#   resources/runtime/pnpm/                     pnpm CLI
-#   resources/runtime/primary-runtime/          interpreters + Python libraries
-#   resources/icon.png                          window/taskbar icon
-#
-# Five details are load-bearing; each was verified experimentally against the
-# unmodified upstream application.
-#
 #  1. The Electron binary must NOT be named 'electron'. Electron treats an
 #     executable by that name as "the default app" and reports
 #     app.isPackaged === false, which sends main.ts down its development branch.
-#     Verified on identical trees: renamed -> isPackaged true, untouched -> false.
 #
 #  2. The bundled runtime lives at resources/app/dsh, not resources/dsh.
 #     runtimeResources() (apps/desktop/src/main.ts) resolves the packaged path as
@@ -107,56 +83,6 @@
 #     and g_object_unref bindings; sharp documents the same conflict under
 #     "Electron and Linux" (https://sharp.pixelplumbing.com/install) and tracks
 #     it upstream as electron#46323.
-#
-#     sharpLibvips therefore supplies the one thing the addon is missing: a
-#     dynamically linked libvips of the same upstream version, reachable under
-#     the addon's own DT_NEEDED name. The addon resolves libvips through
-#     DT_RUNPATH (verified with readelf -d, not DT_RPATH), and LD_LIBRARY_PATH is
-#     searched first, so exporting that directory is enough to make the addon
-#     load it instead of the prebuilt library. It links glib dynamically, and the
-#     loader resolves libglib-2.0.so.0 to the copy Electron already loaded, which
-#     leaves one glib and one GObject type system in the process. The wrapper
-#     prepends the directory to LD_LIBRARY_PATH.
-#
-#     The addon's DT_NEEDED fixes the name this package has to provide, nothing
-#     about the library behind it, so the substitute is the vips this package
-#     already links, from the stable input. That is safe because libvips keeps ABI
-#     within a stable series and says so in its soname: the ABI name is
-#     libvips-cpp.so.42 and the upstream patch version is the last field of the
-#     versioned file (42.20.3 for 8.18.3, against 42.20.7 for the 8.18.7 that the
-#     sharp 0.35.5 addon names), i.e. a libtool revision change, which by
-#     definition carries no interface change -- abidiff on those two builds
-#     reports none. sharpLibvips therefore reads that name from the addon with
-#     patchelf and refuses any other major.minor series, so a sharp or vips bump
-#     to a new series breaks the build in a place that names both versions
-#     instead of segfaulting the app, while a patch bump inside the series costs
-#     nothing and does not move this package to a second, unstable-based vips
-#     closure. The prebuilt libvips stays in the tree, unreferenced, because it is
-#     part of the shared source package.
-#
-#  6. The window menu bar is not drawn. This is the one deliberate deviation
-#     from upstream, and it changes drawing only: the application menu stays
-#     installed. Linux draws that menu as a native bar across the top of every
-#     window -- the localized "Application / Edit" strip. The bar carries About,
-#     Check for Updates and Quit, and the Edit menu's roles; the roles have their
-#     usual mouse equivalents and Quit is also on the window controls, so the
-#     pointer paths it costs are About and the manual update check (scheduled
-#     checks are unaffected). Removing the menu instead would cost more than the
-#     bar: the Edit roles, the Quit role's Ctrl+Q and a hidden F12 devtools toggle
-#     all come from that one template, and keyboard.ts toggles
-#     setIgnoreMenuShortcuts against a menu it expects to exist.
-#     hide-menu-bar.patch therefore wraps the bundled refreshApplicationMenu
-#     instead: it hides each window's bar for the windows that exist each time
-#     the menu is (re)built, and, through one 'browser-window-created' hook, for
-#     every window created afterwards. The menu and each window's visibility flag
-#     are main-process state, so the renderer and the Host observe nothing else.
-#     The hunk is applied by appLib above with the standard patch phase (the
-#     `patches` mechanism), not by hand, so it carries that mechanism's -p1
-#     convention and its failure mode: an upstream restructuring that breaks the
-#     context stops the build instead of silently reinstating the bar. Verified by
-#     screenshotting the built package under Xvfb with an isolated home: the
-#     unmodified build draws the bar on its welcome window and this assembly does
-#     not, while F12 still toggles devtools in both, so the menu itself survived.
 _: {
   perSystem =
     {
@@ -184,37 +110,15 @@ _: {
         stdenvNoCC
         ;
 
-      # The libvips that replaces sharp's prebuilt one (note 5). Taken from the
-      # stable input: the addon's DT_NEEDED pins a soname, not a version, and
-      # sharpLibvips below accepts any release of that soname's own major.minor
-      # series, so this stays the one vips this package links. pkgs.vips' own
-      # default output is bin, so read the out output, which is where
-      # libvips-cpp lives.
       vips = lib.getLib pkgs.vips;
 
       dsh = self'.packages.deepseek-harness-git;
 
-      # Read from the source package's own pin file: importing a manifest out of
-      # dsh's store path would be an import-from-derivation and would also require
-      # that package to be built just to evaluate this one.
       versionData = lib.importJSON ../deepseek-harness-git/hashes.json;
       inherit (versionData) version pnpmVersion;
 
-      # deepseek-harness-git installs the repository tree under $out/lib/<pname>,
-      # not at the store root (see its installPhase).
       outPath = "${dsh}/lib/deepseek-harness-git";
 
-      # release.nodeVersion and release.hostProtocolVersion are deliberately not
-      # written down here. Both describe the tree the build assembles -- what the
-      # bundled Electron reports, and the protocol generation in upstream's
-      # apps/desktop/src/host-protocol.ts -- so the assembly reads them out of that
-      # tree. A literal would go stale on an upstream or nixpkgs bump, and the
-      # shipped shell accepts both fields without comparing either, so the drift
-      # would not show up as a launch failure.
-      #
-      # This one is different: it is the standalone Node the primary runtime links,
-      # and parsePrimaryRuntime() records it as the payload's version. Taking it from
-      # the package being linked keeps the claim true when nixpkgs bumps Node.
       nodeRuntimeVersion = nodejs_24.version;
 
       pythonEnv = python312.withPackages (
@@ -280,11 +184,6 @@ _: {
         "@deepseek-ai/node-addon-system"
       ];
 
-      # Host direct dependencies, resolved by bare name at startup, named as
-      # upstream's own manifest names them: the workspace packages under the
-      # @deepseek-ai scope, plus libreoffice-kit and koffi, which come from the
-      # registry. Linked rather than copied: pnpm's layout is a web of relative
-      # symlinks, so copying only this subtree would leave them dangling.
       hostDependencies = [
         "@deepseek-ai/cordis"
         "@deepseek-ai/dsh-agent"
@@ -302,9 +201,6 @@ _: {
         "koffi"
       ];
 
-      # resources/app/dsh: the bundled runtime. Links point at the shared store tree;
-      # each target's own relative links still resolve, because they are followed
-      # from the target's real location.
       dshRuntimeTree = stdenvNoCC.mkDerivation {
         pname = "deepseek-harness-desktop-runtime";
         inherit version;
@@ -351,15 +247,6 @@ _: {
           runHook postInstall
         '';
       };
-      # The libvips the sharp addon will actually load, under the name the addon
-      # asks for. See note 5: the addon's DT_NEEDED is read out of the addon
-      # rather than restated here, so a sharp bump that moves to a new libvips
-      # fails this build instead of segfaulting the app at run time, and it is
-      # checked against the pinned vips' own version for the same reason.
-      #
-      # A symlink, not a copy: the addon only needs the soname it names to be
-      # findable on LD_LIBRARY_PATH, and the loader then maps the real library
-      # with the substituted build's own RUNPATH intact.
       sharpLibvips = stdenvNoCC.mkDerivation {
         pname = "deepseek-harness-desktop-sharp-libvips";
         inherit version;
@@ -460,10 +347,6 @@ _: {
       pythonMajorMinor = lib.versions.majorMinor pythonVersion;
       pythonSitePackages = "${python}/lib/python${pythonMajorMinor}/site-packages";
 
-      # The template descriptorScript fills in. See note 3 for what the reader
-      # checks. release.nodeVersion and release.hostProtocolVersion are omitted on
-      # purpose: both describe the tree this build assembles, so the install phase
-      # reads them out of that tree and passes them to the script.
       descriptorTemplate = builtins.toFile "desktop-runtime-template.json" (
         builtins.toJSON {
           schemaVersion = 1;
@@ -501,10 +384,6 @@ _: {
         inherit pythonPackages;
       };
 
-      # nodeRuntimeVersion is the Node package's own version, which nixpkgs derives
-      # from the release it packages. parsePrimaryRuntime() trusts this manifest when
-      # the workspace-dependencies tool runs, so the claim is checked against the
-      # binary that is actually linked; a mismatch fails the build, not the tool call.
       nodeVersionProbe = stdenvNoCC.mkDerivation {
         pname = "deepseek-harness-desktop-node-version";
         inherit version;

@@ -24,8 +24,6 @@ let
       libxcb,
       wayland,
       webkitgtk_4_1,
-      # The libwayland-client shadow whose requests keep Tern's input method
-      # alive across focus changes; see the wrapper below and shim.c.
       waylandIme,
     }:
     stdenv.mkDerivation (finalAttrs: {
@@ -128,8 +126,6 @@ let
           }
       '';
 
-      # Runs the patched, wrapped binary: the only check that proves the artifact
-      # still loads against this nixpkgs.
       doInstallCheck = true;
       nativeInstallCheckInputs = [ versionCheckHook ];
       versionCheckProgramArg = "--version";

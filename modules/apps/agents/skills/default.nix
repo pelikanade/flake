@@ -92,8 +92,6 @@ in
 
       empty = builtins.filter (source: skillsOf source == { }) cfg.install;
 
-      # A lone Markdown file becomes a skill directory in the store, so installed
-      # skills all have the shape agents expect.
       skillDirectory =
         name: source:
         if lib.pathIsDirectory source then

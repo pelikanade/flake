@@ -54,9 +54,6 @@
         exec ${endpointWrapper} ${lib.getExe netbird} "$@"
       '';
 
-      # socat terminates the loopback connection and dials the target through the
-      # client's SOCKS5 proxy, which is unauthenticated and loopback-only:
-      # neither listener is reachable from the LAN.
       tunnelService =
         _name: tunnel:
         lib.nameValuePair "netbird-userspace-tunnel-${toString tunnel.localPort}" {

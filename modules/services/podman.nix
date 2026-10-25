@@ -60,18 +60,11 @@
 
       config = lib.mkMerge [
         {
-          # Containers run rootless: each user drives Podman under their own uid
-          # and reaches its Docker-compatible API on that user's own socket under
-          # `/run/user/<uid>/podman`. Every user gets their own runtime, and no
-          # user can drive another's; the published sockets below are the
-          # deliberate exception, and each admits only its own account.
           virtualisation.podman = {
             enable = true;
             defaultNetwork.settings.dns_enabled = true;
           };
 
-          # A rootful API socket is root-equivalent container control, so this
-          # host publishes none.
           systemd.sockets.podman.enable = false;
 
           # A rootless runtime has no boot path of its own. A restart policy
@@ -118,21 +111,12 @@
               socketConfig = {
                 ListenStream = api.socketPath;
                 SocketMode = "0660";
-                # The runtime's own account keeps the owner bits: it is the
-                # account that serves this API, and its own processes — one
-                # inside the daemon's sandbox, say — have no other way to run a
-                # container.
                 SocketUser = name;
-                # The same account is the group, so a process matching either
-                # bit reaches the socket and no other account does.
                 SocketGroup = name;
               };
             }
           ) runtimeApis;
 
-          # Socket activation keeps the API server unstarted until a client
-          # connects, and Podman answers on the descriptor systemd hands it, so
-          # the runtime's account never creates the socket at all.
           systemd.services = lib.mapAttrs' (
             name: api:
             lib.nameValuePair "podman-api-${name}" {
@@ -149,8 +133,6 @@
                 User = name;
                 Group = name;
                 Type = "exec";
-                # Containers this API starts manage their own cgroups, as
-                # upstream's own service unit does.
                 Delegate = true;
                 KillMode = "process";
                 ExecStart = "${lib.getExe' config.virtualisation.podman.package "podman"} system service";
@@ -159,8 +141,6 @@
             }
           ) runtimeApis;
 
-          # The directory follows the socket: the runtime's account owns it, and
-          # no other account traverses it.
           systemd.tmpfiles.rules = lib.mapAttrsToList (
             name: api: "d ${builtins.dirOf api.socketPath} 0750 ${name} ${name} -"
           ) runtimeApis;

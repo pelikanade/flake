@@ -30,9 +30,6 @@ let
       pname = "strata";
       version = "1.1.0";
 
-      # The v1.1.0 tag. `src.rev` is the commit the About dialog names, so it is
-      # set from the pinned revision rather than left to build.rs, which finds
-      # no git checkout in the sandbox.
       src = fetchFromGitHub {
         owner = "lgse";
         repo = "strata";

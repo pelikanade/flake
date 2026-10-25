@@ -7,7 +7,6 @@ const SPECIFIER = /(?:from|require|import)\s*\(?\s*["\x27]([^"\x27]+)["\x27]/gu
 
 const OPTIONAL = new Set(["node-addon-require-builtin"])
 
-/** Electron is supplied by the runtime binary, never by node_modules. */
 function providedByRuntime(specifier) {
   return specifier === "electron" || specifier.startsWith("electron/")
 }

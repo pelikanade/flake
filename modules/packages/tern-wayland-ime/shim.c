@@ -20,23 +20,10 @@
 // uses, or a listener array), which is where it learns that the text input left;
 // everything else is delegated to the real library, this object's DT_NEEDED.
 //
-// Those are the entry points Tern uses today. One that reached for
-// wl_proxy_marshal_flags/wl_proxy_marshal_array_flags instead would create its
-// text input unseen, and one that used neither event path would never report a
-// leave — which is why the trace below is worth reading rather than guessing
-// from: a log that stops after "text input v3" or never reaches "hooked
-// dispatcher" means the shadow is no longer intercepting what Tern calls.
-//
 // On the text input's leave event it sends disable + commit, which is exactly
 // what the protocol asks a client to do when it no longer has input focus, and
 // flushes, so the compositor sees the state leave true before the client's own
 // enable on the next enter puts it back — the edge that re-activates fcitx5.
-//
-// Set WL_IME_SHIM_LOG to a path to trace what the shadow hooks and sends; the
-// file is opened lazily, so the shadow is silent without it. The interposition
-// is limited to zwp_text_input_v3: a client that uses text-input-v1/v2, or that
-// spells the Wayland protocol out itself, is untouched, and a client that
-// already disables correctly only sees a redundant second disable.
 #define _GNU_SOURCE
 #include <dlfcn.h>
 #include <stdarg.h>
@@ -84,19 +71,18 @@ typedef int (*display_flush_fn)(struct wl_display *);
 // its listener array, and the two requests it sends.
 enum { EV_ENTER = 0, EV_LEAVE = 1, EV_COUNT = 6, REQ_DISABLE = 2, REQ_COMMIT = 7 };
 
-// One client holds one text input per seat, in practice.
 #define MAX_TARGETS 4
 
 static FILE *LOG;
 static struct wl_proxy *text_inputs[MAX_TARGETS];
 static int text_input_count;
-static int left; // a leave is waiting for the disable the client did not send
+static int left;
 
 struct hook {
     struct wl_proxy *proxy;
-    wl_dispatcher_fn orig;   // dispatcher path: what the client installed
-    void (**listener)(void); // listener path: the client's own array
-    void *data;              // listener path: the client's context
+    wl_dispatcher_fn orig;
+    void (**listener)(void);
+    void *data;
 };
 
 static struct hook hooks[MAX_TARGETS];

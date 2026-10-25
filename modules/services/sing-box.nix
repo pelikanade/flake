@@ -223,9 +223,6 @@
             ];
             auto_route = true;
             auto_redirect = true;
-            # Declared rather than defaulted: the mark is the tun's contract with
-            # whatever must stay outside it, and `services.sing-box.tunBypassMark`
-            # is where that value is written down.
             auto_redirect_output_mark = config.services.sing-box.tunBypassMark;
             # The carrier-grade NAT range belongs to interfaces the kernel owns:
             # the tailnet's `tailscale0` and NetBird's tunnel both carry their own
@@ -241,8 +238,6 @@
               "fe80::/10"
               "fd7a:115c:a1e0::/48"
             ];
-            # NetBird's interface: what arrives on it is already inside the
-            # NetBird tunnel and must not enter the tun.
             exclude_interface = lib.optional (netbirdInterface != null) netbirdInterface;
           }
         ];
@@ -341,14 +336,8 @@
       };
     in
     {
-      # Machine and workstation policy compose this same feature.
       key = "sing-box";
 
-      # The mark this tun treats as its own, read-only because it is a contract
-      # rather than a knob: the tun sets `auto_redirect_output_mark` from it, and a
-      # feature whose own transport must not be proxied marks its sockets with it —
-      # the tailnet's daemon does, and reads this value to do so. Changing it here
-      # would be changing both sides of that contract.
       options.services.sing-box.tunBypassMark = lib.mkOption {
         type = lib.types.str;
         readOnly = true;
@@ -399,11 +388,6 @@
             }
           });
         '';
-
-        # NetBird's own WireGuard, STUN and relay traffic does not survive being
-        # proxied. Its interface is excluded above with the rest of the
-        # carrier-grade NAT range, so its peers and its routes leave through `wt0`
-        # as the kernel routes them, without an outbound bound to that interface.
 
         # The root pre-start renderer reads these files into the runtime config, so
         # the service itself never needs direct secret-file access and every

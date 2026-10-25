@@ -30,8 +30,6 @@ _: {
         pname = "tern-wayland-ime";
         version = "1";
 
-        # The directory holds shim.c and this expression; unpackPhase copies it
-        # in, so the compiler sees ./shim.c.
         src = ./.;
 
         dontConfigure = true;
@@ -57,11 +55,6 @@ _: {
             $out/lib/libwayland-client.so.0
         '';
 
-        # The failure this catches is the wiring, not the code: a client asks
-        # this library for the whole libwayland C API, so a shadow that cannot
-        # answer for the real one behind it breaks the client outright. Probed
-        # rather than reasoned about, because a wrong SONAME or dependency
-        # resolves at load time and nowhere earlier.
         doInstallCheck = true;
         installCheckPhase = ''
           runHook preInstallCheck

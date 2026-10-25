@@ -1,8 +1,5 @@
 { inputs, ... }:
 {
-  # Freezer builds this repository's flake outputs on neko-sphere; Harmonia
-  # serves the resulting store paths over the tailnet. The flake input still
-  # belongs to this feature.
   flake-file.inputs.freezer = {
     url = "github:pelikanade/freezer";
     inputs.nixpkgs.follows = "nixpkgs";

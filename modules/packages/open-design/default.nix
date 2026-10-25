@@ -95,9 +95,6 @@
         '';
       };
 
-      # importPnpmLock reads the integrity hashes straight out of the lockfile,
-      # so there is no pnpmDepsHash to maintain and no second copy of the
-      # lockfile to keep in sync.
       mitmCache = importPnpmLock {
         inherit pname version;
         lockFile = "${src}/pnpm-lock.yaml";
@@ -697,13 +694,6 @@
           runHook postInstall
         '';
 
-        # The wrapper deliberately sets no OD_RESOURCE_ROOT, OD_DATA_DIR or
-        # OD_NODE_BIN: the packaged runtime owns all three for the sidecars it
-        # starts, and a value from here would override it. OD_RESOURCE_ROOT
-        # especially — the daemon refuses one that is not under the app's own
-        # resources, which is precisely what the daemon package's standalone
-        # wrapper sets.
-        #
         # Wayland follows nixpkgs' NIXOS_OZONE_WL convention: the flags appear only
         # when that and WAYLAND_DISPLAY are both set. They are the explicit
         # `--ozone-platform=wayland` form, not the `--ozone-platform-hint=auto`

@@ -15,14 +15,11 @@ concurrency:
 
 jobs:
   deploy:
-    # A dispatch from any other ref must not activate this repository's
-    # configuration on the servers.
     if: github.ref == 'refs/heads/main'
     name: Deploy ${{ matrix.target }}
     strategy:
       fail-fast: false
       matrix:
-        # Keep this list in sync with the machines that import avalanche-server.
         target:
           - edge
           - neko-sphere

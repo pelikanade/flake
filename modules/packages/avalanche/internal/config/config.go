@@ -10,8 +10,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Load reads defaultPath as YAML with AVALANCHE_* environment overrides.
-// AVALANCHE_CONFIG replaces defaultPath.
 func Load(defaultPath string, defaults map[string]any) (*viper.Viper, string, error) {
 	path := os.Getenv("AVALANCHE_CONFIG")
 	if path == "" {

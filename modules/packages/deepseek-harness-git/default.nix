@@ -2,9 +2,6 @@
 # by Mooling0602: https://github.com/Mooling0602/nix-packages
 { inputs, ... }:
 {
-  # The package resolves pnpm-lock.yaml integrity hashes through
-  # importPnpmLock/iplConfigHook, which nixpkgs does not provide. Pinned to the
-  # revision the copied package was built against.
   flake-file.inputs.importPnpmLock = {
     url = "git+https://tangled.org/scrumplex.net/importPnpmLock.nix?rev=4bd9cc54e6a5431930b4d09898e1ef49cb2ed241";
     inputs = {
@@ -110,7 +107,6 @@
         ];
 
         env = {
-          # Never let an interactive prompt block the sandbox (module purges).
           CI = "true";
           DSH_TELEMETRY_DISABLED = "1";
           # build.ts wants `git rev-parse HEAD`; the tarball has no .git, so pass
@@ -193,9 +189,6 @@
           ];
           versionFile = "modules/packages/deepseek-harness-git/hashes.json";
 
-          # The desktop assembly consumes this package's built tree, so its own
-          # build is part of a dsh update. A failure here belongs to the same
-          # repair handoff.
           verify = [ "deepseek-harness-desktop" ];
         };
 

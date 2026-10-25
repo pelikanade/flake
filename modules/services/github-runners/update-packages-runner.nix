@@ -22,9 +22,6 @@
         description = "Package update GitHub Actions runner";
       };
 
-      # The update workflow registers this runner with the same repository
-      # access PAT as the deploy runner; both are separate registrations on
-      # this host, so each gets its own unreadable-by-others copy.
       sops.secrets.update_packages_runner_pat = {
         sopsFile = ../../secrets/avalanche.yaml;
         key = "pat";
@@ -34,9 +31,6 @@
         restartUnits = [ "${runnerService}.service" ];
       };
 
-      # The repair and review agents call the Magpie gateway on this host
-      # through the omp-magpie extension, so no provider credential leaves the
-      # machine or lives in GitHub Actions.
       sops.secrets.update-packages-magpie-endpoint = {
         format = "yaml";
         key = "endpoint";
@@ -95,15 +89,6 @@
           PI_CONFIG_FILES = toString ompExtensions;
         };
 
-        # The workflow calls these directly instead of entering a nix shell:
-        # the scripts, and the agent action, run under bun; the agent script
-        # itself uses omp; git and jq are used throughout; nix-update formats
-        # with nixfmt; the agent reaches for ripgrep and openssh; the deploy
-        # dispatch uses gh; and every command runs in its own session through
-        # setsid from util-linux. A package-provided update script reads release
-        # tags with awk and fetches upstream files with curl. Nix and git come
-        # from the runner service itself. omp is this flake's locked output, so
-        # the workflow does not build .#omp per run.
         extraPackages = with pkgs; [
           bun
           curl

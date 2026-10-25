@@ -32,11 +32,6 @@
       '';
     in
     {
-      # The tailnet belongs to the host, not to the proxy: `tailscaled` owns a real
-      # `tailscale0` interface with its own routes, its own resolver entries and its
-      # own peer transport, so `tailscale serve`, the CLI and anything else the
-      # client ships work normally. The sing-box module keeps that interface out of
-      # its tun and out of its DNS; nothing of the tailnet is declared there.
       services.tailscale = {
         enable = true;
         package = pkgs.tailscale;
@@ -44,8 +39,6 @@
         # addresses rather than through the tunnel, so it is admitted everywhere,
         # as it was when the endpoint carried it.
         openFirewall = true;
-        # Reuses the tailnet's subnet routes, matching the endpoint's policy; the
-        # node advertises no exit node.
         extraUpFlags = [ "--accept-routes" ];
         authKeyFile = config.sops.secrets.tailscale_auth_key.path;
       };
@@ -98,9 +91,6 @@
           RemainAfterExit = true;
         };
 
-        # A failure here costs the tailnet its direct paths and nothing else, which
-        # is why it is a unit of its own: the daemon does not wait for it, and the
-        # unit reports itself failed instead of hiding in a start hook.
         script = ''
           ${lib.getExe pkgs.nftables} delete table inet tailscale-bypass 2>/dev/null || true
           ${lib.getExe pkgs.nftables} -f ${bypassRuleset}

@@ -1,16 +1,5 @@
 { inputs, ... }:
 {
-  # Prometheus scrapes node_exporter on every host, and the profile sheet reads
-  # the same read-only HTTP API. Targets and their host labels live in Nix, so
-  # there is no dashboard database or per-host login to keep in sync.
-  #
-  # Each agent also publishes the revision its system was built from and when
-  # that generation was activated, so the API can show a host's NixOS version
-  # and last update.
-  #
-  # The hub binds to loopback; the agents listen on every interface but their
-  # port is closed publicly. The tailnet interface is trusted, which is how the
-  # hub reaches its peers.
   flake.modules.nixos.probe-hub =
     { config, lib, ... }:
     let
@@ -65,16 +54,12 @@
       # has neither, and the metric says so rather than inventing a revision.
       revision = inputs.self.dirtyRev or inputs.self.rev or "unknown";
 
-      # node_exporter reads this directory through its textfile collector. The
-      # writer recreates the file on boot and after a generation change, so a
-      # tmpfs location is enough.
       metricsDirectory = "/run/probe";
     in
     {
       services.prometheus.exporters.node = {
         enable = true;
 
-        # The tailnet is a trusted interface; the public firewall drops this port.
         listenAddress = "0.0.0.0";
         openFirewall = false;
 
@@ -90,10 +75,6 @@
 
         serviceConfig.Type = "oneshot";
 
-        # The profile link carries the activation time of the running
-        # generation; a reboot does not move it, unlike the boot time. The
-        # revision is fixed at build time, but the timestamp has to be read
-        # from the machine, hence a unit instead of a store file.
         script = ''
           set -euo pipefail
 
@@ -117,9 +98,6 @@
         '';
       };
 
-      # A switch restarts the unit only when its script changes, and an edited
-      # tree keeps the same `dirtyRev`. Refreshing from the profile link covers
-      # those switches without tying the unit to the system closure.
       systemd.timers.probe-metrics = {
         wantedBy = [ "timers.target" ];
         timerConfig.OnCalendar = "*:0/5";

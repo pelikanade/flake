@@ -26,8 +26,6 @@
             trusted-users = [ "@wheel" ];
           }
           (lib.mkIf config.services.tailscale.enable {
-            # Harmonia on neko-sphere serves the build host's own store over the
-            # tailnet. The key is the one the retired S3 cache used.
             extra-substituters = [ "http://${config.constants.getTailnetFqdn "nsphere-cache"}" ];
             trusted-public-keys = [
               "freezer-cache-1:frU02BGsL4XIHxMWogpWoZWNDzLcgwH4Iu8XoPs6WyI="

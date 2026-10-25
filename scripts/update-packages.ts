@@ -1,18 +1,5 @@
 #!/usr/bin/env bun
 /**
- * Update the tools this repository packages itself and flake inputs.
- *
- * Package targets are discovered from the flake's `packages` outputs: every
- * package that declares `passthru.update` metadata is updatable. Packages that
- * track a flake input need no metadata; update every input with the `flake`
- * target instead (`nix flake update`).
- *
- * The scheduled GitHub Actions workflow runs the package step without --commit.
- * It then builds every updated package, repairs failures, reviews the repairs,
- * and commits the clean and repaired updates separately. Interactively, run it
- * from `nix develop`, add --build to build each tool and evaluate every machine,
- * inspect the diff, and commit selectively.
- *
  * A package registers itself with `passthru.update`:
  *
  *   { kind = "nix-update"; file = "modules/packages/<name>.nix"; }
@@ -135,8 +122,6 @@ async function verifyTargets(
   files: string[],
   metadata: Metadata,
 ): Promise<void> {
-  // Build packages that consume the updated package. A package can build while
-  // a dependent that shares its source tree does not.
   if (!state.build) return;
   for (const target of metadata.verify ?? []) {
     say(`${label}: verifying ${target}`);
@@ -285,8 +270,6 @@ async function updateFlakeInputs(): Promise<void> {
     return;
   }
   if (state.build) {
-    // A lock update is cheap to commit but expensive to discover broken at the
-    // next deploy. Force every machine's toplevel through evaluation first.
     const expression =
       'cs: builtins.concatStringsSep "\\n" ' +
       "(map (n: cs.${n}.config.system.build.toplevel.drvPath) " +
@@ -316,9 +299,6 @@ async function updateNixUpdate(name: string, label: string, metadata: Metadata):
   const log = logPath(name);
   if ((await runLogged(command, { log })) !== 0) {
     const next = currentVersion(path) || old;
-    // A changed version means the failure is in the source/dependency update or
-    // build, which the repair agent can inspect. An unchanged version means the
-    // update command itself failed.
     const phase = next !== old ? "build" : "update";
     recordFailure(name, label, old, next, files, log, phase);
     error(`${label} update or build failed; ${state.keepFailed ? "kept for repair" : "reverting"}`);
@@ -380,7 +360,6 @@ async function updateRevPackage(name: string, label: string, metadata: Metadata)
   command.push(name);
   const log = logPath(name);
   if ((await runLogged(command, { log })) !== 0) {
-    // The version and rev were written before nix-update ran.
     recordFailure(name, label, old, next, files, log, "build");
     error(`${label} ${next} failed to update or build; ${state.keepFailed ? "kept for repair" : "reverting"}`);
     if (!state.keepFailed) await restore(...files);

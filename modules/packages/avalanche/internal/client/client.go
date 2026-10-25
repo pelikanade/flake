@@ -15,7 +15,6 @@ import (
 	"avalanche/internal/protocol"
 )
 
-// Run builds and deploys one target supplied by the workflow matrix.
 func Run(target string) error {
 	if target == "" {
 		return fmt.Errorf("target is required")

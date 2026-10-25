@@ -1,20 +1,4 @@
 #!/usr/bin/env bun
-/**
- * Build every package touched by a unified update run.
- *
- * With `--updates`, the package names come from the updater's `updates.json`;
- * build failures are appended to `--failures-file` and the manifest is marked so
- * the commit phases can separate clean updates from pins needing repair. A
- * previously failed pin that now builds is a clean update again — unless its
- * file no longer pins the updated version, because a repair that reverted the
- * update is a failure, not a pass. Without `--updates`, the packages are
- * selected from a git diff, which is useful when checking a branch by hand.
- *
- * Packages that declare `passthru.update.verify` bring those dependents with
- * them. If a `modules/packages/` diff matches no update metadata, every
- * updatable package is built, so a newly added or renamed package cannot escape
- * the gate.
- */
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
@@ -83,11 +67,6 @@ function packagePaths(metadata: Metadata): { files: Set<string>; directories: Se
   return { files, directories };
 }
 
-/**
- * The version a package file pins. A repair that reverted the update instead of
- * adapting to it would build, so the build alone cannot decide; a file this
- * cannot read says nothing, and returns null.
- */
 function packageVersion(files: string[]): string | null {
   for (const name of files) {
     const path = join(repo, name);
@@ -214,9 +193,6 @@ async function main(): Promise<number> {
       const primary = target === name;
       const entry = entriesByName[name];
       if (status === 0) {
-        // A pin whose update command failed but now builds is a clean update,
-        // not a repair — unless its file no longer pins the updated version,
-        // because then the repair reverted the update instead of adapting to it.
         if (primary && entry?.failed && entry.phase === "build") {
           const pinned = packageVersion(entry.files ?? []);
           if (pinned !== null && pinned !== entry.new) {
@@ -252,8 +228,6 @@ async function main(): Promise<number> {
           target: primary ? null : target,
         });
       }
-      // The package itself did not build; its verify targets cannot add
-      // information about the update.
       if (primary) break;
     }
   }

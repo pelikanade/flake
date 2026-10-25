@@ -69,19 +69,12 @@
         disko.devices.disk.main.device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0-0-0-0";
       };
 
-    # The monitors this host runs: Gatus checks the public and tailnet Services,
-    # while Prometheus scrapes node_exporter on this host and its peer. Both sit
-    # outside the machine that serves most of what they check, so a failure
-    # there still reaches the status page. The tailnet entries are the Services
-    # neko-sphere advertises; the local ones cover this host itself, and the
-    # NetBird tunnel that only neko-sphere can see is not carried over.
     nixosModule =
       { config, ... }:
       let
         tailnet = config.constants.getTailnetFqdn;
       in
       {
-        # Prometheus scrapes itself over loopback and the peer over the tailnet.
         services.probe.targets = [
           {
             name = "edge";

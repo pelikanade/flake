@@ -7,10 +7,8 @@ import (
 	"strings"
 )
 
-// DefaultDir is the runtime directory shared by the trigger and root units.
 const DefaultDir = "/run/avalanche"
 
-// ValidStorePath accepts a NixOS system toplevel for the given hostname.
 func ValidStorePath(hostname, path string) bool {
 	const prefix = "/nix/store/"
 	if !strings.HasPrefix(path, prefix) {
@@ -54,13 +52,11 @@ func writeAtomic(dir, prefix, name string, data []byte, mode os.FileMode) error 
 	return os.Rename(temp, filepath.Join(dir, name))
 }
 
-// WriteRequest publishes the single pending request.
 func WriteRequest(dir, nonce, storePath string) error {
 	data := fmt.Sprintf("%s %s\n", nonce, storePath)
 	return writeAtomic(dir, ".request-", "request", []byte(data), 0o600)
 }
 
-// ReadRequest reads the single pending request written by the trigger.
 func ReadRequest(dir string) (nonce, storePath string, err error) {
 	data, err := os.ReadFile(filepath.Join(dir, "request"))
 	if err != nil {
@@ -74,17 +70,14 @@ func ReadRequest(dir string) (nonce, storePath string, err error) {
 	return fields[0], fields[1], nil
 }
 
-// WriteStatus publishes the current activation phase.
 func WriteStatus(dir, nonce, status string) error {
 	return writeAtomic(dir, ".status-", "status-"+nonce, []byte(status+"\n"), 0o644)
 }
 
-// WriteResult publishes the outcome of the transient activation unit.
 func WriteResult(dir, nonce, status string) error {
 	return writeAtomic(dir, ".result-", "result-"+nonce, []byte(status+"\n"), 0o644)
 }
 
-// ReadToken reads and trims a non-empty bearer token file.
 func ReadToken(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

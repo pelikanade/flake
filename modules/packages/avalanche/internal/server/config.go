@@ -20,8 +20,6 @@ type Config struct {
 	StorePath string        `mapstructure:"store_path"`
 }
 
-// LoadConfig reads server.yaml, then lets AVALANCHE_SERVER_* environment
-// variables override every key.
 func LoadConfig() (*Config, error) {
 	loader, path, err := config.Load(DefaultConfigPath, map[string]any{
 		"server.hostname":   "",

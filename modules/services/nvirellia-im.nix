@@ -1,9 +1,5 @@
 { inputs, ... }:
 {
-  # The personal site is its own flake: a Go service whose templates and static
-  # assets are embedded in the binary. The input carries the package and the
-  # upstream NixOS module, which owns the unit, hardening and its options.
-  # The option namespace and unit name carry the same suffix as this aspect.
   flake-file.inputs.nvirellia-im = {
     url = "github:pelikanade/nvirellia.im";
     inputs.nixpkgs.follows = "nixpkgs";
@@ -17,11 +13,9 @@
       services.nvirellia-im = {
         enable = true;
 
-        # The Resources panel asks Magpie's web API through its tailnet Service.
         magpie.url = "http://${config.constants.getTailnetFqdn "nsphere-magpie"}";
         magpie.keyFile = config.sops.templates.nvirellia-im-environment.path;
 
-        # The Status tab reads the monitors that run on this host.
         gatus.url = "http://127.0.0.1:3001";
         prometheus.url = "http://127.0.0.1:9090";
       };

@@ -1,5 +1,3 @@
--- Window bindings follow Sway before b0903cf, including its Home Manager
--- defaults. Keep the later Noctalia adaptations, without Niri-only actions.
 local terminal = @terminal@
 local ipc = @ipc@
 local logout = @logout@
@@ -35,8 +33,6 @@ for workspace = 1, 10 do
     bind("SUPER + SHIFT + " .. key, hl.dsp.window.move({ workspace = workspace, follow = false }))
 end
 
--- Sway's split/resize/fullscreen keys. Its custom clipboard binding already
--- replaced the default V vertical split; E still toggles the split direction.
 bind("SUPER + B", hl.dsp.layout("preselect r"))
 bind("SUPER + E", function()
     local active = hl.get_active_window()
@@ -91,11 +87,9 @@ end
 bind("SUPER + ALT + Space", focus_other_layer)
 bind("SUPER + SHIFT + Space", hl.dsp.window.float())
 
--- Hyprland's default mouse controls supplement the familiar keyboard binds.
 bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true })
 bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
--- Restore Sway's scratchpad shortcuts; resizing lives in the resize submap.
 bind("SUPER + minus", hl.dsp.workspace.toggle_special("scratchpad"))
 bind("SUPER + SHIFT + minus", function()
     hl.dispatch(hl.dsp.window.float({ action = "set" }))

@@ -27,10 +27,6 @@
       ) cfg.plugins;
       herdrCommand = if cfg.package == null then "herdr" else lib.escapeShellArg (lib.getExe cfg.package);
 
-      # The plugin modules beside this file add their sidebar rows, keys and
-      # tab-bar entries through `pluginSettings`. A contribution receives the
-      # settings collected so far and returns the whole subtree it owns, so it
-      # can append to arrays the user or another plugin already set.
       settings = lib.foldl' (
         collected: contribute: lib.recursiveUpdate collected (contribute collected)
       ) cfg.settings cfg.pluginSettings;

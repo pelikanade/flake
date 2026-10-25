@@ -17,8 +17,6 @@ type Config struct {
 	Timeout   time.Duration `mapstructure:"timeout"`
 }
 
-// LoadConfig reads client.yaml, then lets AVALANCHE_CLIENT_* environment
-// variables override every key. The target is supplied on the command line.
 func LoadConfig() (*Config, error) {
 	loader, path, err := configutil.Load(DefaultConfigPath, map[string]any{
 		"client.tailnet":    "",

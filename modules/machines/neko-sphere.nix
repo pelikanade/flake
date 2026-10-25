@@ -65,9 +65,6 @@
 
         hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
       };
-    # Agents hosted here commit as the paseo service account and as root, and
-    # neither runs Home Manager, so this machine's author identity belongs in the
-    # system-wide gitconfig that both read.
     nixosModule = {
       programs.git.config.user = {
         name = "Felis catus 'Clonazepam' Suzume";

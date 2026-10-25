@@ -15,7 +15,6 @@ import (
 	"avalanche/internal/deploy"
 )
 
-// Request starts the transient root activation unit for the pending request.
 func Request() error {
 	cfg, err := LoadConfig()
 	if err != nil {
@@ -69,8 +68,6 @@ func Request() error {
 	return nil
 }
 
-// Activate realizes a signed closure from the cache and switches to it, while
-// teeing the command output to the per-request log the trigger streams.
 func Activate() error {
 	cfg, err := LoadConfig()
 	if err != nil {

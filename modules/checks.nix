@@ -32,8 +32,7 @@ let
     );
 
   # Activation reads a machine's secret files with its host key, so a document
-  # that omits that key fails only when the machine switches. Compare what each
-  # configuration reads against the recipients already recorded in the document.
+  # that omits that key fails only when the machine switches.
   missingRecipients = lib.concatMap (
     name:
     let

@@ -19,7 +19,6 @@ import (
 	"avalanche/internal/protocol"
 )
 
-// Serve runs the non-root HTTP trigger on loopback.
 func Serve() error {
 	cfg, err := LoadConfig()
 	if err != nil {
@@ -83,8 +82,6 @@ func deployHandler(cfg *Config) gin.HandlerFunc {
 	}
 }
 
-// streamDeploy follows the activation log and status files and relays them as
-// NDJSON events until the transient unit publishes its result.
 func streamDeploy(w http.ResponseWriter, cfg *Config, nonce string) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {

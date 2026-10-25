@@ -16,10 +16,6 @@
       paseoDaemon = pkgs.selfPackages.paseo-daemon;
     in
     {
-      # The account can run containers, so the host publishes its runtime's API on
-      # a fixed socket outside the account's private runtime directory. Agents
-      # need that socket, and they run as this account inside the daemon's
-      # sandbox, so they reach it through the owner bits.
       virtualisation.podman.runtimeApis.paseo = { };
 
       users.groups.paseo = { };
@@ -61,10 +57,6 @@
         ];
       };
 
-      # The unit takes the whole system profile as its PATH, so the agents it
-      # spawns see everything installed here, omp included. Agents run `devenv`
-      # for project dev shells; the workstation role installs it only for desktop
-      # users, and this account has no Home Manager.
       environment.systemPackages = [
         paseoDaemon
         pkgs.devenv

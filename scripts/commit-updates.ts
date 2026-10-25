@@ -1,21 +1,4 @@
 #!/usr/bin/env bun
-/**
- * Commit the pieces of a unified package update in separate commits.
- *
- * The updater leaves every pin change in the working tree. This script commits
- * them in three phases:
- *
- *   clean   packages whose update built successfully, one commit each. It also
- *           publishes what the later phases read: `clean-tip`, the `gate` when
- *           the build phase did not complete or an update command failed, and
- *           `ok` when nothing needs repair or review.
- *   failed  pins for packages that need repair, one commit each; skipped when
- *           the triage below blocks them.
- *   repair  the agent's patch/substitution changes on top of those pins.
- *
- * `failed` is only used after the clean phase, so the workflow can reset the
- * failed pins if repair or review does not pass.
- */
 
 import { parseArgs } from "node:util";
 import { error, output, readJson } from "./lib.ts";
@@ -58,7 +41,6 @@ async function head(): Promise<string> {
   return result.stdout.trim();
 }
 
-/** Why the updated pins may not be committed, or null when they may. */
 async function triage(
   stateDir: string,
   buildSummary: string,
