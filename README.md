@@ -2,10 +2,10 @@
 
 ![Annotated desktop screenshot: the nvirellia.im status page with Gatus uptime checks and per-host probes beside a fastfetch report of parallax running NixOS 26.05, Hyprland and the NVIDIA stack](https://gist.githubusercontent.com/pelikanade/24093549b4e95f9ed5f140b83efc4df7/raw/cover.webp)
 
-A personal NixOS configuration for five machines, written as one [dendritic](https://github.com/mightyiam/dendritic) `flake-parts` module tree. Each feature is a single aspect file that configures NixOS, Home Manager and flake inputs together, so adding a host or toggling a service touches one place instead of separate `nixos/`, `hm/` and `overlays/` trees.
+A personal NixOS configuration written as one [dendritic](https://github.com/mightyiam/dendritic) `flake-parts` module tree. 
 
-- **One tree.** `import-tree` loads everything under `modules/`; `flake-file` generates the root `flake.nix` from module declarations.
-- **Machines are import lists.** `asymmetry` and `parallax` (workstations), `neko-sphere` and `edge` (servers), and `installer` (live ISO), all on NixOS 26.05.
-- **Secrets stay out of the store.** sops-nix decrypts with host SSH-derived age keys at activation, and each secret is declared beside its consumer.
-- **Push to deploy.** A push to `main` builds `edge` and `neko-sphere` and activates them through `avalanche`; no host polls git.
-- **Self-maintaining packages.** 14 custom packages ship as `pkgs.selfPackages`; a daily `02:00 Asia/Shanghai` run bumps, builds and commits each one that declares `passthru.update` metadata.
+## Highlights 
+
+- `avalanche`: push `main` to automatically deploy all managed machines.
+- `update-packages`: a daily run that bumps, builds and commits packages maintained in this repository. now with agentic repair.
+- `freezer`: a single-binary service that spins a s3-backed Nix binary cache and auto-builder.
