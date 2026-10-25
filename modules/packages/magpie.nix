@@ -36,6 +36,13 @@ let
         hash = "sha256-NNGaUB+8mFoNbYBb/hRGygqlJjpJK3c27jJhIP5KlW8=";
       };
 
+      # Go forbids closing, from outside a synctest bubble, a channel the
+      # bubble made; filememo.Forget made one on every write, so the next
+      # test's write closed the provider sign-in test's bubble channel. The
+      # patch makes the channel in Written instead, and closes only an open
+      # one; its wake-up semantics are unchanged.
+      patches = [ ./magpie-lazy-written-channel.patch ];
+
       vendorHash = "sha256-pBk3sQZ9/1sVdz2ZteBGgQrI49fDfgsQ8ur7pzM477A=";
 
       subPackages = [ "." ];
@@ -97,16 +104,6 @@ let
         substituteInPlace internal/autostart/autostart.go \
           --replace-fail 'exe, err := os.Executable()' \
           'exe, err := os.Executable(); if filepath.Base(exe) == ".magpie-wrapped" { exe = filepath.Join(filepath.Dir(exe), "magpie") }'
-
-        # The background gateway's serve went straight to os/exec, which
-        # TestNoCommandBypassesProc rejects: on Windows it would open a
-        # console window for every command not made through proc.Command.
-        substituteInPlace internal/tui/keep.go \
-          --replace-fail $'\t"os/exec"\n' "" \
-          --replace-fail $'\t"github.com/yetone/magpie/internal/daemon"\n' \
-          $'\t"github.com/yetone/magpie/internal/daemon"\n\t"github.com/yetone/magpie/internal/proc"\n' \
-          --replace-fail 'cmd := exec.Command(exe, "serve")' \
-          'cmd := proc.Command(exe, "serve")'
       '';
 
       nativeCheckInputs = [
@@ -167,13 +164,6 @@ let
         substituteInPlace internal/gateway/claude_client_cache_test.go \
           --replace-fail '\\u003cexternal_system_instructions\\u003e\nshared\n\\u003c/external_system_instructions\\u003e\n\n' \
           '\\u003cexternal_system_instructions\\u003e\\nshared\\n\\u003c/external_system_instructions\\u003e\\n\\n'
-        # A command is read for RSS as soon as Start returns, before its
-        # dynamic loader must have faulted a page in; on a busy sandbox the
-        # first read sees the bare image. Retry, keeping the same bounds.
-        substituteInPlace internal/proc/rss_test.go \
-          --replace-fail $'\t"testing"\n' $'\t"testing"\n\t"time"\n' \
-          --replace-fail $'\trss, ok := tree.RSS()\n\tif !ok || rss < 64<<10 || rss > 1<<30 {\n\t\tt.Fatalf("a running %s holds %d bytes (%v)", name, rss, ok)\n\t}' \
-          $'\tvar rss int64\n\tvar ok bool\n\tfor deadline := time.Now().Add(5 * time.Second); ; {\n\t\trss, ok = tree.RSS()\n\t\tif ok && rss >= 64<<10 || time.Now().After(deadline) {\n\t\t\tbreak\n\t\t}\n\t\ttime.Sleep(10 * time.Millisecond)\n\t}\n\tif !ok || rss < 64<<10 || rss > 1<<30 {\n\t\tt.Fatalf("a running %s holds %d bytes (%v)", name, rss, ok)\n\t}'
       '';
       checkPhase = ''
         runHook preCheck

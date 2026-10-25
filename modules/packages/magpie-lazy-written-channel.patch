@@ -1,0 +1,44 @@
+From: Nix package maintenance
+Subject: Make filememo's written channel only when Written asks
+
+filememo.Forget made a channel on every write, which Go associates with
+the synctest bubble the writing test runs in; the next test's Forget then
+closed it from outside that bubble, a fatal error. Making the channel in
+Written instead leaves Forget closing only channels made outside bubbles,
+and skips the allocation while no watcher waits. Its wake-up semantics
+are unchanged: Written after a Forget waits for the next one.
+
+--- a/internal/filememo/filememo.go
++++ b/internal/filememo/filememo.go
+@@ -88,13 +88,17 @@
+ 	mu.Lock()
+ 	gen++
+ 	gens.Store(gen)
+-	close(written)
+-	written = make(chan struct{})
++	if written != nil {
++		close(written)
++		written = nil
++	}
+ 	mu.Unlock()
+ }
+ 
+-// written is closed, and made anew, by every Forget.
+-var written = make(chan struct{})
++// written is closed by every Forget, and made when Written is first called
++// after one: closing from outside a synctest bubble a channel the bubble
++// made is fatal, and a write in a test runs Forget in the test's bubble.
++var written chan struct{}
+ 
+ // Written is closed by the next write magpie makes (Forget): a loop that
+ // follows magpie's files waits on it, and looks at them only every so
+@@ -104,6 +108,9 @@
+ func Written() <-chan struct{} {
+ 	mu.Lock()
+ 	defer mu.Unlock()
++	if written == nil {
++		written = make(chan struct{})
++	}
+ 	return written
+ }
+ 
