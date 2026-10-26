@@ -223,15 +223,125 @@ Two consequences of that arrangement are worth knowing:
   protects little here; getting it back means `CONFIG_NFT_FIB_INET=m` in the
   kernel configuration and a new boot image.
 
+## Storage
+
+The storage is a UFS device behind `ufshcd-qcom`, and one thing about it is
+worth knowing before trusting it with an uninterrupted write: the host
+controller took the device down during the largest write of a session.
+
+The error was `ufshcd_enable_vreg: vcc enable failed, err = -110` — the
+controller failing to bring its `vcc` rail (PM8150L L17) up within its timeout
+as it returned from runtime suspend. Nothing else faltered: WiFi, the USB link
+and a shell all stayed up, but the device served no further IO, `/proc/pressure/io`
+pinned at 99% and the load average at 30, and a reboot never completed because
+systemd could not sync. A power cycle recovered it, and the boot after it was
+clean.
+
+The failure left nothing in the journal — no `ufshcd_enable_vreg` line at all,
+because the storage stopped completing writes before the message reached the
+disk, and the kernel's ring buffer died with the power cycle. What follows is
+inference from the sequence, not a log.
+
+Two candidates fit that one error:
+
+- The host controller's runtime suspend, which is the only path that re-enables
+  the rail while the phone is running and which `power/control = auto` left
+  enabled.
+- The supply. The port is an SDP, and the typec driver of a PMIC on the same
+  SPMI bus as the ones that carry the rails (PM8150B, while the rails come from
+  PM8150 and PM8150L) sustains a warning storm — `unexpected snk status 01`,
+  about three times a second — through which a regulator transaction can time
+  out as well.
+
+The controller is kept out of runtime suspend, which removes the re-enable
+instead of hoping it succeeds:
+
+```nix
+services.udev.extraRules = ''
+  ACTION=="add", SUBSYSTEM=="platform", DRIVERS=="ufshcd-qcom", ATTR{power/control}="on"
+'';
+```
+
+It costs nothing: the rails stay powered, which a phone on an adapter does not
+notice. The rule is in effect from a cold boot — within seconds of the system
+starting, `/sys/bus/platform/devices/1d84000.ufshc/power/control` reads `on`,
+and a manual write cannot have put it there.
+
+The charge window is not part of this: the measurements under
+[Battery](#battery) show the adapter powers the phone whether or not the cell
+charging, so holding the window neither gives nor takes supply.
+
+A repeat would want the rail's own reporting, `/sys/kernel/debug/regulator/regulator_summary`
+under load, and the same write with the phone on a Power Delivery source, which
+is the only lever that changes what the port can give.
+
+## Cluster
+
+`k3s` runs a single-node server, and the tailnet is the way in: the API answers
+to `alioth.dwelf-hoki.ts.net` and to `alioth`, the two names its certificate
+carries, and a client takes `/etc/rancher/k3s/k3s.yaml` off the phone and points
+that file's `server:` at the name. With one node there is no peer to agree with,
+so nothing about the fabric needed deciding, and the address the node advertises
+is whatever the default route gives it, which is the radio.
+
+Two properties of this host's network cost real failures, both handled in the
+modules now:
+
+- **The phone's network does not reach Docker Hub.** A pull from it fails on
+  both address families: the sandbox image never arrived, and every pod sat in
+  `ContainerCreating` while the pull was reset. `services.k3s.images` supplies
+  the images the node's own components need from the store the workstation
+  fills — the airgap archive of the k3s package in use, 175 MB — so the cluster
+  comes up without reaching a registry at all. Anything the cluster should run
+  later wants the same treatment: a `dockerTools.pullImage` on the workstation
+  and an entry in that list.
+- **This host's firewall is a different nftables table from k3s's.** k3s writes
+  the proxy and flannel rules into tables of its own, and flannel flips that
+  table's FORWARD policy to ACCEPT, which says nothing about the table carrying
+  this host's policy: pod traffic and the ClusterIP path were dropped there, so
+  a service VIP timed out inside every pod. Trusting `cni0` and `flannel.1`
+  admits pod traffic and leaves everything else as it was. Turning the firewall
+  off instead would have exposed the API, the kubelet and the ingress to the
+  local network and gained nothing: `tailscale0` is a trusted interface, so the
+  tailnet is the boundary either way.
+
+Verified on the running cluster: the node reports `Ready`; `kubectl` from
+another host in the tailnet reaches the API by name; every packaged component
+runs — `coredns`, `local-path-provisioner`, `metrics-server`, and `traefik`
+with an `svclb-traefik` in front of it; `kubectl top nodes` reports the node's
+usage; and traefik answers on the tailnet address. One consequence is worth
+knowing: the kernel carries no `br_netfilter`, so
+`net.bridge.bridge-nf-call-iptables` stays unset and same-node pod-to-pod
+traffic never reaches iptables, which leaves a NetworkPolicy unenforced there.
+
 ## Verified
 
 On the handset this was written against, a boot reaches `Multi-User System` in
 about sixteen seconds: the serial console and the display both get a login
 prompt, the ethernet link comes up at its static address and answers pings,
 `sshd` accepts connections on it with the maintainer's key, and `qbootctl -m`
-reports the slot as successfully booted. That is the whole of the verification
-so far: it was done by flashing slot B and watching one boot, not by a test
-that runs in this repository.
+reports the slot as successfully booted. That was the whole of the verification
+at the time: one flash of slot B and one boot watched, not a test that runs in
+this repository.
+
+A later pass over a deployed system, cold-booted on the kernel this repository
+builds, added:
+
+- `net.ipv4.tcp_congestion_control` reads `bbr`, `net.core.default_qdisc` reads
+  `fq`, and `bbr` appears in `tcp_available_congestion_control`: the kernel
+  configuration's congestion control and the `server` role's sysctls in effect
+  together.
+- systemd is armed on the hardware watchdog — `WatchdogDevice=/dev/watchdog0`,
+  `RuntimeWatchdogUSec=20s`, and `qcom_wdt` reported during the boot.
+- `systemctl --failed` lists nothing, and the controller's `power/control`
+  reads `on` from the rule in [Storage](#storage).
+- `tailscale status` reports `Running` and the node is reachable from another
+  host in the tailnet as `alioth.dwelf-hoki.ts.net`. Enrolling it needed the
+  tailnet's admin to approve the machine, which its auth key did not do.
+- The activation that installs a configuration wrote `boot_b` and
+  `vendor_boot_b` from the images the configuration carries, from the running
+  system; the boot after it came up with `bbr` available, which the kernel it
+  replaced did not have.
 
 ## Battery
 
@@ -294,3 +404,9 @@ runs a Bluetooth stack, so that radio is up and unused.
 
 The kernel is a downstream fork with the device tree, panel, and touchscreen
 drivers this port needs; upstream carries no device tree for the phone.
+
+Two netfilter gaps are known and unclosed, each one `=m` line in
+`modules/devices/alioth/kernel-config.aarch64` away from closing at the price of
+a kernel build and a new boot image. The kernel carries no `br_netfilter`, so
+`net.bridge.bridge-nf-call-iptables` cannot be set at all, and no `xt_CONNMARK`,
+which leaves tailscale's connmark rules in its health warnings.
