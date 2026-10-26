@@ -42,7 +42,11 @@
 
       # The phone's own firmware, taken from the port's extraction of the
       # vendor images. The ADSP, CDSP, SLPI, and Venus firmware blobs live
-      # here; the GPU firmware comes from linux-firmware.
+      # here, and so does the GPU's zap shader as
+      # `qcom/sm8250/xiaomi/alioth/a650_zap.mbn`: that is the name the device
+      # tree gives it, and the image is the phone's own, signed for this
+      # handset rather than the generic one `linux-firmware` ships. The rest
+      # of the GPU firmware comes from linux-firmware.
       firmware = pkgs.buildPackages.runCommand "alioth-firmware" { } ''
         mkdir -p $out
         cp -a ${
@@ -66,6 +70,20 @@
           ${pkgs.buildPackages.linux-firmware}/lib/firmware/qca/htbtfw20.tlv \
           ${pkgs.buildPackages.linux-firmware}/lib/firmware/qca/htnv20.bin \
           $out/lib/firmware/qca/
+      '';
+
+      # The GPU firmware `msm` asks for on this SoC, from `linux-firmware`: its
+      # Adreno 650 entry names `qcom/a650_sqe.fw` for the SQE microcode and
+      # `qcom/a650_gmu.bin` for the GMU, and `linux-firmware` carries both under
+      # `qcom/`. The zap shader is deliberately not taken from here: the device
+      # tree names the device-specific image the vendor extraction above
+      # already carries.
+      gpuFirmware = pkgs.buildPackages.runCommand "alioth-gpu-firmware" { } ''
+        mkdir -p $out/lib/firmware/qcom
+        cp -a \
+          ${pkgs.buildPackages.linux-firmware}/lib/firmware/qcom/a650_sqe.fw \
+          ${pkgs.buildPackages.linux-firmware}/lib/firmware/qcom/a650_gmu.bin \
+          $out/lib/firmware/qcom/
       '';
 
       deviceTree = "${kernel}/dtbs/qcom/sm8250-xiaomi-alioth.dtb";
@@ -562,11 +580,11 @@
       hardware.firmware = [
         firmware
         radioFirmware
+        gpuFirmware
       ];
 
       # The default closure of redistributable firmware is close to a
-      # gigabyte, and this device loads only the blobs above plus the GPU
-      # firmware that will be added with the display.
+      # gigabyte, and this device loads only the blobs above.
       hardware.enableRedistributableFirmware = false;
 
       # The vendor images this device ships pair a header version 3 boot image,

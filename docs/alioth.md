@@ -392,11 +392,17 @@ one is untested.
 
 ## What is not here yet
 
-There is no graphical session, and the modem, the sensors, and the GPU are not
-brought up. The sensor DSP crashes while loading its firmware and is restarted;
-the firmware for the ADSP, CDSP, SLPI, and Venus blocks is installed, but the
-GPU firmware from `linux-firmware` is not, so anything built on the GPU stays
-unavailable.
+There is no graphical session, and the modem and the sensors are not brought
+up, nor does anything render on the GPU. The sensor DSP crashes while loading
+its firmware and is restarted; the firmware for the ADSP, CDSP, SLPI, and Venus
+blocks is installed, and the GPU's is too — `qcom/a650_sqe.fw` and
+`qcom/a650_gmu.bin` come out of `linux-firmware` the way the radio blobs in
+[Network](#network) do, and the zap shader is the phone's own
+`qcom/sm8250/xiaomi/alioth/a650_zap.mbn` from the vendor extraction. `msm` loads
+the GPU on the first open of its DRM device rather than at boot, and nothing on
+the phone opens it by itself. Opened by hand on an installed system, both files
+load and the GMU comes up — `[drm] Loaded GMU firmware v2.1.8` — which is as far
+as this has been checked: no client has rendered with it yet.
 
 Bluetooth has its firmware now — `qca/htbtfw20.tlv` and its NVM image come from
 `linux-firmware` the way the WiFi blobs in [Network](#network) do — but nothing
