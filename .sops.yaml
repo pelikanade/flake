@@ -30,6 +30,7 @@ creation_rules:
           - *neko-sphere
           - *parallax
           - *edge
+          - *alioth
   - path_regex: ^modules/secrets/magpie\.yaml$
     key_groups:
       - age:
