@@ -63,6 +63,89 @@ collect-machine-info target:
 build-installer-iso:
     nix build .#nixosConfigurations.installer.config.system.build.isoImage -L
 
+# Flash a phone that has no NixOS on it, from fastboot mode. The vendor system
+# on slot A is left alone, and it is also where fastbootd comes from: the
+# bootloader's own fastboot refuses the chunked write a multi-gigabyte root
+# filesystem needs ("unknown command" on the first sparse chunk), so the root
+# filesystem is written while slot A is active and the slot is switched back in
+# the bootloader afterwards. Erases userdata.
+#
+# Everything after the first boot goes over SSH instead: `just rdeploy` switches
+# the system and writes the boot images with it, and `just alioth-write-boot`
+# does that same write on its own.
+[group('alioth')]
+[doc("Flash a phone with no system on it: slot B images, root filesystem on userdata, slot B active. Erases userdata.")]
+alioth-flash:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    boot=$(nix build --no-link --print-out-paths \
+      .#nixosConfigurations.alioth.config.system.build.aliothBootImage)
+    vendor=$(nix build --no-link --print-out-paths \
+      .#nixosConfigurations.alioth.config.system.build.aliothVendorBoot)
+    vbmeta=$(nix build --no-link --print-out-paths \
+      .#nixosConfigurations.alioth.config.system.build.aliothVbmeta)
+    rootfs=$(nix build --no-link --print-out-paths \
+      .#nixosConfigurations.alioth.config.system.build.aliothRootfsImage)
+
+    wait_for_fastboot() {
+      for _ in $(seq 120); do
+        fastboot devices | grep -q . && return 0
+        sleep 1
+      done
+      echo "fastboot did not come back" >&2
+      return 1
+    }
+
+    # Slot B's device tree overlays come from the vendor kernel and cannot be
+    # applied to a mainline device tree, so `dtbo_b` is erased before the first
+    # flash of slot B.
+    fastboot erase dtbo_b
+
+    # fastbootd belongs to the vendor system's boot image, which lives on slot
+    # A, so the root filesystem is written while slot A is active; the
+    # bootloader is the only place that can switch slots back.
+    fastboot set_active a
+    fastboot reboot fastboot
+    wait_for_fastboot
+    fastboot -S 256M flash userdata "$rootfs"
+
+    fastboot reboot bootloader
+    wait_for_fastboot
+    fastboot flash boot_b "$boot"
+    fastboot flash vendor_boot_b "$vendor"
+    fastboot flash vbmeta_b "$vbmeta"
+    fastboot set_active b
+    fastboot reboot
+
+# The phone can write its own boot partitions, so a kernel or device tree
+# change does not need a fastboot session. What the phone boots today is kept
+# on this machine first: a boot image that does not start leaves the phone
+# needing fastboot to recover (ABL falls back to slot A after a few failed
+# boots).
+[group('alioth')]
+[doc("Write newly built boot images onto the phone's boot_b and vendor_boot_b over SSH.")]
+alioth-write-boot host="alioth" target="root@172.16.42.1":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    boot=$(nix build --no-link --print-out-paths \
+      .#nixosConfigurations.{{ host }}.config.system.build.aliothBootImage)
+    vendor=$(nix build --no-link --print-out-paths \
+      .#nixosConfigurations.{{ host }}.config.system.build.aliothVendorBoot)
+    writer=$(nix build --no-link --print-out-paths \
+      .#nixosConfigurations.{{ host }}.config.system.build.aliothWriteBoot)
+
+    backup=$(mktemp -d)
+    ssh ${NIX_SSHOPTS:-} {{ target }} 'dd if=/dev/disk/by-partlabel/boot_b bs=4M status=none' \
+      > "$backup/boot_b.img"
+    ssh ${NIX_SSHOPTS:-} {{ target }} 'dd if=/dev/disk/by-partlabel/vendor_boot_b bs=4M status=none' \
+      > "$backup/vendor_boot_b.img"
+    echo "the images the phone boots today are in $backup"
+
+    nix copy --to "ssh://{{ target }}" "$boot" "$vendor" "$writer"
+    ssh ${NIX_SSHOPTS:-} {{ target }} "$writer/bin/alioth-write-boot" "$boot" "$vendor"
+
 [group('secrets')]
 [doc("Create a machine's LUKS passphrase and store it in the vault.")]
 generate-luks-password machine vault="NixOS":

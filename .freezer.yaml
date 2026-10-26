@@ -3,6 +3,7 @@
 # machine in use is listed explicitly and a new one must be added here.
 entries:
   - packages.x86_64-linux.*
+  - nixosConfigurations.alioth.config.system.build.toplevel
   - nixosConfigurations.asymmetry.config.system.build.toplevel
   - nixosConfigurations.edge.config.system.build.toplevel
   - nixosConfigurations.neko-sphere.config.system.build.toplevel

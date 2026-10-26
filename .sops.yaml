@@ -4,6 +4,9 @@ keys:
   - &asymmetry age1r6yhequnuznq8chh6l6zq4mwdmf3htcffsxndg4r542qffuj4chsdzlgws
   - &parallax age12najdl7c469qu0txpft0gvqv9ng59t2u99m5mkmgy79k3hdg3pjsy4748z
   - &edge age1nu4amp388373487w6gadw9px4ldfddlgfnk4t4t6g27ntf3c9udqy8ds6n
+  # The phone's identity is its SSH host key, which NixOS generates into the
+  # root filesystem, so a full flash of the device produces a new one.
+  - &alioth age1m88lf2h2uhdqmy88waefyrr06h7e686s9mgsc6daflmy7h79fsjqfpajg5
 creation_rules:
   # A host appears only in the rule for a document its activation reads, because
   # a recipient decrypts the whole document. Every consumer, Home Manager
@@ -62,3 +65,8 @@ creation_rules:
           - *noa
           - *neko-sphere
           - *edge
+  - path_regex: ^modules/secrets/alioth-wifi\.yaml$
+    key_groups:
+      - age:
+          - *noa
+          - *alioth

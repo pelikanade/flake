@@ -27,6 +27,7 @@
 
       devShells.default = pkgs.mkShell {
         packages = with pkgs; [
+          android-tools
           bun
           nixd
           nixfmt
