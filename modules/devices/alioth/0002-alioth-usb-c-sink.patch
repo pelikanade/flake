@@ -1,0 +1,24 @@
+Bring the USB-C port up as a sink
+
+`tcpm` makes a dual-role port source-first when its connector is
+`self-powered`, which is the wrong way round for a phone that only ever
+charges from a cable: the port then never runs BC1.2 or PD on the sink
+side, the charger reports no USB type at all, `qcom_smb5` keeps retrying
+APSD, and the input current stays at the 500 mA default.
+
+Declaring the port a sink fixes the role at probe time.
+
+--- a/arch/arm64/boot/dts/qcom/sm8250-xiaomi-alioth.dts
++++ b/arch/arm64/boot/dts/qcom/sm8250-xiaomi-alioth.dts
+@@ -1,9 +1,9 @@
+ 	connector {
+ 		compatible = "usb-c-connector";
+ 
+-		power-role = "dual";
++		power-role = "sink";
+ 		data-role = "dual";
+ 		try-power-role = "sink";
+-		self-powered;
++		/* a phone only ever charges from a cable */
+ 
+ 		op-sink-microwatt = <33000000>;

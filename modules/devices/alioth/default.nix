@@ -37,6 +37,10 @@
             name = "alioth-device-tree";
             patch = ./0001-alioth-dts-panel-touchscreen.patch;
           }
+          {
+            name = "alioth-usb-c-sink";
+            patch = ./0002-alioth-usb-c-sink.patch;
+          }
         ];
       };
 
