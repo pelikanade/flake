@@ -3,36 +3,54 @@ Subject: Make filememo's written channel only when Written asks
 
 filememo.Forget made a channel on every write, which Go associates with
 the synctest bubble the writing test runs in; the next test's Forget then
-closed it from outside that bubble, a fatal error. Making the channel in
-Written instead leaves Forget closing only channels made outside bubbles,
+closed it from outside that bubble, a fatal error. wake, which another
+process's write reaches, did the same. Making the channel in Written
+instead leaves Forget and wake closing only a channel a waiter asked for,
 and skips the allocation while no watcher waits. Its wake-up semantics
 are unchanged: Written after a Forget waits for the next one.
 
 --- a/internal/filememo/filememo.go
 +++ b/internal/filememo/filememo.go
-@@ -88,13 +88,17 @@
+@@ -88,8 +88,7 @@
  	mu.Lock()
  	gen++
  	gens.Store(gen)
 -	close(written)
 -	written = make(chan struct{})
-+	if written != nil {
-+		close(written)
-+		written = nil
-+	}
++	closeWritten()
+ 	mu.Unlock()
+ }
+ 
+@@ -98,13 +97,24 @@
+ // disk tells.
+ func wake() {
+ 	mu.Lock()
+-	close(written)
+-	written = make(chan struct{})
++	closeWritten()
  	mu.Unlock()
  }
  
 -// written is closed, and made anew, by every Forget.
 -var written = make(chan struct{})
-+// written is closed by every Forget, and made when Written is first called
-+// after one: closing from outside a synctest bubble a channel the bubble
-+// made is fatal, and a write in a test runs Forget in the test's bubble.
++// closeWritten wakes Written's waiters by closing written, if Written
++// made one, and leaves none until Written is called again: closing from
++// outside a synctest bubble a channel the bubble made is fatal, and a
++// write in a test runs Forget in the test's bubble.
++func closeWritten() {
++	if written != nil {
++		close(written)
++		written = nil
++	}
++}
++
++// written is closed by every Forget and wake, and made when Written is
++// first called after one.
 +var written chan struct{}
  
- // Written is closed by the next write magpie makes (Forget): a loop that
- // follows magpie's files waits on it, and looks at them only every so
-@@ -104,6 +108,9 @@
+ // Written is closed by the next write magpie makes (Forget), or by
+ // another process's that Watch is told of: a loop that follows magpie's
+@@ -115,6 +125,9 @@
  func Written() <-chan struct{} {
  	mu.Lock()
  	defer mu.Unlock()

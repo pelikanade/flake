@@ -37,13 +37,14 @@ let
       };
 
       # Go forbids closing, from outside a synctest bubble, a channel the
-      # bubble made; filememo.Forget made one on every write, so the next
-      # test's write closed the provider sign-in test's bubble channel. The
-      # patch makes the channel in Written instead, and closes only an open
-      # one; its wake-up semantics are unchanged.
+      # bubble made; filememo.Forget made one on every write, and wake on
+      # every watched change, so the next test's write closed the provider
+      # sign-in test's bubble channel. The patch makes the channel in
+      # Written instead, and closes only an open one; its wake-up semantics
+      # are unchanged.
       patches = [ ./magpie-lazy-written-channel.patch ];
 
-      vendorHash = "sha256-pBk3sQZ9/1sVdz2ZteBGgQrI49fDfgsQ8ur7pzM477A=";
+      vendorHash = "sha256-TnyCe6gD8SC4625Fc5iFSDLbs0a0ehdi0MlN1kANoQg=";
 
       subPackages = [ "." ];
       tags = [
