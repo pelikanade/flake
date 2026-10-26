@@ -85,9 +85,12 @@
         };
       };
 
+      # The second view runs `fastfetch` and shows what it prints, so the
+      # binary has to be on the service's PATH.
       environment.systemPackages = [
         panel
         collect
+        pkgs.fastfetch
       ];
     };
 }
