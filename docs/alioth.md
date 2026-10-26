@@ -139,9 +139,13 @@ The phone has one USB connection, and this port uses it for both a console and
 a network link. The gadget is configured from the initramfs, so boot output is
 visible before anything is loaded from the root filesystem:
 
-- A serial console on `ttyGS0`, which prints kernel and initramfs messages and
-  carries a login prompt. On the workstation it appears as
-  `/dev/ttyACM0`; the node belongs to `root:dialout`, so reading it needs
+- A serial console on `ttyGS0`, carrying a login prompt. It is deliberately not
+  a *kernel* console: writing to a tty that nobody reads blocks the writer, and
+  kernel messages — the charger's APSD retries alone are several a second —
+  would fill the buffer and stall the boot into a watchdog reset whenever the
+  cable has no host on the other end. The kernel's messages go to the display
+  instead, and `journalctl` has them all. On the workstation the port appears
+  as `/dev/ttyACM0`; the node belongs to `root:dialout`, so reading it needs
   either group membership or `sudo chmod 666 /dev/ttyACM0`, and then
   `socat - /dev/ttyACM0,raw,echo=0` or `screen /dev/ttyACM0` gives the prompt.
   Writing to the port blocks while nothing on the phone reads it, so a client

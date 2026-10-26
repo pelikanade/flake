@@ -233,13 +233,14 @@
       # so NixOS installs no bootloader of its own.
       boot.loader.grub.enable = false;
 
-      # Both consoles the phone has are named here: its display, and the serial
-      # port the USB gadget provides once it exists. The log level is raised so
-      # that they carry the kernel's informational messages rather than the
-      # quieter level this configuration inherits.
+      # The display is the only kernel console. `ttyGS0` is deliberately not
+      # one: a tty nobody reads blocks its writer, and the kernel's own messages
+      # — the charger's APSD retries alone are several a second — fill the tty
+      # buffer while no host is attached, which stalls the boot until the
+      # watchdog resets it. The serial port still carries a login prompt, which
+      # is what it is for; its output goes only to a session that asked for it.
       boot.kernelParams = [
         "console=tty0"
-        "console=ttyGS0"
       ];
       boot.consoleLogLevel = 7;
 
