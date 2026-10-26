@@ -321,6 +321,13 @@
         };
       };
 
+      # The gadget script is deliberately *not* listed in
+      # `boot.initrd.systemd.storePaths`. Listing it made the initrd run this
+      # unit for the first time, and on this port a boot with it never reached
+      # switch-root: the hardware watchdog fired a pretimeout and reset the
+      # phone. A serial console during the initramfs is not worth an unbootable
+      # device, so the unit stays in the initrd without the script and fails
+      # with "No such file or directory" as it always did.
       boot.initrd.systemd.services.alioth-usb-gadget = gadgetUnit // {
         enable = true;
         # Until the gadget binds there is no serial console, so these lines land

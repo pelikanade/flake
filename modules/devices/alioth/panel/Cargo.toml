@@ -1,0 +1,18 @@
+[package]
+name = "alioth-panel"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "alioth-panel"
+path = "src/main.rs"
+
+# Two dependencies, both pure Rust and both without build scripts, because this
+# is cross-compiled for aarch64 from a machine that is not one:
+#   tiny-skia — a CPU rasteriser (anti-aliased fills, strokes, paths, gradients)
+#   fontdue   — a TrueType rasteriser, so text comes from the installed font
+# Everything else the panel needs — the framebuffer, /proc, /sys — is reachable
+# from the standard library.
+[dependencies]
+tiny-skia = { version = "0.11", default-features = false, features = ["std"] }
+fontdue = "0.9"

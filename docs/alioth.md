@@ -146,9 +146,10 @@ visible before anything is loaded from the root filesystem:
   `socat - /dev/ttyACM0,raw,echo=0` or `screen /dev/ttyACM0` gives the prompt.
   Writing to the port blocks while nothing on the phone reads it, so a client
   that opens it for writing without a reader should be treated as hanging.
-- A framebuffer console on the display, which carries the same boot messages
-  and its own login prompt. The device has no keyboard, so the display is
-  output only.
+- The display. The kernel's framebuffer console prints the boot messages there,
+  and from `multi-user.target` the status panel below takes it over and keeps
+  it. No login prompt is started on it — `tty1` belongs to the panel — and the
+  device has no keyboard, so the display is output only either way.
 - An ethernet link with the static address `172.16.42.1/24` on the phone. The
   host side needs an address in the same network; with NetworkManager,
   `nmcli con add type ethernet ifname <interface> con-name alioth ip4
@@ -156,6 +157,59 @@ visible before anything is loaded from the root filesystem:
 - `sshd` on that link, where root is reachable with the maintainer's key or
   their password. The same password opens the serial console: the login is
   `root`.
+
+## Status panel
+
+The display is not a console: it is a status board for the node, painted by
+`alioth-panel`, a dependency-free Rust program in
+`modules/devices/alioth/panel` that owns the framebuffer the way `fbcon` does —
+memory, no GPU.
+
+That is the point of doing it in pixels. The Adreno 650 has no firmware on this
+device, so there is no GL, and a terminal emulator on top of `fbcon` is stuck in
+software with a handful of palette entries. Writing the frame itself buys
+antialiased type and real colour for a cost the phone can pay: about one frame
+every two seconds, measured at roughly three percent of a core.
+
+The frame is built around three numbers — load, the busiest process's share of a
+core, and memory in use — because that is what a glance at this node is for.
+Network, cluster state, power and per-pod usage sit below them. Battery is
+deliberately a footnote: the phone runs from a pass-through supply with the
+charge held, so it is effectively mains-powered, and the interesting question is
+never how full the battery is.
+
+How it holds the display: `fbcon` keeps the console, so the panel writes `0` to
+`/sys/class/vtconsole/vtcon1/bind` before it draws and `1` again on the way out.
+That unbind is also the whole recovery story — stopping the unit repaints the
+console, `ExecStopPost` covers a crash that never got there, and `systemctl
+start getty@tty1` is a way back in.
+
+What it knows: the cheap facts are read straight off `/proc` and `/sys` by the
+panel itself (battery and charger, thermals, load, memory, CPU frequencies, and
+the state and byte counters of the wifi, USB and tailnet links). Everything that
+needs a process or the cluster API comes from `/run/alioth-panel/status.env`,
+which `alioth-panel-collect` rewrites every 30 s from a systemd timer; the panel
+draws that sample's age, so a stale status file is visible as one.
+
+Checking it off the device: the same program renders a single frame without
+touching the framebuffer. On the phone, print the font directory the unit uses
+and render a PNG from the phone's live status file, then read the image on the
+workstation:
+
+```
+F=$(systemctl show -p Environment --value alioth-panel |
+      tr ' ' '\n' | sed -n 's/^ALIOTH_PANEL_FONT_DIR=//p')
+ALIOTH_PANEL_FONT_DIR="$F" alioth-panel --png /tmp/frame.png
+```
+
+`--once 20` is the other half: it draws one frame on the display itself for
+twenty seconds and exits, which is how a change is previewed on the glass
+without handing the panel over to it.
+
+One screen-specific constraint is worth stating: this is an AMOLED panel that is
+on all day, so black pixels are off pixels, and static bright chrome is how
+burn-in starts. The palette is chosen to stay dim and near-black for that
+reason.
 
 ## Network
 
@@ -327,6 +381,12 @@ this repository.
 A later pass over a deployed system, cold-booted on the kernel this repository
 builds, added:
 
+- The status panel owns the display: `alioth-panel` runs with no restarts, its
+  collector rewrites `status.env` on its timer, a frame rendered from that same
+  file on the phone shows every field with the phone's real values, the
+  framebuffer console is gone from `tty1` — `kmscon`, which used to own the
+  display, is no longer in the system — and the panel holds about three percent
+  of a core.
 - `net.ipv4.tcp_congestion_control` reads `bbr`, `net.core.default_qdisc` reads
   `fq`, and `bbr` appears in `tcp_available_congestion_control`: the kernel
   configuration's congestion control and the `server` role's sysctls in effect
