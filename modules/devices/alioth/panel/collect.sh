@@ -25,9 +25,9 @@ mkdir -p "$run"
 # switch the light off.
 hour=$(printf '%(%H)T' -1)
 case "$hour" in
-  0[6-9] | 1[0-9] | 2[0-1]) bright=150 ;;
-  2[2-3]) bright=60 ;;
-  *) bright=40 ;;
+  0[6-9] | 1[0-9] | 2[0-1]) bright=700 ;;
+  2[2-3]) bright=250 ;;
+  *) bright=90 ;;
 esac
 if [ "$(cat "$run/band" 2>/dev/null)" != "$bright" ]; then
   echo "$bright" >/sys/class/backlight/ae94000.dsi.0/brightness 2>/dev/null
