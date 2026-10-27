@@ -88,7 +88,7 @@
 
         # Automatic HTTPS issues a certificate per name once its A/AAAA record
         # resolves here, so pointing the names at this host is the whole
-        # deployment step. The site keeps the upstream module's default port.
+        # deployment step. The site keeps the module's default port.
         services.caddy.virtualHosts = {
           "status.nvirellia.im".extraConfig = "reverse_proxy 127.0.0.1:3001";
           "nvirellia.im" = {

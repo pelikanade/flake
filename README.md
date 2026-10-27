@@ -8,4 +8,4 @@ A personal NixOS configuration written as one [dendritic](https://github.com/mig
 
 - [`avalanche`](https://github.com/pelikanade/flake/actions/workflows/deploy.yml): push `main` to automatically deploy all managed machines.
 - [`update-packages`](https://github.com/pelikanade/flake/actions/workflows/update-packages.yml): a daily run that bumps, builds and commits packages maintained in this repository. now with agentic repair.
-- [`freezer`](https://github.com/pelikanade/freezer): a single-binary service that spins a s3-backed Nix binary cache and auto-builder.
+- [`freezer`](modules/packages/freezer): a single-binary service that spins an s3-backed Nix binary cache and auto-builder.

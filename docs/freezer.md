@@ -1,11 +1,15 @@
 # Freezer
 
-[Freezer](https://github.com/pelikanade/freezer) is the host's Nix flake build
-service. It polls the registered repositories' default branches and builds what
-their `.freezer.yaml` lists. It is configured without a cache: the outputs stay
-in `neko-sphere`'s Nix store, and [Harmonia](#the-cache) serves that store over
-the tailnet. `neko-sphere` runs it as `freezer.service`, from upstream's NixOS
-module rather than a container.
+Freezer is the host's Nix flake build service. It polls the registered
+repositories' default branches and builds what their `.freezer.yaml` lists. It
+is configured without a cache: the outputs stay in `neko-sphere`'s Nix store,
+and [Harmonia](#the-cache) serves that store over the tailnet. `neko-sphere`
+runs it as `freezer.service`, from a module in this repository rather than a
+container.
+
+The Go source is vendored from `pelikanade/freezer` at
+`b6670bdf82fcdafb2ad3ecfdbbb4cfdf32f0013b` in
+[`modules/packages/freezer`](../modules/packages/freezer).
 
 ## The cache
 
@@ -48,10 +52,10 @@ imports = with inputs.self.modules.aspects; [
 ];
 ```
 
-`modules/services/freezer.nix` declares the flake input and imports
-`inputs.freezer.nixosModules.default`. The upstream module owns the service
-account, the systemd unit, the generated server configuration, and the
-hardening; this repository supplies only the deployment's values and secrets.
+`modules/services/freezer.nix` owns the service account, the systemd unit, the
+generated server configuration, and the hardening, and takes the binary from
+`pkgs.selfPackages.freezer`. `modules/packages/freezer/default.nix` builds the
+vendored source; the repository no longer follows an input for it.
 
 The UI listens on `127.0.0.1:8080` and is published as `svc:nsphere-freezer` by
 [the Tailscale ingress module](tailscale-ingress.md). Nothing inbound is needed
@@ -68,9 +72,8 @@ The host's values live in `modules/services/freezer.nix`:
 | `publicUrl` | `http://nsphere-freezer.dwelf-hoki.ts.net`, used only as the commit-status link |
 | `pollInterval` | `10m` |
 
-The upstream module writes the server YAML into the store from these options
-and passes it to the binary. The YAML holds public data only: repository names
-and URLs.
+The module writes the server YAML into the store from these options and passes
+it to the binary. The YAML holds public data only: repository names and URLs.
 
 ## Secrets
 
@@ -123,14 +126,13 @@ Harmonia key, or the GitHub token.
 
 ## Updates
 
-The package follows the `freezer` flake input. Update that input alone and
-rebuild; do not run a blanket `nix flake update`:
+Freezer is vendored, so there is no input to update. Replacing its source means
+overwriting the Go files under `modules/packages/freezer`, bumping `version`, and
+raising `vendorHash` when `go.mod` changes; then build and switch:
 
 ```sh
-nix flake update freezer
+nix build .#freezer
 nix develop -c just build
 ```
 
-The state under `/var/lib/freezer` survives switches and reboots. See
-[upstream's runbook](https://github.com/pelikanade/freezer/blob/main/docs/runbook.md)
-for retention, backups, and the environment-file contract.
+The state under `/var/lib/freezer` survives switches and reboots.

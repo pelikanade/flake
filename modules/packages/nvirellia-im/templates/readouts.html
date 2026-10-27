@@ -1,0 +1,18 @@
+{{define "readouts-dl"}}
+<dl class="readouts">
+<div class="big"><dt>tokens today</dt><dd>{{.Today}}</dd></div>
+<div><dt>input</dt><dd>{{.Input}}</dd></div>
+<div><dt>cache read</dt><dd>{{.CacheRead}}</dd></div>
+<div><dt>cache write</dt><dd>{{.CacheWrite}}</dd></div>
+<div><dt>output</dt><dd>{{.Output}}</dd></div>
+<div><dt>this hour</dt><dd>{{.ThisHour}}</dd></div>
+<div><dt>busiest hour</dt><dd>{{.Peak}}</dd></div>
+<div><dt>last 7 days</dt><dd>{{.Last7d}}</dd></div>
+</dl>
+{{end}}
+
+{{define "ro-note"}}<p class="ro-note">{{.Note}}</p>{{end}}
+
+{{define "legend-value"}}<span class="v">{{.}}</span>{{end}}
+
+{{define "sb-today"}}<b>{{.}}</b>{{end}}

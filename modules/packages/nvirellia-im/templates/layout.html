@@ -1,0 +1,85 @@
+<!doctype html>
+<!--
+  Noa Virellia — profile sheet, Clearlooks / GNOME 2. Served by the Go program.
+  Without JS: the Profile sheet plus, when magpie has data, the Resources panel, reached by the
+  #resources anchor via :target. With JS: notebook tabs, graph, heatmap.
+-->
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noa Virellia — Profile</title>
+<script>document.documentElement.classList.replace("no-js", "js");</script>
+<link rel="icon" type="image/svg+xml" href="{{asset "favicon.svg"}}">
+<link rel="stylesheet" href="{{asset "clearlooks.css"}}">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+{{template "sprite"}}
+
+<div class="window">
+  <header class="titlebar" aria-label="Window title">
+    {{icon "i-app"}}
+    <span class="t">Noa Virellia — Profile</span>
+    <span class="wm"><button type="button" class="min" aria-label="Minimise" title="Minimise" disabled></button><button type="button" class="max" aria-label="Maximise" title="Maximise" aria-pressed="false" disabled></button><button type="button" class="cls" aria-label="Close" title="Close" disabled></button></span>
+  </header>
+
+  <nav class="toolbar" aria-label="Elsewhere">
+    <a class="tb" href="https://github.com/pelikanade">{{icon "i-repo"}}<span class="lbl-opt">GitHub</span></a>
+    <a class="tb" href="https://t.me/noa_virellia">{{icon "i-plane"}}<span class="lbl-opt">Telegram</span></a>
+    <a class="tb" href="https://twitter.com/pelikanade">{{icon "i-bird"}}<span class="lbl-opt">Twitter</span></a>
+    <span class="tb-sep" aria-hidden="true"></span>
+    <a class="tb" href="https://nuts.nvirellia.im/">{{icon "i-globe"}}<span class="lbl-opt">nuts.nvirellia.im</span></a>
+    <a class="tb" href="https://requiem.garden/">{{icon "i-leaf"}}<span class="lbl-opt">requiem.garden</span></a>
+    <span class="tb-sep" aria-hidden="true"></span>
+    <a class="tb" href="https://status.nvirellia.im/">{{icon "i-pulse"}}<span class="lbl-opt">Gatus</span></a>
+    <span class="tb-spring"></span>
+    {{if .Resources}}<a class="spark js-only" href="#resources" title="tokens by hour, today — open Resources" aria-label="token use, today by hour: open Resources"><svg id="spark" viewBox="0 0 72 24" preserveAspectRatio="none" aria-hidden="true" focusable="false"></svg></a>{{end}}
+  </nav>
+
+  <div class="infobar" id="infobar" role="alert" hidden>
+    {{icon "i-info"}}
+    <p><b>this is a webpage, you're staying.</b> the window manager was decorative all along.</p>
+    <button type="button" class="btn" id="info-ok">OK</button>
+  </div>
+
+  <main class="notebook" id="main" tabindex="-1">
+  <div class="notebook-tabs">
+    <div role="tablist" aria-label="Profile window" class="js-only">
+      <button type="button" role="tab" class="ntab" id="tab-profile" aria-controls="profile" aria-selected="true">{{icon "i-person"}}Profile</button>
+      <button type="button" role="tab" class="ntab" id="tab-resources" aria-controls="resources" aria-selected="false" tabindex="-1"{{if not .Resources}} disabled{{end}}>{{icon "i-chart"}}Resources</button>
+      <button type="button" role="tab" class="ntab" id="tab-status" aria-controls="status" aria-selected="false" tabindex="-1"{{if not .Status}} disabled{{end}}>{{icon "i-pulse"}}Status</button>
+    </div>
+    <nav class="nojs-only nojs-tabs" aria-label="Sections">
+      <a class="ntab" href="#profile" aria-current="page">{{icon "i-person"}}Profile</a>
+      {{if .Resources}}<a class="ntab" href="#resources">{{icon "i-chart"}}Resources</a>{{else}}<span class="ntab" aria-disabled="true">{{icon "i-chart"}}Resources</span>{{end}}
+      {{if .Status}}<a class="ntab" href="#status">{{icon "i-pulse"}}Status</a>{{else}}<span class="ntab" aria-disabled="true">{{icon "i-pulse"}}Status</span>{{end}}
+    </nav>
+  </div>
+
+  {{template "profile" .}}
+  {{template "resources" .}}
+  {{template "status" .}}
+  </main>
+
+  <footer class="statusbar">
+{{if .Resources}}<span class="grow sb-mon js-only" title="tokens from magpie">{{icon "i-chart"}}<span class="sb-txt">tokens today: {{template "sb-today" .Readouts.Today}}</span></span>{{end}}
+    <span class="grow sb-upd">{{icon "i-clock"}}Updated {{.Updated}}</span>
+    <span class="sb-who">love :3</span>
+    <span class="grip" aria-hidden="true"></span>
+  </footer>
+</div>
+
+<div class="desk-note" id="desk-note" role="status" hidden>the profile window is minimised. restore it from the panel below.</div>
+<div class="gpanel" id="gpanel" hidden>
+  <button type="button" class="taskchip" id="taskchip" title="Restore window">{{icon "i-app"}}Noa Virellia — Profile</button>
+  <span class="ws" aria-hidden="true"><span></span><span></span></span>
+</div>
+
+{{template "quit-dialog" .}}
+
+<script type="application/json" id="cl-stats">{{.FeedJSON}}</script>
+<script src="{{asset "scripts.js"}}" defer></script>
+</body>
+</html>

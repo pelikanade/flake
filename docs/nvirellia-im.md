@@ -1,24 +1,29 @@
 # nvirellia.im
 
 [`modules/services/nvirellia-im.nix`](../modules/services/nvirellia-im.nix) runs the
-personal site on `edge`. The site is its own flake
-([`pelikanade/nvirellia.im`](https://github.com/pelikanade/nvirellia.im)): a Go
-service whose templates and static assets are embedded in the binary. This
-repository takes it as an input and contributes only the deployment.
+personal site on `edge`. The Go service, with the templates and static assets
+it embeds, is vendored from `pelikanade/nvirellia.im` at
+`104fbe048aa0e90ed7f658d9149aa2c4304cf7d2` in
+[`modules/packages/nvirellia-im`](../modules/packages/nvirellia-im). The service
+module carries the unit, its hardening and its options.
 
-## The input and the aspect
+## The package and the aspect
 
-`flake-file.inputs.nvirellia-im` pins the upstream flake, with `nixpkgs` following
-this repository's. The aspect imports its `nixosModules.default` and enables
-`services.nvirellia-im`; the unit, its hardening and its options belong upstream.
+`modules/packages/nvirellia-im/default.nix` builds the vendored source with
+`buildGoModule`; the module has no Go dependencies, so there is no vendor hash.
+The aspect takes the binary from `pkgs.selfPackages.nvirellia-im`, and importing
+the aspect is what runs the service.
 
-Both the input and the aspect are named `nvirellia-im`, so the upstream flake
-and the aspect that deploys it are easy to pair. The suffix also keeps the
-aspect distinct from the maintainer's user module
+Both the package and the aspect are named `nvirellia-im`, so the binary and the
+aspect that deploys it are easy to pair. The suffix also keeps the aspect
+distinct from the maintainer's user module
 ([modules/users/nvirellia.nix](../modules/users/nvirellia.nix)), whose
 `flake.modules.nixos.nvirellia` name would otherwise merge into it. The module
-file, its sops template, and the upstream option namespace and unit name all
-carry the same suffix.
+file, its sops template, and the option namespace and unit name all carry the
+same suffix.
+
+Updating the site means editing the vendored source; the repository no longer
+follows an input for it.
 
 The service listens on `127.0.0.1:8080`, the upstream default, and Caddy
 reverse-proxies `nvirellia.im` and `www.nvirellia.im` to it ([caddy.md](caddy.md)).

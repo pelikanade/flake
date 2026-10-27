@@ -1,0 +1,38 @@
+{{define "resources"}}{{if .Resources}}
+<section id="resources" class="mon tabpanel" role="tabpanel" aria-labelledby="tab-resources">
+  <div class="mon-head">
+    <h2>Resources</h2>
+    <span class="aside">llm tokens my agents burn through, via magpie</span>
+    <span class="nojs-only aside">the graph and heatmap need javascript; every number below is here.</span>
+  </div>
+  <section class="frame js-only" aria-labelledby="h-hist">
+    <h3 class="legend" id="h-hist">{{icon "i-chart"}}Token History</h3>
+    <div class="frame-tools">
+      <p class="cap" id="graph-cap">input, cache and output by hour, today</p>
+      <div class="toggles" role="group" aria-label="Time range">
+        <button type="button" class="btn" data-range="today" aria-pressed="true">today</button>
+        <button type="button" class="btn" data-range="7d" aria-pressed="false">7d</button>
+      </div>
+    </div>
+    <svg class="graph" id="graph" role="img" aria-label="token history graph"></svg>
+    <div class="legend-row">
+<p class="lg"><span class="sw in" aria-hidden="true"></span><b>Input</b>{{template "legend-value" .Legend.In}}</p>
+<p class="lg"><span class="sw cache" aria-hidden="true"></span><b>Cache</b>{{template "legend-value" .Legend.Cache}}</p>
+<p class="lg"><span class="sw out" aria-hidden="true"></span><b>Output</b>{{template "legend-value" .Legend.Out}}</p>
+    </div>
+  </section>
+  <div class="mon-row">
+    <section class="frame js-only" aria-labelledby="h-heat">
+      <h3 class="legend" id="h-heat">{{icon "i-clock"}}Activity, last 16 weeks</h3>
+      <div class="heat" id="heat" role="img" aria-label="token activity per day for 16 weeks"></div>
+      <div class="heat-foot"><span>tokens per day</span><span class="scale" aria-hidden="true">less <span class="hc l0"></span><span class="hc l1"></span><span class="hc l2"></span><span class="hc l3"></span><span class="hc l4"></span> more</span></div>
+      <p class="heat-read" id="heat-read" aria-hidden="true">point at a day to see its total.</p>
+    </section>
+    <section class="frame" aria-labelledby="h-today">
+      <h3 class="legend" id="h-today">{{icon "i-gear"}}Today</h3>
+{{template "readouts-dl" .Readouts}}
+{{template "ro-note" .Readouts}}
+    </section>
+  </div>
+</section>
+{{end}}{{end}}

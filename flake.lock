@@ -393,26 +393,6 @@
         "type": "github"
       }
     },
-    "freezer": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1792754861,
-        "narHash": "sha256-m1AFvRkDhc8prycR/EOcqBrfaS2uiDAoGDOleTl0C3c=",
-        "owner": "pelikanade",
-        "repo": "freezer",
-        "rev": "b6670bdf82fcdafb2ad3ecfdbbb4cfdf32f0013b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "pelikanade",
-        "repo": "freezer",
-        "type": "github"
-      }
-    },
     "fromYaml": {
       "flake": false,
       "locked": {
@@ -793,26 +773,6 @@
         "type": "github"
       }
     },
-    "nvirellia-im": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1793032798,
-        "narHash": "sha256-eW3ZY5dBJADY1eVvP2uzic+0K2d6Qmy/U7Y4yq/BT5M=",
-        "owner": "pelikanade",
-        "repo": "nvirellia.im",
-        "rev": "104fbe048aa0e90ed7f658d9149aa2c4304cf7d2",
-        "type": "github"
-      },
-      "original": {
-        "owner": "pelikanade",
-        "repo": "nvirellia.im",
-        "type": "github"
-      }
-    },
     "omp": {
       "inputs": {
         "bun2nix": "bun2nix_2",
@@ -888,7 +848,6 @@
         "disko": "disko",
         "flake-file": "flake-file",
         "flake-parts": "flake-parts",
-        "freezer": "freezer",
         "git-hooks": "git-hooks",
         "home-manager": "home-manager",
         "import-tree": "import-tree",
@@ -901,7 +860,6 @@
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",
         "noctalia": "noctalia",
-        "nvirellia-im": "nvirellia-im",
         "omp": "omp",
         "paseo": "paseo",
         "sops-nix": "sops-nix",

@@ -21,10 +21,6 @@
       url = "github:hercules-ci/flake-parts";
       inputs.nixpkgs-lib.follows = "nixpkgs";
     };
-    freezer = {
-      url = "github:pelikanade/freezer";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     git-hooks = {
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -62,10 +58,6 @@
       };
     };
     noctalia.url = "github:noctalia-dev/noctalia";
-    nvirellia-im = {
-      url = "github:pelikanade/nvirellia.im";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     omp = {
       url = "github:can1357/oh-my-pi";
       inputs.nixpkgs.follows = "nixpkgs";

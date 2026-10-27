@@ -1,9 +1,10 @@
 # Updates
 
 The `Update packages` workflow runs daily at 02:00 Asia/Shanghai. It updates
-the flake lock, updates every locally packaged tool, builds them, repairs
-failures with an omp agent, reviews the repairs with a second omp agent, and
-then commits. There is no separate repair workflow and no pull request.
+the flake lock, updates every locally packaged tool that pins an upstream
+revision, builds them, repairs failures with an omp agent, reviews the repairs
+with a second omp agent, and then commits. There is no separate repair workflow
+and no pull request.
 
 It runs on the `update-packages` self-hosted runner on `neko-sphere`.
 `modules/services/github-runners/update-packages-runner.nix` puts the tools its
@@ -151,8 +152,9 @@ have exited.
   evaluates but fails to build an unchanged package can still reach `main`.
 - The build gate covers every package in the update manifest, not every
   machine toplevel.
-- Packages that arrive through flake inputs are not individually built by this
-  workflow.
+- Packages that arrive through flake inputs, and vendored packages without
+  `passthru.update` metadata such as `freezer` and `nvirellia-im`, are not
+  updated by this workflow.
 
 ## Local use
 

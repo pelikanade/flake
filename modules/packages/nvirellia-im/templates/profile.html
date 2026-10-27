@@ -1,0 +1,126 @@
+{{define "profile"}}
+<div id="profile" class="tabpanel on" role="tabpanel" aria-labelledby="tab-profile">
+
+  <header class="masthead">
+    <div class="mast-id">
+      <span class="photo mast-avatar">{{template "avatar"}}</span>
+      <div>
+        <h1>Noa Virellia <span class="alias"><span class="slash" aria-hidden="true">／</span>pelikanade</span></h1>
+      </div>
+    </div>
+    <div class="mast-lede">
+      <p class="lede">full-spectrum developer</p>
+      <p class="motto">Building trusted foundations. For the postmodern age.</p>
+    </div>
+  </header>
+
+  <div class="panes">
+    <div class="mainpane">
+      <section aria-labelledby="h-who">
+        <h2 class="sec-h" id="h-who">Who</h2>
+        <div class="indent bio">
+          <p>I'm noa — a full-spectrum developer who thinks systems should stay understandable and observable: declarative, reproducible structure that doesn't quietly drift into chaos.</p>
+          <p>I treat tooling as part of the thinking process, and keep refining my environments, abstractions and workflows until the friction mostly disappears and building things feels continuous. That instinct carries over into the systems I make, often with nix — and when it isn't nix, as immutable infrastructure, reproducible builds and signed artifact distribution, always with usability in mind.</p>
+          <p>I work on nix, kubernetes delivery &amp; ops, zero-trust networking and mainly declarative systems. Nixpkgs package maintainer since 2024, also contributing upstream fixes where the friction shows up.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="h-making">
+        <h2 class="sec-h" id="h-making">What i maintain<span class="aside">featured opensource work</span></h2>
+        <div class="indent">
+          <div class="projects">
+            <article class="frame proj" aria-labelledby="p-flake">
+              <h3 class="legend" id="p-flake">{{icon "i-repo"}}flake</h3>
+              <span class="tag">Nix / config</span>
+              <p class="lead">My NixOS config.</p>
+              <p class="detail">the one that propelled me into the immutable everything field (thank you).</p>
+              <p class="act"><a class="btn" href="https://github.com/pelikanade/flake">learn more on github.com<span class="vh"> about flake</span> <span class="arr" aria-hidden="true">↗</span></a></p>
+            </article>
+            <article class="frame proj" aria-labelledby="p-freezer">
+              <h3 class="legend" id="p-freezer">{{icon "i-repo"}}freezer</h3>
+              <span class="tag">Nix / builds</span>
+              <p class="lead">Self-hosted flake build service.</p>
+              <p class="detail">reproducible builds, signed store paths pushed to an s3-compatible cache.</p>
+              <p class="act"><a class="btn" href="https://github.com/pelikanade/freezer">learn more on github.com<span class="vh"> about freezer</span> <span class="arr" aria-hidden="true">↗</span></a></p>
+            </article>
+            <article class="frame proj" aria-labelledby="p-mimosa">
+              <h3 class="legend" id="p-mimosa">{{icon "i-repo"}}mimosa</h3>
+              <span class="tag">Kubernetes / IaC</span>
+              <p class="lead">Kubernetes on Talos Linux &amp; Terraform.</p>
+              <p class="detail">immutable infrastructure + gitops.</p>
+              <p class="act"><a class="btn" href="https://github.com/pelikanade/mimosa">learn more on github.com<span class="vh"> about mimosa</span> <span class="arr" aria-hidden="true">↗</span></a></p>
+            </article>
+            <article class="frame proj" aria-labelledby="p-paseo">
+              <h3 class="legend" id="p-paseo">{{icon "i-repo"}}paseo-plugins</h3>
+              <span class="tag">Agents / tooling</span>
+              <p class="lead">Independently installable paseo plugins.</p>
+              <p class="detail">reduce friction in development: devenv, generative-ui, host-monitor, obsidian, omp fidelity, and more.</p>
+              <p class="act"><a class="btn" href="https://github.com/pelikanade/paseo-plugins">learn more on github.com<span class="vh"> about paseo-plugins</span> <span class="arr" aria-hidden="true">↗</span></a></p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <div class="lower">
+        <section class="frame" aria-labelledby="h-skills">
+          <h2 class="legend" id="h-skills">{{icon "i-tools"}}Skills &amp; toolbelt</h2>
+          <div class="skill-row">
+            <span class="lbl-sm" id="s-daily">skills</span>
+            <ul class="pills" aria-labelledby="s-daily"><li class="pill">NixOS</li><li class="pill">Nix</li><li class="pill">Kubernetes delivery &amp; ops</li><li class="pill">Zero-trust networking</li><li class="pill">Declarative systems</li><li class="pill">Immutable infrastructure</li></ul>
+          </div>
+          <div class="skill-row">
+            <span class="lbl-sm" id="s-ws">Toolbelt</span>
+            <ul class="pills" aria-labelledby="s-ws"><li class="pill">Zed</li><li class="pill">Neovim</li><li class="pill">Firefox w/ sidebery</li><li class="pill">omp</li><li class="pill">grokbot</li><li class="pill">paseo</li></ul>
+          </div>
+        </section>
+
+        <section class="frame" aria-labelledby="h-know">
+          <h2 class="legend" id="h-know">{{icon "i-info"}}Things you might want to know</h2>
+          <ul class="know">
+            <li>{{icon "i-bud"}}I run an immutable OS on everything.</li>
+            <li>{{icon "i-bud"}}I name my servers after plants.</li>
+            <li>{{icon "i-bud"}}I once made a systemd timer that reminds me to take my meds.</li>
+            <li>{{icon "i-bud"}}I <a href="https://www.youtube.com/watch?v=WLRRJjACyBs">gave talks</a> at nix meetups in china about convincing companies to use nix (mixed results), and have helped host the event since meetup #2.</li>
+            <li>{{icon "i-bud"}}I love VRChat photography and avatar work.</li>
+            <li>{{icon "i-bud"}}generally, I tend flowers in the wires.</li>
+          </ul>
+        </section>
+      </div>
+
+      <img class="watermark" src="/static/watermark.svg" alt="" aria-hidden="true">
+    </div>
+
+    <aside class="sidepane" aria-label="Facts and links">
+      <div class="pane-group">
+        <h2 class="pane-head" id="h-about">About</h2>
+        <ul class="sunken rows" aria-labelledby="h-about">
+          <li class="photo-row"><span class="photo">{{template "avatar"}}</span>
+            <span class="photo-cap"><b>Noa Virellia</b><br>pelikanade<br>she/they</span></li>
+          <li>{{icon "i-gear"}}<span class="kv"><span class="lbl-sm">mood</span><span class="val"><img src="https://moods.imood.com/display/uname-pelikanade/bg-f4f3f2/imood.gif" alt="The current mood of pelikanade at www.imood.com" border="0"></span></span></li>
+          <li>{{icon "i-heart"}}<span class="kv"><span class="lbl-sm">likes</span><span class="val">config tweaking, homelab, yapping, ZZZ</span></span></li>
+          <li>{{icon "i-leaf"}}<span class="kv"><span class="lbl-sm">workstations</span><span class="val">parallax (AMD Ryzen 5 7600X, 16GB RAM, RTX 4060)<br>
+          asymmetry (Intel Core Ultra 5 228V, 32GB RAM)</span></span></li>
+          <li>{{icon "i-clock"}}<span class="kv"><span class="lbl-sm">time</span><span class="val">UTC+8</span></span></li>
+        </ul>
+      </div>
+      <div class="pane-group">
+        <h2 class="pane-head" id="h-contact">Contact</h2>
+        <ul class="sunken rows" aria-labelledby="h-contact">
+          <li>{{icon "i-mail"}}<span class="kv"><span class="lbl-sm">email</span><a class="val" href="mailto:i@nvirellia.im">i@nvirellia.im</a></span></li>
+          <li>{{icon "i-plane"}}<span class="kv"><span class="lbl-sm">telegram</span><a class="val" href="https://t.me/noa_virellia">@noa_virellia</a></span></li>
+        </ul>
+      </div>
+      <div class="pane-group">
+        <h2 class="pane-head" id="h-ids">Identities</h2>
+        <ul class="sunken rows" aria-labelledby="h-ids">
+          <li>{{icon "i-repo"}}<span class="kv"><span class="lbl-sm">github</span><a class="val" href="https://github.com/pelikanade">pelikanade</a></span></li>
+          <li>{{icon "i-porch"}}<span class="kv"><span class="lbl-sm">nekoweb porch</span><a class="val" href="https://pelikanade.nekoweb.org/">pelikanade.nekoweb.org</a></span></li>
+          <li>{{icon "i-net"}}<span class="kv"><span class="lbl-sm">dn42</span><span class="val mono">AS4242420833</span></span></li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div><!-- /profile -->
+{{end}}
+
+{{define "avatar"}}<img src="/static/avatar.jpg" alt="Noa's avatar" width="88" height="88">{{end}}

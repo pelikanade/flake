@@ -1,0 +1,56 @@
+{{define "sprite"}}
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false">
+ <defs>
+  <linearGradient id="g-blue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9ec4ea"/><stop offset="1" stop-color="#3465a4"/></linearGradient>
+  <linearGradient id="g-ice" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#cfe2f6"/><stop offset="1" stop-color="#8db6e4"/></linearGradient>
+  <linearGradient id="g-green" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ae234"/><stop offset="1" stop-color="#4e9a06"/></linearGradient>
+  <linearGradient id="g-red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ef2929"/><stop offset="1" stop-color="#a40000"/></linearGradient>
+  <linearGradient id="g-box" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9b96e"/><stop offset="1" stop-color="#c17d11"/></linearGradient>
+  <linearGradient id="g-alu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d3d7cf"/></linearGradient>
+  <linearGradient id="g-plum" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ad7fa8"/><stop offset="1" stop-color="#5c3566"/></linearGradient>
+ <linearGradient id="g-in" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#729fcf" stop-opacity=".62"/><stop offset="1" stop-color="#729fcf" stop-opacity=".12"/></linearGradient>
+  <linearGradient id="g-out" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fcaf3e" stop-opacity=".6"/><stop offset="1" stop-color="#fcaf3e" stop-opacity=".12"/></linearGradient>
+  <linearGradient id="g-cache" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ad7fa8" stop-opacity=".58"/><stop offset="1" stop-color="#ad7fa8" stop-opacity=".12"/></linearGradient>
+ </defs>
+ <!-- app: profile card -->
+ <symbol id="i-app" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="url(#g-ice)" stroke="#204a87"/><circle cx="5.5" cy="6.6" r="1.8" fill="#3465a4"/><path d="M2.8 11.6c.5-1.8 1.5-2.6 2.7-2.6s2.2.8 2.7 2.6" fill="#3465a4"/><path d="M9.3 6h3.6M9.3 8.2h3.6M9.3 10.4h2.4" stroke="#204a87" stroke-linecap="round"/></symbol>
+ <!-- bird (twitter) -->
+ <symbol id="i-bird" viewBox="0 0 16 16"><path d="M14.6 4.6c-.5.2-1 .4-1.6.4.6-.3 1-.9 1.2-1.5-.6.3-1.2.6-1.9.7a2.9 2.9 0 0 0-5 2.7A8.2 8.2 0 0 1 1.5 3.5a2.9 2.9 0 0 0 .9 3.9c-.5 0-.9-.1-1.3-.3 0 1.4 1 2.6 2.3 2.9-.4.1-.8.1-1.2 0 .4 1.2 1.4 2 2.7 2A5.8 5.8 0 0 1 1 12.9a8.2 8.2 0 0 0 4.5 1.3c5.3 0 8.2-4.4 8.2-8.2v-.4c.6-.4 1-.9 1.4-1.5z" fill="url(#g-ice)" stroke="#204a87" stroke-linejoin="round" stroke-width=".5"/></symbol>
+ <!-- globe (site) -->
+ <symbol id="i-globe" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="url(#g-blue)" stroke="#204a87"/><path d="M1.8 8h12.4M8 1.6c-2.4 2.2-2.4 10.6 0 12.8M8 1.6c2.4 2.2 2.4 10.6 0 12.8M3 4.8h10M3 11.2h10" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width=".8"/></symbol>
+ <!-- porch: little house -->
+ <symbol id="i-porch" viewBox="0 0 16 16"><path d="M3 7.5v6.5h10V7.5" fill="url(#g-alu)" stroke="#555753"/><path d="M1 8.2 8 2l7 6.2" fill="none" stroke="#a40000" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><rect x="6.5" y="9.5" width="3" height="4.5" fill="#c17d11" stroke="#8f5902" stroke-width=".8"/><path d="M11 3.2v2" stroke="#555753" stroke-width="1.4"/></symbol>
+ <!-- repo: cardboard box -->
+ <symbol id="i-repo" viewBox="0 0 16 16"><path d="M1.5 5 8 2l6.5 3v7L8 15l-6.5-3z" fill="url(#g-box)" stroke="#8f5902" stroke-linejoin="round"/><path d="M1.5 5 8 8l6.5-3M8 8v7" fill="none" stroke="#8f5902"/><path d="M4.8 3.5l6.5 3" stroke="#fff" stroke-opacity=".55"/></symbol>
+ <!-- paper plane (telegram, generic) -->
+ <symbol id="i-plane" viewBox="0 0 16 16"><path d="M1.2 7.4 14.6 1.8 11.8 14 7.6 10.6 6 13.6 5.6 9.4z" fill="url(#g-ice)" stroke="#204a87" stroke-linejoin="round"/><path d="M5.6 9.4 14.6 1.8 7.6 10.6" fill="none" stroke="#204a87" stroke-linejoin="round"/></symbol>
+ <!-- network (dn42) -->
+ <symbol id="i-net" viewBox="0 0 16 16"><path d="M4 4.5 12 4.5M4 4.5 8 12M12 4.5 8 12" stroke="#555753" stroke-width="1.2"/><circle cx="4" cy="4.5" r="2.4" fill="url(#g-green)" stroke="#2e6a04"/><circle cx="12" cy="4.5" r="2.4" fill="url(#g-blue)" stroke="#204a87"/><circle cx="8" cy="12" r="2.4" fill="url(#g-plum)" stroke="#3d1f45"/></symbol>
+ <!-- status: hammer-ish gear -->
+ <symbol id="i-gear" viewBox="0 0 16 16"><path d="M8 1.5l1.2 1.7 2-.6.3 2.1 2 .7-.8 1.9 1.3 1.6-1.8 1.1.2 2.1-2.1-.1-.9 1.9L8 13.7l-1.4 1.6-.9-1.9-2.1.1.2-2.1-1.8-1.1 1.3-1.6-.8-1.9 2-.7.3-2.1 2 .6z" fill="url(#g-alu)" stroke="#555753" stroke-linejoin="round"/><circle cx="8" cy="8.2" r="2.1" fill="#fff" stroke="#555753"/></symbol>
+ <!-- heart (likes) -->
+ <symbol id="i-heart" viewBox="0 0 16 16"><path d="M8 14S1.5 9.8 1.5 5.6C1.5 3.6 3 2.2 4.8 2.2c1.4 0 2.5.8 3.2 2 .7-1.2 1.8-2 3.2-2 1.8 0 3.3 1.4 3.3 3.4C14.5 9.8 8 14 8 14z" fill="url(#g-red)" stroke="#820000" stroke-linejoin="round"/><path d="M3.6 4.4c.4-.6 1-.9 1.6-.9" stroke="#fff" stroke-opacity=".7" stroke-linecap="round"/></symbol>
+ <!-- leaf (servers named after plants) -->
+ <symbol id="i-leaf" viewBox="0 0 16 16"><path d="M2.5 13.5C2 7 6 2.5 14 2.5c0 8-4.5 11.5-11.5 11z" fill="url(#g-green)" stroke="#2e6a04" stroke-linejoin="round"/><path d="M2.6 13.4C6 10 8.5 7.5 11.5 5" fill="none" stroke="#fff" stroke-opacity=".75" stroke-linecap="round"/></symbol>
+ <!-- clock -->
+ <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="#fff" stroke="#555753"/><path d="M8 4v4l2.6 1.6" fill="none" stroke="#2e3436" stroke-width="1.3" stroke-linecap="round"/></symbol>
+ <!-- person (pronouns) -->
+ <symbol id="i-person" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" fill="url(#g-ice)" stroke="#204a87"/><path d="M2.5 14.5c.6-3.4 2.8-5 5.5-5s4.9 1.6 5.5 5z" fill="url(#g-blue)" stroke="#204a87" stroke-linejoin="round"/></symbol>
+ <!-- info (things to know) -->
+ <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.8" fill="url(#g-blue)" stroke="#204a87"/><circle cx="8" cy="4.9" r="1.1" fill="#fff"/><path d="M8 7.2v4.6" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/></symbol>
+ <!-- skills: toolbox-ish wrench -->
+ <symbol id="i-tools" viewBox="0 0 16 16"><rect x="1.5" y="6" width="13" height="8" rx="1" fill="url(#g-red)" stroke="#820000"/><path d="M5.5 6V4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2" fill="none" stroke="#555753" stroke-width="1.3"/><path d="M1.5 9.2h13" stroke="#820000"/><rect x="7" y="8.4" width="2" height="1.8" fill="#eeeeec" stroke="#555753" stroke-width=".7"/></symbol>
+<!-- resources tab (little history graph) -->
+ <symbol id="i-chart" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1" fill="#fff" stroke="#555753"/><path d="M2 12 5 8l2.5 2L10.5 5 14 7.5V13H2z" fill="#9ec4ea"/><path d="M2 12 5 8l2.5 2L10.5 5 14 7.5" fill="none" stroke="#204a87" stroke-width="1.2" stroke-linejoin="round"/></symbol>
+<!-- status tab (heartbeat trace) -->
+ <symbol id="i-pulse" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1" fill="#fff" stroke="#555753"/><path d="M2.5 8.5h2.6l1.2-3.2 2.2 6 1.5-3.8h3.5" fill="none" stroke="#a40000" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+<!-- host probe (two-unit rack server) -->
+ <symbol id="i-host" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="5" rx="1" fill="url(#g-alu)" stroke="#555753"/><rect x="1.5" y="8.5" width="13" height="5" rx="1" fill="url(#g-alu)" stroke="#555753"/><circle cx="4" cy="5" r="1" fill="#73d216" stroke="#2e6a04" stroke-width=".5"/><circle cx="4" cy="11" r="1" fill="#73d216" stroke="#2e6a04" stroke-width=".5"/><path d="M7 4.5h5.5M7 6h5.5M7 10.5h5.5M7 12h5.5" stroke="#888a85" stroke-width=".8"/></symbol>
+<!-- dialog question -->
+ <symbol id="i-quest" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="url(#g-blue)" stroke="#204a87" stroke-width="1.5"/><path d="M8 18c3-9 11-13 19-12" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2.5" stroke-linecap="round"/><path d="M17.5 18.5c0-4 3-6.5 7-6.5s7 2.4 7 6c0 5-6.5 5.2-6.5 10" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round"/><circle cx="25" cy="35" r="2.8" fill="#fff"/></symbol>
+ <!-- small bud bullet -->
+ <symbol id="i-bud" viewBox="0 0 16 16"><path d="M8 15V8.5" stroke="#4e9a06" stroke-width="1.4"/><path d="M8 11c-2.4 0-3.6-1.2-3.8-3 2.2 0 3.4 1 3.8 3z" fill="#73d216" stroke="#2e6a04" stroke-width=".7"/><circle cx="8" cy="5.4" r="3.4" fill="url(#g-plum)" stroke="#5c3566" stroke-width=".8"/><circle cx="7" cy="4.4" r="1" fill="#fff" fill-opacity=".55"/></symbol>
+  <!-- contact: envelope -->
+ <symbol id="i-mail" viewBox="0 0 16 16"><rect x="1.5" y="3.5" width="13" height="9" rx="1.2" fill="url(#g-ice)" stroke="#204a87"/><path d="M2 4.2 8 9l6-4.8" fill="none" stroke="#204a87" stroke-linejoin="round"/></symbol>
+</svg>
+{{end}}

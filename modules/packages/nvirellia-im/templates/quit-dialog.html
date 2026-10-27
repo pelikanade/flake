@@ -1,0 +1,15 @@
+{{define "quit-dialog"}}
+<dialog class="gtkdlg" id="quit-dlg" aria-labelledby="dlg-h" aria-describedby="dlg-d">
+  <div class="titlebar" aria-hidden="true"><span class="t">Quit</span></div>
+  <form method="dialog">
+    <div class="dlg-body">
+      {{icon "i-quest"}}
+      <div><h2 id="dlg-h">Quit Profile?</h2><p id="dlg-d">closing the sheet won't stop my agents. they'll just keep going without an audience.</p></div>
+    </div>
+    <div class="dlg-btns">
+      <button class="btn" value="cancel" autofocus>Cancel</button>
+      <button class="btn" value="quit">Quit</button>
+    </div>
+  </form>
+</dialog>
+{{end}}

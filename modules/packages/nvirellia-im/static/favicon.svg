@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Noa Virellia">
+ <defs>
+  <linearGradient id="ice" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#cfe2f6"/><stop offset="1" stop-color="#8db6e4"/></linearGradient>
+  <linearGradient id="plum" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ad7fa8"/><stop offset="1" stop-color="#5c3566"/></linearGradient>
+  <linearGradient id="leaf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ae234"/><stop offset="1" stop-color="#4e9a06"/></linearGradient>
+ </defs>
+ <rect x="1" y="1" width="30" height="30" rx="6" fill="url(#ice)" stroke="#204a87" stroke-width="2"/>
+ <path d="M16 29V16" stroke="#4e9a06" stroke-width="2.6" stroke-linecap="round"/>
+ <path d="M16 22.4c-4.8 0-7.4-2.6-7.8-6.4 4.6 0 7 2.2 7.8 6.4z" fill="url(#leaf)" stroke="#2e6a04" stroke-width="1.2" stroke-linejoin="round"/>
+ <path d="M16 25.6c4.6-1 7.2-4 7.8-7.8-4.2.8-6.8 3.6-7.8 7.8z" fill="url(#leaf)" stroke="#2e6a04" stroke-width="1.2" stroke-linejoin="round"/>
+ <circle cx="16" cy="10" r="6.2" fill="url(#plum)" stroke="#5c3566" stroke-width="1.6"/>
+ <circle cx="13.6" cy="7.6" r="1.9" fill="#fff" fill-opacity=".55"/>
+</svg>

@@ -1,0 +1,70 @@
+{{define "status"}}{{if .Status}}
+<section id="status" class="mon tabpanel" role="tabpanel" aria-labelledby="tab-status">
+  <div class="mon-head">
+    <h2>Status</h2>
+    <span class="aside">uptime checks via gatus, host probes via prometheus; versions against flake main; times in UTC+8</span>
+  </div>
+{{with .Status.Uptime}}
+  <section class="frame" aria-labelledby="h-uptime">
+    <h3 class="legend" id="h-uptime">{{icon "i-pulse"}}Uptime</h3>
+    <div class="frame-tools">
+      <p class="cap">{{.Summary}} · last 50 checks each, newest on the right</p>
+      <p class="key" aria-hidden="true"><span><span class="useg up"></span>up</span><span><span class="useg down"></span>down</span><span><span class="useg none"></span>no data</span></p>
+    </div>
+    <div class="uptime sunken">
+      <div class="u-head" aria-hidden="true"><span>monitor</span><span>recent checks</span><span>24h</span><span>7d</span></div>
+      <ul class="u-rows">
+{{range .Endpoints}}        <li class="urow {{.State}}">
+          <div class="u-id">
+            <b class="u-name">{{.Name}}</b>
+            <span class="u-sub"><span class="state {{.State}}">{{.State}}</span>{{with .Group}}<span class="u-group">{{.}}</span>{{end}}</span>
+          </div>
+          <div class="u-track">
+            <div class="ubar" role="img" aria-label="{{.BarLabel}}">{{range .Slots}}<span class="useg {{.State}}" title="{{.Title}}"></span>{{end}}</div>
+            <p class="u-axis"><span>{{.Oldest}}</span><span class="u-tally">{{.Tally}}</span><span>last {{.Last}}{{with .Latency}} · {{.}}{{end}}</span></p>
+          </div>
+          <dl class="u-nums">
+            <div class="d24"><dt>24h</dt><dd>{{.Uptime24h}}</dd></div>
+            <div class="d7"><dt>7d</dt><dd>{{.Uptime7d}}</dd></div>
+          </dl>
+        </li>
+{{end}}      </ul>
+    </div>
+  </section>
+{{end}}
+{{with .Status.Probes}}
+  <section class="frame" aria-labelledby="h-probes">
+    <h3 class="legend" id="h-probes">{{icon "i-host"}}Probes</h3>
+    <div class="frame-tools">
+      <p class="cap">{{.Summary}} · graphs show the last {{.Window}} on a 0–100% scale</p>
+      <p class="key" aria-hidden="true"><span><span class="sw cpu"></span>cpu</span><span><span class="sw mem"></span>memory</span><span><span class="sw disk"></span>disk</span></p>
+    </div>
+    <div class="hosts">
+{{range .Systems}}      <article class="host {{.State}}">
+        <header class="host-head">
+          {{icon "i-host"}}
+          <div class="host-id"><h4>{{.Name}}</h4>{{with .Host}}<span class="mono">{{.}}</span>{{end}}</div>
+          <span class="state {{.State}}">{{.State}}</span>
+        </header>
+        <dl class="host-facts">
+          <div><dt>up for</dt><dd>{{.Uptime}}</dd></div>
+          <div><dt>seen</dt><dd>{{.Seen}}</dd></div>
+          <div class="ver"><dt>version</dt><dd><span class="mono"{{with .VersionFull}} title="{{.}}"{{end}}>{{.Version}}</span>{{if .VersionLabel}} <span class="vtag {{.VersionState}}">{{.VersionLabel}}</span>{{end}}</dd></div>
+          <div class="moment"><dt>last update</dt><dd>{{.Updated}}</dd></div>
+        </dl>
+{{if ne .State "up"}}        <p class="host-note">not answering scrapes; live metrics withheld</p>
+{{end}}        <ul class="metrics">
+{{range .Metrics}}          <li class="metric {{.Key}}">
+            <span class="m-name"><span class="sw {{.Key}}" aria-hidden="true"></span>{{.Label}}</span>
+            <span class="meter{{with .Level}} {{.}}{{end}}" aria-hidden="true">{{with .Fill}}<span style="width: {{.}}"></span>{{end}}</span>
+            <b class="m-val">{{.Value}}</b>
+            {{if .Line}}<svg class="sparkline" viewBox="0 0 120 30" preserveAspectRatio="none" role="img" aria-label="{{.GraphLabel}}"><path class="spark-g" d="M0 8H120M0 15H120M0 22H120"/><polygon class="spark-a" points="{{.Area}}"/><polyline class="spark-l" points="{{.Line}}"/></svg>{{else}}<span class="sparkline none" role="img" aria-label="{{.GraphLabel}}">no history</span>{{end}}
+          </li>
+{{end}}        </ul>
+        <p class="spark-axis" aria-hidden="true"><span>−{{$.Status.Probes.Window}}</span><span>now</span></p>
+      </article>
+{{end}}    </div>
+  </section>
+{{end}}
+</section>
+{{end}}{{end}}
