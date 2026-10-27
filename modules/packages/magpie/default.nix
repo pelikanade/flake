@@ -229,8 +229,8 @@ let
 
       passthru.update = {
         kind = "nix-update";
-        file = "modules/packages/magpie.nix";
-        files = [ "modules/packages/magpie.nix" ];
+        file = "modules/packages/magpie/default.nix";
+        files = [ "modules/packages/magpie/default.nix" ];
       };
 
       meta = {

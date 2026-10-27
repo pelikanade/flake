@@ -47,9 +47,9 @@ _: {
 
         passthru.update = {
           kind = "rev";
-          file = "modules/packages/herdr-reviewr.nix";
+          file = "modules/packages/herdr-reviewr/default.nix";
           repo = "persiyanov/herdr-reviewr";
-          files = [ "modules/packages/herdr-reviewr.nix" ];
+          files = [ "modules/packages/herdr-reviewr/default.nix" ];
         };
 
         meta = {
