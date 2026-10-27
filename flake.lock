@@ -805,15 +805,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1792946669,
-        "narHash": "sha256-Bq4IpE0QzVe5krHObOKGGhmrcG6ErcZgtmYesDG8eVk=",
-        "owner": "pelikanade",
+        "lastModified": 1792821753,
+        "narHash": "sha256-f3hXjwjenlXr8c8FmXMnz6PZ8QGyeyouJ/CtRwO8OdM=",
+        "owner": "getpaseo",
         "repo": "paseo",
-        "rev": "8eca5ff5420348cd875c9fd7f6725caefb01d06c",
+        "rev": "d34d17a9072149320ace35ec2a2e5c7dcd992cb3",
         "type": "github"
       },
       "original": {
-        "owner": "pelikanade",
+        "owner": "getpaseo",
+        "ref": "v0.13.0",
         "repo": "paseo",
         "type": "github"
       }

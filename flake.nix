@@ -63,7 +63,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     paseo = {
-      url = "github:pelikanade/paseo";
+      url = "github:getpaseo/paseo/v0.13.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     sops-nix = {

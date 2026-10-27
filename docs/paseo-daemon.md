@@ -49,14 +49,17 @@ Use `ssh://USER@HOST?daemonPort=6768` for SSH transport and adjust the health pr
 below. Commands selecting the service's `--home` follow its published endpoint.
 
 `paseo-desktop` and `paseo-daemon` are upstream packages from the
-[pelikanade/paseo](https://github.com/pelikanade/paseo) flake input, built
-against this repository's nixpkgs. Upstream owns the version, source, npm
-dependency hash, and runtime closures: `paseo-daemon` is its headless `paseo`
-package and `paseo-desktop` is its Electron application, transparent Linux
-window included. Both wrappers run Paseo in production mode, so the
-development-only mock providers do not appear while agents keep their inherited
-`NODE_ENV`. The headless build includes the upstream web assets, but serving
-them remains disabled by default.
+[getpaseo/paseo](https://github.com/getpaseo/paseo) flake input, pinned to the
+release tag matching the composed version and built against this repository's
+nixpkgs. Upstream owns the version, source, npm dependency hash, and runtime
+closures: `paseo-daemon` is its headless `paseo` package and `paseo-desktop` is
+its Electron application. The package module raises the daemon build's Node heap
+limit and applies the repository's `patches/` itself, because upstream's build
+phases install with `npm ci --ignore-scripts` and skip the postinstall that
+patches renderer dependencies. Both wrappers run Paseo in production mode, so
+the development-only mock providers do not appear while agents keep their
+inherited `NODE_ENV`. The headless build includes the upstream web assets, but
+serving them remains disabled by default.
 
 ## Systemd lifecycle and execution account
 
