@@ -17,10 +17,12 @@ let
       xdg-utils,
       desktop-file-utils,
       coreutils,
+      gnused,
       dbus,
       python3,
       bash,
       procps,
+      nodejs,
       versionCheckHook,
       grok,
       claude-code,
@@ -42,7 +44,20 @@ let
       # sign-in test's bubble channel. The patch makes the channel in
       # Written instead, and closes only an open one; its wake-up semantics
       # are unchanged.
-      patches = [ ./magpie-lazy-written-channel.patch ];
+
+      # Upstream issues at this release: a stopped WSL distro's Hermes
+      # profiles were listed, which starts it (#3924); the tests that count
+      # a shared list and the agent's picker predate two changes (the
+      # Codex-shaped ask of a Responses base, #3854; codexViaMagpieFor,
+      # #3919). The sandbox reports /proc/<pid>/environ empty for a moment
+      # after Start, so the tests that read a child's environment wait.
+      patches = [
+        ./magpie-lazy-written-channel.patch
+        ./magpie-cold-hermes-profiles.patch
+        ./magpie-shared-list-tests.patch
+        ./magpie-tui-agent-picker.patch
+        ./magpie-sandbox-child-env.patch
+      ];
 
       vendorHash = "sha256-TnyCe6gD8SC4625Fc5iFSDLbs0a0ehdi0MlN1kANoQg=";
 
@@ -111,6 +126,7 @@ let
         dbus
         bun
         procps
+        nodejs
       ];
       preCheck = ''
         export MAGPIE_BUN="${lib.getExe bun}"
@@ -134,6 +150,15 @@ let
             lib.makeBinPath [
               coreutils
               bash
+            ]
+          }'
+        # The agy function it writes reads settings.json with sed and head,
+        # neither of which the PATH the test gives it reaches.
+        substituteInPlace internal/agent/wsl_agy_test.go \
+          --replace-fail ':/usr/bin:/bin' ':${
+            lib.makeBinPath [
+              coreutils
+              gnused
             ]
           }'
         # The fish stand-in prints its answer through a PATH of its own.

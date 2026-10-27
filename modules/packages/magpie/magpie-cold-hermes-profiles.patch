@@ -1,0 +1,30 @@
+From: JoeyWu-tech
+Subject: [PATCH] agent: a stopped distro's Hermes profiles are never listed
+
+Upstream fix for #3924 (commit 97ca0160 on main 7f0f71a0). The Hermes
+builder adds a field for each profile besides the connected one
+(hermesProfileFields), found through hermesOthers and hermesProfiles,
+which lists <root>/profiles and stats each profile's tombstone and
+config.yaml. The builder runs at a stopped distro's place too, so every
+build opened the distro's folder and started the distro again.
+
+---
+ internal/agent/hermes.go | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/internal/agent/hermes.go b/internal/agent/hermes.go
+--- a/internal/agent/hermes.go
++++ b/internal/agent/hermes.go
+@@ -342,7 +342,12 @@ var hermesProfileID = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
+ // HERMES_HOME under it is a profile of; a HERMES_HOME elsewhere is the root itself, or, as
+ // <root>/profiles/<name>, a profile of <root> (get_default_hermes_root).
+ // A profile with no config.yaml yet is left out: magpie doesn't make one.
++// None at a stopped distro's place, whose folder is never listed: that
++// starts it (#3896).
+ func hermesProfiles(at place) []string {
++	if at.cold {
++		return nil
++	}
+ 	root := hermesRoot(at)
+ 	paths := []string{filepath.Join(root, "config.yaml")}
+ 	ps := filepath.Join(root, "profiles")
