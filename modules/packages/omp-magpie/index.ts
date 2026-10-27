@@ -25,7 +25,9 @@ function endpointUrl(input: string): string {
 	return url.toString().replace(/\/+$/, "").replace(/\/v1$/, "");
 }
 
-function modelConfig(model: MagpieModel, endpoint: string): ProviderModelConfig & { baseUrl: string } {
+type MagpieModelConfig = ProviderModelConfig & { baseUrl: string; supportsTools: true };
+
+function modelConfig(model: MagpieModel, endpoint: string): MagpieModelConfig {
 	const native = model.native_endpoints ?? [];
 	const api = native.includes("/v1/responses")
 		? "openai-responses"
@@ -45,6 +47,11 @@ function modelConfig(model: MagpieModel, endpoint: string): ProviderModelConfig 
 		reasoning: model.reasoning === true || efforts.length > 0,
 		thinking: efforts.length > 0 ? { mode: api === "anthropic-messages" ? "budget" : "effort", efforts } : undefined,
 		input: model.modalities?.input?.includes("image") ? ["text", "image"] : ["text"],
+		// omp resolves an omitted supportsTools from the bundled reference of the bare model id,
+		// where fireworks/qwen3.8-max declares no tools; Magpie answers tool calls on every chat
+		// endpoint, and the inherited false forces omp's text <tool_call> dialect, which those
+		// models leak into the message body.
+		supportsTools: true,
 		// The gateway catalog has no prices; zero means unreported, not free.
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 		contextWindow,

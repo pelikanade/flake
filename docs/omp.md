@@ -45,7 +45,11 @@ Discovery reads the gateway's `/v1/models` with that key. It preserves model
 IDs, context/output limits, image input and supported reasoning levels, and
 uses native Responses or Anthropic Messages endpoints when advertised;
 other models use Chat Completions. Anthropic requests use budget thinking,
-which Magpie adapts for models requiring adaptive thinking. Missing token
+which Magpie adapts for models requiring adaptive thinking. Every model declares
+native tool support: omp otherwise inherits `supportsTools: false` from the
+bundled reference of a matching bare ID (for example `fireworks/qwen3.8-max`),
+switches to its text `<tool_call>` dialect, and those models leak the calls into
+the message body. Missing token
 limits use omp's defaults (128,000 context and 16,384 output tokens); the
 gateway does not advertise prices, so cost is unreported.
 
