@@ -28,7 +28,7 @@ type readouts struct {
 }
 
 type legend struct {
-	In, Cache, Out string
+	Total string
 }
 
 // statusView is the Status panel, already formatted for the template.
@@ -137,8 +137,6 @@ func newPage(f feed.Feed) (page, error) {
 		}
 	}
 	todayTot := t.Today.All()
-	todayCache := t.Today.CacheRead + t.Today.CacheWrite
-	hourCache := t.Hourly.CacheRead[nowH] + t.Hourly.CacheWrite[nowH]
 
 	snapshotLabel := generated.Format("2006-01-02 15:04") + " (UTC+8)"
 	p.Resources = true
@@ -154,9 +152,7 @@ func newPage(f feed.Feed) (page, error) {
 		Note:       fmt.Sprintf("magpie snapshot: %s", snapshotLabel),
 	}
 	p.Legend = legend{
-		In:    fmt.Sprintf("today %s · this hour %s", fmtTokens(t.Today.Input), fmtTokens(t.Hourly.Input[nowH])),
-		Cache: fmt.Sprintf("today %s · this hour %s", fmtTokens(todayCache), fmtTokens(hourCache)),
-		Out:   fmt.Sprintf("today %s · this hour %s", fmtTokens(t.Today.Output), fmtTokens(t.Hourly.Output[nowH])),
+		Total: fmt.Sprintf("today %s · this hour %s", fmtTokens(todayTot), fmtTokens(hourTot[nowH])),
 	}
 	return p, nil
 }

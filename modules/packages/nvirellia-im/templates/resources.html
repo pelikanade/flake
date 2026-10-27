@@ -8,7 +8,7 @@
   <section class="frame js-only" aria-labelledby="h-hist">
     <h3 class="legend" id="h-hist">{{icon "i-chart"}}Token History</h3>
     <div class="frame-tools">
-      <p class="cap" id="graph-cap">input, cache and output by hour, today</p>
+      <p class="cap" id="graph-cap">tokens by hour, today</p>
       <div class="toggles" role="group" aria-label="Time range">
         <button type="button" class="btn" data-range="today" aria-pressed="true">today</button>
         <button type="button" class="btn" data-range="7d" aria-pressed="false">7d</button>
@@ -16,9 +16,7 @@
     </div>
     <svg class="graph" id="graph" role="img" aria-label="token history graph"></svg>
     <div class="legend-row">
-<p class="lg"><span class="sw in" aria-hidden="true"></span><b>Input</b>{{template "legend-value" .Legend.In}}</p>
-<p class="lg"><span class="sw cache" aria-hidden="true"></span><b>Cache</b>{{template "legend-value" .Legend.Cache}}</p>
-<p class="lg"><span class="sw out" aria-hidden="true"></span><b>Output</b>{{template "legend-value" .Legend.Out}}</p>
+<p class="lg"><span class="sw total" aria-hidden="true"></span><b>Total</b>{{template "legend-value" .Legend.Total}}</p>
     </div>
   </section>
   <div class="mon-row">
