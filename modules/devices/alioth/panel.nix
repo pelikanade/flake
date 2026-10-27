@@ -13,20 +13,11 @@
   flake.modules.nixos.alioth =
     { lib, pkgs, ... }:
     let
-      # No build script, no C dependencies, two pure-Rust crates: this is
-      # cross-compiled for aarch64 from x86_64, and the dependency tree is the
-      # part of such a build that breaks.
-      panel = pkgs.rustPlatform.buildRustPackage {
-        pname = "alioth-panel";
-        version = "0.1.0";
-        src = ./alioth/panel;
-        cargoLock.lockFile = ./alioth/panel/Cargo.lock;
-        meta.description = "Status panel for the phone's own display";
-      };
-
-      collect = pkgs.writeShellScriptBin "alioth-panel-collect" (
-        builtins.readFile ./alioth/panel/collect.sh
-      );
+      # The panel is a package of its own (`modules/packages/alioth-panel`): it
+      # already knows how to build for this phone from whatever machine compiles
+      # it, so this module only wires it to the display.
+      panel = pkgs.selfPackages.alioth-panel;
+      collect = pkgs.selfPackages.alioth-panel.passthru.collect;
 
       # The panel gives the display back on its own; this is the belt for a
       # crash that never got there, and rebinding fbcon repaints the console.

@@ -123,10 +123,14 @@ The machine is `aarch64-linux` and this repository has no aarch64 builder, so
 `nixpkgs.hostPlatform = "aarch64-linux"` and the workstation builds the whole
 system. Two consequences are worth knowing before touching that module:
 
-- `pkgs.selfPackages` resolves to the aarch64-native package set inside this
-  machine, which nothing here can build. Device-specific packages therefore
-  live in the module that uses them instead of `modules/packages`, and nothing
-  this machine imports may reach for `pkgs.selfPackages`.
+- `pkgs.selfPackages` is keyed on the machine doing the building, not on the
+  machine the system is for: inside this cross-compiled configuration it
+  resolves to the workstation's package set, so what a machine imports is
+  always something its builder can produce. A package that only ever runs on
+  the phone therefore has to be a *cross* build when a workstation produces it,
+  which `modules/packages/alioth-panel` arranges by building itself with
+  `pkgsCross.aarch64-multiplatform`; a package that can only be built natively
+  on aarch64 cannot be imported here at all.
 - Every derivation that only assembles an image — the boot image, the vendor
   boot image, the firmware, the root filesystem — has to come from
   `pkgs.buildPackages`, because its tools run on the workstation. The reverse
