@@ -130,7 +130,9 @@
     }
     const at = arr => arr.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
     const points = arr => at(arr).join(' ');
-    el('polyline', { points: points(total), class: 'l-total' }, svg, 1);
+    const path = points(total);
+    el('polygon', { points: `${L},${TOP + ph} ${path} ${L + pw},${TOP + ph}`, class: 'a-total' }, svg, 1);
+    el('polyline', { points: path, class: 'l-total' }, svg, 1);
     el('circle', { cx: x(n - 1), cy: y(total[n - 1]), r: 3, class: 'd-total' }, svg, 1);
     if (s.now >= 0 && s.now <= n - 1) {                             // today: the snapshot's place in the day
       const nx = x(s.now), end = s.now > (n - 1) / 2;
