@@ -251,6 +251,14 @@ _: {
               persistent_size = true;
             }
             {
+              # Feishu's sharing preview and its in-call window both report
+              # class Meeting with no distinguishing title, so both float;
+              # the share preview otherwise takes a tile while presenting.
+              name = "feishu-meeting";
+              match.class = "^Meeting$";
+              float = true;
+            }
+            {
               name = "meeting-idle-inhibit";
               match.class = "(?i)^(wemeet(app)?|com[.]tencent[.]wemeet)$";
               idle_inhibit = "focus";
