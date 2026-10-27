@@ -20,14 +20,14 @@ mkdir -p "$run"
 
 # --- brightness bands -------------------------------------------------------
 # The panel is on all day, so it never sits at the console's default: dim for
-# the day and dimmer for the evening, with the backlight at its floor overnight
-# — the frame is black there anyway, and kmscon owns the DRM device, so
-# `fb0/blank` is not what turns this panel down.
+# the day, dimmer for the evening, and dimmest overnight — but the frame is
+# still drawn there, so the overnight floor has to stay readable rather than
+# switch the light off.
 hour=$(printf '%(%H)T' -1)
 case "$hour" in
   0[6-9] | 1[0-9] | 2[0-1]) bright=150 ;;
   2[2-3]) bright=60 ;;
-  *) bright=1 ;;
+  *) bright=40 ;;
 esac
 if [ "$(cat "$run/band" 2>/dev/null)" != "$bright" ]; then
   echo "$bright" >/sys/class/backlight/ae94000.dsi.0/brightness 2>/dev/null

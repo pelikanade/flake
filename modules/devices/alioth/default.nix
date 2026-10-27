@@ -244,6 +244,10 @@
       ];
       boot.consoleLogLevel = 7;
 
+      # The panel's dimming schedule reads local time, and a phone that lives on
+      # one shelf has no reason to think it is in UTC.
+      time.timeZone = "Asia/Shanghai";
+
       # UFS, the root filesystem, and the USB gadget are all built into the
       # kernel; only the panel driver has to be loaded for the framebuffer
       # console to come up, which happens before the root filesystem is

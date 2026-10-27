@@ -63,7 +63,7 @@
           ];
           Restart = "always";
           RestartSec = 2;
-          ExecStopPost = lib.getExe giveDisplayBack;
+          ExecStopPost = "${giveDisplayBack}";
         };
       };
 
