@@ -16,11 +16,19 @@ function packageName(specifier) {
   return specifier.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0]
 }
 
+// Upstream's electron-builder `files` list ships lib/main.js, the worker and
+// preloads, lib/welcome, renderer and package.json -- never lib/types. That
+// directory holds the compiled type-checker output, which the bundled main.js
+// inlines, so a bare import it names neither loads nor has to resolve here.
+const UNSHIPPED = ["lib/types"]
+
 function shippedSources(root) {
   const files = []
+  const unshipped = new Set(UNSHIPPED.map(sub => join(root, sub)))
   const visit = (directory) => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name)
+      if (unshipped.has(path)) continue
       if (entry.isDirectory()) visit(path)
       else if (/\.(?:c|m)?js$/u.test(entry.name)) files.push(path)
     }

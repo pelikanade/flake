@@ -193,6 +193,7 @@ _: {
         "@deepseek-ai/dsh-home-paths"
         "@deepseek-ai/dsh-host-webserver"
         "@deepseek-ai/dsh-jobs"
+        "@deepseek-ai/dsh-plugin-manager"
         "@deepseek-ai/dsh-schedule"
         "@deepseek-ai/dsh-skill-office"
         "@deepseek-ai/dsh-tool-workspace-dependencies"
