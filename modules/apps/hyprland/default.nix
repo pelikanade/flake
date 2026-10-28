@@ -307,9 +307,17 @@ _: {
               # make it trail the position it is being told to take.
               # no_blur: the window is transparent everywhere the sprite is not,
               # so blur would show as a halo behind the pet.
+              #
+              # pin: the app asks the window manager to keep the pet on every
+              # workspace (#979) by setting _NET_WM_STATE_STICKY itself, which
+              # Hyprland does not act on; the pin rule is the compositor-side
+              # equivalent, and it carries the overlays that belong to the pet
+              # (HUD, quota ring, bubbles) along with it. It only applies to
+              # floating windows, which is what the float above is for.
               name = "clawd-overlays";
               match.title = "^(Clawd|clawd-on-desk|Session HUD|Quota Ring|Choose Clawd activity area|Animation Preview)$";
               float = true;
+              pin = true;
               decorate = false;
               no_shadow = true;
               no_blur = true;

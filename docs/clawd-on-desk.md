@@ -75,6 +75,13 @@ matches those windows by title — every frameless page in the app falls back to
 the application name for a title it does not set, and the framed dialogs
 (settings, dashboard, welcome) are localized and keep their decorations.
 
+The rule also pins them. The app asks the window manager to keep the pet on
+every workspace by setting `_NET_WM_STATE_STICKY` on its windows, which
+Hyprland does not act on, so without the rule the pet lives on whichever
+workspace it was started on and disappears from the rest; `pin` is Hyprland's
+equivalent and carries the overlays that belong to the pet with it. Pinning
+only applies to floating windows, which is why the rule floats them too.
+
 ## Agent integrations
 
 Clawd watches agents through hooks it installs into their configuration files,
