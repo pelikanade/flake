@@ -29,13 +29,13 @@ let
     }:
     buildGoModule (finalAttrs: {
       pname = "magpie";
-      version = "0.1.1780";
+      version = "0.1.1967";
 
       src = fetchFromGitHub {
         owner = "yetone";
         repo = "magpie";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-KwP3sBnHuSwOLPB2StpFHHkUf9uMAk7pWXkPvTLx/mU=";
+        hash = "sha256-57f1e1fr6V4ogB0JMWP0n3Ut4xaMzs/oOTFCYP+oBWE=";
       };
 
       # Go forbids closing, from outside a synctest bubble, a channel the
