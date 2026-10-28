@@ -337,6 +337,95 @@ A repeat would want the rail's own reporting, `/sys/kernel/debug/regulator/regul
 under load, and the same write with the phone on a Power Delivery source, which
 is the only lever that changes what the port can give.
 
+## Time
+
+The phone has no usable real-time clock, and the kernel trusts it anyway.
+
+- `rtc-pm8xxx` reads **1975-06-08**, and `CONFIG_RTC_HCTOSYS=y` with
+  `CONFIG_RTC_HCTOSYS_DEVICE="rtc0"` makes the kernel set the system clock
+  from it at every boot: `rtc-pm8xxx ... setting system clock to
+  1975-06-08T21:12:56 UTC`. The RTC's *rate* is right — its `since_epoch`
+  tracks real time one for one — but its *value* is wrong, so it is useless
+  as a time source and only ever an offset.
+- `systemd-timesyncd` then advances the clock to the timestamp saved in
+  `/var/lib/systemd/timesync/clock`, which is the moment the previous boot
+  died, and NTP finally steps it to the real time. Measured on one boot, in
+  order: `1975-06-08` → `13:18:28` (the saved timestamp) → `Initial clock
+  synchronization to Wed 2026-10-28 14:33:35`. The clock is wrong for the
+  first minute or two of every boot, and it moves by years and by tens of
+  minutes when it is corrected.
+- `tailscaled` records each of those steps: `monitor: time jump detected
+  (slept 450465h20m32s), probably wake from sleep`, once per boot, and
+  rebinds its sockets afterwards.
+
+The wall clock is corrected; the boot clock is not. On 2026-10-28,
+`/proc/uptime` (`CLOCK_BOOTTIME`) was caught **74.5 minutes off while the
+wall clock was NTP-correct and agreed with another machine**: at 15:14:40 it
+implied a boot at 13:18:40, and eight minutes later at 15:22:52 it implied
+14:33:10 — the real uptime being pinned independently by the status panel's
+frame counter (2.08 s per frame) and the collector's 30 s cadence. The
+magnitude is the order of the active clocksource's counter window
+(`sched_clock: 56 bits at 19MHz, resolution 52ns, wraps every
+4398046511078ns`), and this class of erratum exists on ARM64: the Allwinner
+A64's architected timer jumps by a whole `2^56` wrap, and the kernel works
+around it per SoC through `CONFIG_ARM_ARCH_TIMER_OOL_WORKAROUND`, which is
+enabled here but carries no SM8250 entry. That the counter is what moves is
+inference from the magnitude and the readouts; the readouts themselves are
+measured.
+
+What this looks like to a person is the status panel misbehaving, because two
+of its fields are clock readouts: `data` is the age of the collector's sample
+(dim below 90 s, amber below 240 s, red beyond) and `up` is `/proc/uptime`.
+A clock that jumps makes `data` red and `up` nonsense, and every deadline
+that lands on the jump is wrong with it — the panel's own two-second sleep,
+the collector's 30 s timer, tailscale's keepalives, and systemd's kick of the
+hardware watchdog (20 s on `/dev/watchdog0`, `qcom_wdt`). Timeouts that never
+arrive leave drivers waiting forever, their tasks sit in `D`, and `loadavg` —
+`nr_running` plus `nr_uninterruptible` — climbs until the phone is reset. The
+last long boot ended that way: no `systemd-shutdown`, no unit stops, no
+`Journal stopped`, just a journal that stops mid-sentence at 13:18:00, while
+the boot before it ended with `watchdog0: pretimeout event` in the log.
+
+None of it can be seen in the journal, because this kernel is built without
+the detectors that would report it:
+
+```
+# CONFIG_DETECT_HUNG_TASK is not set
+# CONFIG_SOFTLOCKUP_DETECTOR is not set
+# CONFIG_HARDLOCKUP_DETECTOR is not set
+# CONFIG_MTD_OOPS is not set
+```
+
+`hctosys=1` on `rtc0`, `/sys/fs/pstore` empty after the reset, and the
+`mtdoops.*` arguments on the command line do nothing without
+`CONFIG_MTD_OOPS`, so a stall and a reset leave no record at all.
+
+The one-line check, which has already gone red once:
+
+```
+ssh root@alioth 'w=$(date +%s); u=$(cut -d" " -f1 /proc/uptime); echo "implied boot $((w-${u%.*})) wall $w uptime ${u%.*}"'
+```
+
+The implied boot time must not move between runs. When it does, the phone's
+clock moved under it.
+
+Levers, none applied yet:
+
+- `CONFIG_RTC_HCTOSYS=n` (and probably `CONFIG_RTC_SYSTOHC=n`), so the boot
+  never takes its time from `rtc0` and `systemd-timesyncd` owns the clock
+  alone.
+- `clocksource=arch_mmio_counter` on the kernel command line. The same
+  counter read through MMIO is registered as a second clocksource here
+  (`available_clocksource` lists it), which is the view the A64 workaround
+  falls back to; it is reversible and verifiable by reading
+  `current_clocksource` after a boot.
+- The detectors above plus a ramoops region, so the next stall is recorded
+  rather than inferred.
+- The UFS rule in [Storage](#storage) covers the platform device only; the
+  UFS SCSI nodes still read `power/control=auto`
+  (`/sys/bus/scsi/devices/0:0:0:49488/`), so their runtime resume can still
+  re-enable the rails that failed with `-110`.
+
 ## Cluster
 
 `k3s` runs a single-node server, and the tailnet is the way in: the API answers
