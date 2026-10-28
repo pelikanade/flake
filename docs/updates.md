@@ -57,7 +57,7 @@ whether `main` receives the repairs.
    built, separately:
 
    ```
-   strata: update 1.0.0 -> 1.1.0
+   magpie: update 0.1.1649 -> 0.1.1780
    ```
 
    records the commit after them as `clean-tip`, publishes the gate if the
@@ -102,7 +102,7 @@ whether `main` receives the repairs.
    on `main`. Otherwise the repair is committed:
 
    ```
-   packages: adapt updates (strata)
+   packages: adapt updates (magpie)
    ```
 7. **Dispatch deployment.** The workflow dispatches the `Deploy` workflow for
    the revision it just pushed: a push made with `GITHUB_TOKEN` does not trigger

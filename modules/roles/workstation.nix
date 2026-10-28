@@ -17,6 +17,7 @@
     agent-desktops
     delta
     desktop-apps
+    dolphin
     fcitx5
     firefox
     fish
@@ -36,7 +37,6 @@
     skills
     splayer-next
     starship
-    strata
     tailscale
     tailscale-desktop
     udiskie
