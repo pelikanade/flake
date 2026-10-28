@@ -386,8 +386,8 @@ last long boot ended that way: no `systemd-shutdown`, no unit stops, no
 `Journal stopped`, just a journal that stops mid-sentence at 13:18:00, while
 the boot before it ended with `watchdog0: pretimeout event` in the log.
 
-None of it can be seen in the journal, because this kernel is built without
-the detectors that would report it:
+None of it could be seen in the journal, because the kernel this was diagnosed
+on was built without the detectors that would report it:
 
 ```
 # CONFIG_DETECT_HUNG_TASK is not set
@@ -396,9 +396,9 @@ the detectors that would report it:
 # CONFIG_MTD_OOPS is not set
 ```
 
-`hctosys=1` on `rtc0`, `/sys/fs/pstore` empty after the reset, and the
-`mtdoops.*` arguments on the command line do nothing without
-`CONFIG_MTD_OOPS`, so a stall and a reset leave no record at all.
+`hctosys` was on for `rtc0`, `/sys/fs/pstore` was empty after the reset, and the
+`mtdoops.*` arguments on the command line do nothing without `CONFIG_MTD_OOPS`,
+so a stall and a reset left no record at all.
 
 The one-line check, which has already gone red once:
 
@@ -409,20 +409,30 @@ ssh root@alioth 'w=$(date +%s); u=$(cut -d" " -f1 /proc/uptime); echo "implied b
 The implied boot time must not move between runs. When it does, the phone's
 clock moved under it.
 
-Levers, none applied yet:
+What is in place now, from the first boot on this kernel:
 
-- `CONFIG_RTC_HCTOSYS=n` (and probably `CONFIG_RTC_SYSTOHC=n`), so the boot
-  never takes its time from `rtc0` and `systemd-timesyncd` owns the clock
-  alone.
-- `clocksource=arch_mmio_counter` on the kernel command line. The same
-  counter read through MMIO is registered as a second clocksource here
-  (`available_clocksource` lists it), which is the view the A64 workaround
-  falls back to; it is reversible and verifiable by reading
-  `current_clocksource` after a boot.
-- The detectors above plus a ramoops region, so the next stall is recorded
-  rather than inferred.
-- The UFS rule in [Storage](#storage) covers the platform device only; the
-  UFS SCSI nodes still read `power/control=auto`
+- `CONFIG_RTC_HCTOSYS` and `CONFIG_RTC_SYSTOHC` are off, so nothing sets the
+  clock from `rtc0` once the kernel is up. The RTC still registers, and the boot
+  still starts from the value it holds, but NTP owns the clock within half a
+  minute: the verification boot logs `Initial clock synchronization to
+  Wed 2026-10-28 20:33:20` and neither `setting system clock to 1975-…` nor a
+  `time jump detected` line from tailscaled.
+- `clocksource=arch_mmio_counter` on the kernel command line.
+  `current_clocksource` reads `arch_mmio_counter`, and the clocksource watchdog
+  has not demoted it. Whether the counter's jumps stop is a question for a long
+  uptime — the canary above is how it is answered, sampled rather than
+  remembered.
+- The detectors: `CONFIG_DETECT_HUNG_TASK=y` with a 60 s timeout,
+  `CONFIG_SOFTLOCKUP_DETECTOR=y`, `CONFIG_HARDLOCKUP_DETECTOR=y` (the buddy one,
+  there is no NMI here) and `CONFIG_WQ_WATCHDOG=y`, all confirmed in
+  `/proc/config.gz` and `/proc/sys/kernel/hung_task_timeout_secs`. A stall now
+  reports itself in the journal instead of passing silently.
+
+Still open:
+
+- A ramoops region, so a reset keeps the last lines the journal never got.
+- The UFS rule in [Storage](#storage) covers the platform device only; the UFS
+  SCSI nodes still read `power/control=auto`
   (`/sys/bus/scsi/devices/0:0:0:49488/`), so their runtime resume can still
   re-enable the rails that failed with `-110`.
 

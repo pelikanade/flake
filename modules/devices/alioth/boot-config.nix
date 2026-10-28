@@ -55,6 +55,16 @@
         # that asked for it.
         boot.kernelParams = [
           "console=tty0"
+          # The architected timer's sysreg counter is what `/proc/uptime` and
+          # every timeout ride on, and it was caught moving by 74.5 minutes
+          # while the NTP-corrected wall clock did not (see "Time" in
+          # `docs/alioth.md`). The same counter is also registered here as the
+          # clocksource `arch_mmio_counter`, read through MMIO, which is the
+          # view the kernel's Allwinner A64 arch-timer workaround falls back
+          # to; selecting it is the experiment. If the sysreg counter is fine
+          # after all, the kernel's clocksource watchdog demotes this one and
+          # switches back, and deleting this line is the whole revert.
+          "clocksource=arch_mmio_counter"
         ];
         boot.consoleLogLevel = 7;
 
