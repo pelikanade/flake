@@ -1,0 +1,34 @@
+From: nvirellia
+Subject: [PATCH] autostart: Linux writes the launcher it is running from
+
+The Linux "start at login" writer has one branch for a release and one for
+a source checkout; the source branch writes `node <app>/launch.js`, which
+needs a `node` on PATH that can resolve the `electron` npm package. A
+package built by Nix has neither, and the app then writes an autostart
+entry that can never start it.
+
+Write what the app already writes for macOS in the same situation: the
+executable it is running from, given the application directory as its
+argument. `process.execPath` is that executable under both layouts — the
+release binary, or the Electron binary that was given the application
+directory to run.
+
+---
+ src/main.js | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/src/main.js b/src/main.js
+--- a/src/main.js
++++ b/src/main.js
+@@ -407,10 +407,9 @@
+ // surface the error to the UI.
+ function _writeSystemOpenAtLogin(enabled) {
+   if (isLinux) {
+-    const launchScript = path.join(__dirname, "..", "launch.js");
+     const execCmd = app.isPackaged
+       ? `"${process.env.APPIMAGE || app.getPath("exe")}"`
+-      : `node "${launchScript}"`;
++      : `"${process.execPath}" "${app.getAppPath()}"`;
+     loginItemHelpers.linuxSetOpenAtLogin(enabled, { execCmd });
+     return;
+   }

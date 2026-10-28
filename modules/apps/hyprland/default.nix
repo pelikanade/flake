@@ -290,6 +290,32 @@ _: {
               content = "video";
               idle_inhibit = "fullscreen";
             }
+            {
+              # Clawd's overlays — the pet itself, its session HUD, quota ring,
+              # permission bubbles and the click surface — are frameless
+              # always-on-top windows that draw their own pixels and place
+              # themselves; the settings, dashboard and welcome windows are
+              # framed dialogs, and their titles are localized. So this matches
+              # the overlay titles (every frameless page falls back to the app
+              # name, which is "clawd-on-desk") rather than the class.
+              #
+              # decorate: the composer's border, shadow and rounding belong to a
+              # window that the user manages; the pet is a 150 px sprite on a
+              # transparent window, so the border draws a rectangle around it.
+              # no_anim: applyPetWindowBounds() moves the pet window every frame
+              # while it roams, and the configured move/resize animation would
+              # make it trail the position it is being told to take.
+              # no_blur: the window is transparent everywhere the sprite is not,
+              # so blur would show as a halo behind the pet.
+              name = "clawd-overlays";
+              match.title = "^(Clawd|clawd-on-desk|Session HUD|Quota Ring|Choose Clawd activity area|Animation Preview)$";
+              float = true;
+              decorate = false;
+              no_shadow = true;
+              no_blur = true;
+              no_anim = true;
+              no_initial_focus = true;
+            }
           ];
 
           # https://docs.noctalia.dev/noctalia/compositor-settings/hyprland/
