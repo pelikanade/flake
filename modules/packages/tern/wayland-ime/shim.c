@@ -8,17 +8,19 @@
 // across a focus change, so the compositor never re-activates the input method,
 // fcitx5 never re-arms its keyboard grab, and CJK input dies for the window's
 // lifetime. That is stencil-hq/tern-sdk#95 (the Wayland half of #2, closed not
-// planned), still open on Tern 0.9.5, and the reason modules/packages/tern.nix
-// puts this file in Tern's LD_LIBRARY_PATH.
+// planned; upstream closed #95 as completed on 2026-10-28, after this pin), and
+// the reason modules/packages/tern/default.nix puts this file first on Tern's
+// RUNPATH.
 //
 // Tern resolves the whole libwayland C API by name after
-// dlopen("libwayland-client.so.0"), so a shadow library that LD_LIBRARY_PATH
-// finds before the real one is what the process runs: the client's dlopen gets
-// this object, and every dlsym on that handle resolves here first. The shadow
-// intercepts the two array-form constructors, which is where it learns the text
-// input, and the two ways a client can take events (a dispatcher, which Tern
-// uses, or a listener array), which is where it learns that the text input left;
-// everything else is delegated to the real library, this object's DT_NEEDED.
+// dlopen("libwayland-client.so.0"), so a shadow library that the executable's
+// RUNPATH names before the real one is what the process runs: the client's
+// dlopen gets this object, and every dlsym on that handle resolves here first.
+// The shadow intercepts the two array-form constructors, which is where it
+// learns the text input, and the two ways a client can take events (a
+// dispatcher, which Tern uses, or a listener array), which is where it learns
+// that the text input left; everything else is delegated to the real library,
+// this object's DT_NEEDED.
 //
 // On the text input's leave event it sends disable + commit, which is exactly
 // what the protocol asks a client to do when it no longer has input focus, and

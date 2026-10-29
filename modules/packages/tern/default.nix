@@ -69,6 +69,13 @@ let
       # addDriverRunpath would have set, so that path is appended here instead.
       appendRunpaths = [
         (lib.makeLibraryPath [
+          # The input-method shadow has to be found before the wayland client it
+          # shadows, and by every launch path: `tern register` writes the desktop
+          # entries with the path of the executable it runs from, which is the
+          # wrapped binary, so a launcher starts Tern without the wrapper's
+          # environment. RUNPATH is what the executable's own dlopen reads, so
+          # this is where the shadow belongs (shim.c carries the story).
+          waylandIme
           vulkan-loader
           libGL
           libxkbcommon
@@ -95,26 +102,12 @@ let
 
       # git serves `tern plugin install`, `tern register` shells out to the
       # desktop entry, icon and MIME caches, and the settings portal is read
-      # through `gdbus` from glib.
-      #
-      # The shim is what makes Tern's input method survive a focus change. Tern
-      # speaks text-input-v3 on Wayland and never sends the `disable()` the
-      # protocol asks for when its surface loses focus; Hyprland activates the
-      # input method only on a false -> true edge of that state, so fcitx5 never
-      # re-arms its keyboard grab after the first focus change and CJK input
-      # dies for the window's lifetime (docs/tern.md, upstream
-      # stencil-hq/tern-sdk#95, still open on 0.9.5). `tern-wayland-ime` is a
-      # libwayland-client shadow that sends that request in Tern's place. Tern
-      # resolves libwayland by name after dlopen("libwayland-client.so.0"), and
-      # LD_LIBRARY_PATH is searched before the RUNPATH that names the real
-      # library, so the dlopen lands on the shadow. Children inherit the
-      # variable; the shadow is inert for a client that never asks for
-      # text-input-v3, and for one that disables correctly it adds a redundant
-      # second disable.
+      # through `gdbus` from glib. The input-method shadow needs no variable
+      # here: it rides the RUNPATH above, which `tern register` cannot strip
+      # from a launch the way it strips a wrapper's environment.
       postFixup = ''
         mv $out/bin/tern $out/bin/.tern-wrapped
         makeWrapper $out/bin/.tern-wrapped $out/bin/tern \
-          --prefix LD_LIBRARY_PATH : ${waylandIme}/lib \
           --prefix PATH : ${
             lib.makeBinPath [
               desktop-file-utils
@@ -129,6 +122,54 @@ let
       doInstallCheck = true;
       nativeInstallCheckInputs = [ versionCheckHook ];
       versionCheckProgramArg = "--version";
+
+      # The shadow only works if the executable's own RUNPATH resolves
+      # `libwayland-client.so.0` to it, with no LD_LIBRARY_PATH in play — that
+      # is the environment a launcher gives a registered desktop entry. Reuse
+      # the built binary's RUNPATH on a probe that performs the same dlopen, so
+      # a regression in how the shadow is delivered fails the build rather than
+      # silently returning to env-only delivery.
+      installCheckPhase = ''
+        runHook preInstallCheck
+
+        cat > probe.c <<'EOF'
+        #define _GNU_SOURCE
+        #include <dlfcn.h>
+        #include <stdio.h>
+
+        int main(void) {
+          void *handle = dlopen("libwayland-client.so.0", RTLD_NOW | RTLD_LOCAL);
+          if (!handle) {
+            fprintf(stderr, "dlopen: %s\n", dlerror());
+            return 1;
+          }
+          /* An interposed symbol: delegating ones report the real library, so
+             the shadow is identified by the functions it defines itself. */
+          Dl_info info;
+          if (!dladdr(dlsym(handle, "wl_proxy_add_dispatcher"), &info)) {
+            fprintf(stderr, "no wl_proxy_add_dispatcher\n");
+            return 1;
+          }
+          puts(info.dli_fname);
+          return 0;
+        }
+        EOF
+
+        $CC -o probe probe.c -ldl
+
+        # The probe keeps its own RUNPATH so the loader still finds libc, and
+        # gains Tern's ahead of it, which is the order the real process sees.
+        probeRunpath="$(patchelf --print-rpath $out/bin/.tern-wrapped):$(patchelf --print-rpath probe)"
+        patchelf --set-rpath "$probeRunpath" probe
+
+        resolved="$(env --ignore-environment ./probe)"
+        if [ "$resolved" != "${waylandIme}/lib/libwayland-client.so.0" ]; then
+          echo "libwayland-client.so.0 resolves to '$resolved', not the shadow" >&2
+          exit 1
+        fi
+
+        runHook postInstallCheck
+      '';
 
       meta = {
         description = "Native multiplexing terminal for panes, files and remote sessions";

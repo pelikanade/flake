@@ -5,8 +5,8 @@ _: {
       # The shadow is dlopened by the client as "libwayland-client.so.0" and has
       # to answer for the whole API behind that name, so it carries that SONAME
       # itself and names the real library among its dependencies. That
-      # dependency is an absolute store path because the loader resolves a bare
-      # SONAME through LD_LIBRARY_PATH, which is the shadow's own directory.
+      # dependency is an absolute store path because a bare SONAME would resolve
+      # through RUNPATH to this same directory and find the shadow again.
       #
       # It must be the same libwayland the consuming package links: two copies
       # in one process would mix proxy objects between their functions. Both
@@ -25,7 +25,7 @@ _: {
       # Sends the zwp_text_input_v3 disable() a client forgets when its surface
       # loses focus, which is what Hyprland needs to re-activate the input
       # method; shim.c carries the whole story. Tern is the consumer, through
-      # LD_LIBRARY_PATH in its wrapper.
+      # the RUNPATH prefix its package puts on this directory.
       packages.tern-wayland-ime = stdenv.mkDerivation {
         pname = "tern-wayland-ime";
         version = "1";
@@ -47,9 +47,9 @@ _: {
 
         nativeBuildInputs = [ patchelf ];
 
-        # The link above records the SONAME, which the loader would look up in
-        # LD_LIBRARY_PATH and find the shadow again: point the dependency at the
-        # store path of the real library instead.
+        # The link above records the SONAME, which the loader would search for
+        # and find the shadow again, one directory away on the same RUNPATH:
+        # point the dependency at the store path of the real library instead.
         postFixup = ''
           patchelf --replace-needed libwayland-client.so.0 ${realLib} \
             $out/lib/libwayland-client.so.0

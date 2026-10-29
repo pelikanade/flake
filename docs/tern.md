@@ -77,31 +77,41 @@ over HTTPS report `TLS support is not available`.
 
 Tern takes its input method from Wayland's text-input-v3, so fcitx5 serves it
 through its Wayland frontend (`frontend:wayland_v2` in `fcitx5-diagnose`'s
-input-context list; `terminal_ime` and `editor_ime` are on by default). Upstream
-never sends `zwp_text_input_v3.disable()` when its surface loses input focus, and
-Hyprland activates the input method only on a false → true transition of that
-state, so fcitx5 never re-arms its keyboard grab after the window's first focus
-change: pinyin then reaches the pane as raw Latin and the toggle key does
+input-context list; `terminal_ime` and `editor_ime` are on by default). Tern
+0.9.5 never sends `zwp_text_input_v3.disable()` when its surface loses input
+focus, and Hyprland activates the input method only on a false → true transition
+of that state, so fcitx5 never re-arms its keyboard grab after the window's first
+focus change: pinyin then reaches the pane as raw Latin and the toggle key does
 nothing, for the window's lifetime. Measured here as `focus:1` on the first focus
 and `focus:0` on every later one, while Ghostty's context returns to `focus:1` in
-the same situation; reported upstream as
+the same situation. Reported upstream as
 [stencil-hq/tern-sdk#95](https://github.com/stencil-hq/tern-sdk/issues/95) (the
-Wayland half of #2, closed not planned) and still open against 0.9.5.
+Wayland half of #2, closed not planned); upstream closed it as completed on
+2026-10-28, so the fix exists in a build newer than the pinned 0.9.5 — the
+shadow below is what covers the pin until the next artifact.
 
 `tern-wayland-ime` closes the gap from outside the artifact. It is a
 `libwayland-client.so.0` shadow that sends the missing `disable()` and commits it
 when the compositor says the text input left, which restores the transition
 Hyprland waits for; the client's own `enable()` on the next focus then
 re-activates the input method. Tern resolves libwayland by name after
-`dlopen("libwayland-client.so.0")`, and the package wrapper puts the shadow first
-on `LD_LIBRARY_PATH`, which the loader searches before the RUNPATH naming the
-real library, so that `dlopen` lands on the shadow — and the `dlsym`s on its
-handle resolve there first, then in the real library, which is the shadow's
-`DT_NEEDED` and the same libwayland the package itself links. Everything outside
-`zwp_text_input_v3` passes through untouched, a client that disables correctly
-only sees a redundant second disable, and `WL_IME_SHIM_LOG=/path` makes the
-shadow trace what it hooks and sends. Delete the package, the wrapper's prefix
-and this section when upstream sends the disable itself.
+`dlopen("libwayland-client.so.0")`, so the shadow has to be what that lookup
+finds; the package puts its directory first on the executable's own RUNPATH,
+which `dlopen` reads on every launch path, and the shadow's `DT_NEEDED` names the
+real store library, so both objects end up in the process and the `dlsym`s on the
+shadow's handle resolve there first, then in the real library — the same
+libwayland the package itself links. Everything outside `zwp_text_input_v3`
+passes through untouched, a client that disables correctly only sees a redundant
+second disable, and `WL_IME_SHIM_LOG=/path` makes the shadow trace what it hooks
+and sends.
+
+The RUNPATH is load-bearing, not the wrapper: `tern register` writes its desktop
+entries with the path of the executable it runs from, which is the wrapped
+binary, so a launcher start carries no wrapper environment at all. Verified with
+`LD_LIBRARY_PATH` unset: the launched process maps both the shadow and the real
+`libwayland-client.so.0` from RUNPATH alone. Delete the package, the RUNPATH
+entry and this section when the pin moves to a build that sends the disable
+itself.
 
 The lever left if the shadow ever stops matching what Tern does is Tern's own
 display-server switch: `STENCIL_DISPLAY_SERVER=x11 tern` uses XIM
