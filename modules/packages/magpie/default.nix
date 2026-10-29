@@ -150,6 +150,11 @@ let
           --replace-fail '/bin/cat' '${coreutils}/bin/cat'
         substituteInPlace internal/library/rtk_install_bottle_test.go \
           --replace-fail '/bin/cat' '${coreutils}/bin/cat'
+        # The fake WSL distro gives its shell the PATH a Linux distro has, but
+        # the sandbox has no /usr/bin: the probe reads rtk's version with head.
+        substituteInPlace internal/library/rtk_wsl_test.go \
+          --replace-fail '"PATH=/usr/bin:/bin"' \
+          '"PATH=${lib.makeBinPath [ coreutils ]}"'
         substituteInPlace internal/provider/codex_keychain_ask_unix_test.go \
           --replace-fail '/bin/sleep' '${coreutils}/bin/sleep'
         # The fake WSL launcher stands in for wsl.exe with /usr/bin/env, which
