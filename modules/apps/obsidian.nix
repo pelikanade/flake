@@ -9,11 +9,32 @@ _: {
       # secret store is available. The Secret Service is already running and
       # unlocked in the session (see the `keyring` aspect), so name the backend
       # that talks to it.
+      # Electron 43.8.x (43.8.3 in the nixos-26.05 channel of 2026-10-28) rejects
+      # a promise while it lazily loads its `webFrame` module for a vault window
+      # and prints the `UnhandledPromiseRejectionWarning` through the app at
+      # every launch. A launcher that hands the app a stderr pipe whose reader is
+      # gone then turns the write of that warning into an uncaught `EPIPE`, and
+      # the "A JavaScript error occurred in the main process" dialog comes up
+      # before any window does. stderr only ever carries diagnostics here —
+      # Obsidian itself logs to stdout, Chromium logs natively — so give it a
+      # file: the write can no longer fail, and the diagnostics stay readable
+      # under `$XDG_STATE_HOME/obsidian`. Drop this once an Electron release
+      # stops warning on that lazy load.
       programs.obsidian = {
         enable = true;
-        package = pkgs.obsidian.override {
-          commandLineArgs = "--password-store=gnome-libsecret";
-        };
+        package =
+          (pkgs.obsidian.override {
+            commandLineArgs = "--password-store=gnome-libsecret";
+          }).overrideAttrs
+            (old: {
+              postFixup = (old.postFixup or "") + ''
+                wrapProgram $out/bin/obsidian --run '
+                  log="''${XDG_STATE_HOME:-$HOME/.local/state}/obsidian/stderr.log"
+                  mkdir -p "''${log%/*}" 2>/dev/null || log=/dev/null
+                  exec 2>>"$log"
+                '
+              '';
+            });
       };
     };
 
