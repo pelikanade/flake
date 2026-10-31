@@ -16,7 +16,6 @@ _: {
         solaar
         telegram-desktop
         wechat
-        wemeet
       ];
     };
 }
