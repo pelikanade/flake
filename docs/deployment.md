@@ -92,11 +92,15 @@ The client:
 4. streams the target's phase and log events to the matrix job log, and fails
    the job if the target reports a failed deployment.
 
-The matrix includes `neko-sphere` itself. Activating it can restart the runner
-and cancel the running job; the transient activation unit is independent of the
-client and continues. The client has no local-target special case: a failed or
-lost connection fails that matrix job. The other matrix entry is queued behind
-the single runner, so it normally runs after the runner re-registers.
+The matrix includes `neko-sphere` itself. Its runners and the trigger server
+set `restartIfChanged = false`, so a switch on that host leaves the job's
+runner and the server that streams the result running: an ephemeral runner
+re-registers from the new unit after the job, and the server keeps its previous
+binary until the next boot or a manual restart. If the connection is lost
+anyway (a manual restart, or the restart a rotated secret triggers), the client
+fails that matrix job while the transient activation unit continues
+independently. The other matrix entry is queued behind the single runner, so it
+runs after the job releases it.
 
 ### Registration token
 
@@ -282,9 +286,8 @@ workflow failure, run the normal switch from a workstation:
 nixos-rebuild switch --flake .#<machine> --target-host root@<host>
 ```
 
-A partial deployment is possible: matrix jobs are serial, and the local switch
-can cancel its own job by restarting the runner. Every target remains on its
-last successfully activated revision after the next run.
+A partial deployment is possible: matrix jobs are serial, and every target
+remains on its last successfully activated revision after the next run.
 
 ## Troubleshooting
 
@@ -299,9 +302,10 @@ last successfully activated revision after the next run.
   transient unit is `avalanche-deploy-transient-<nonce>`. Check that the target can reach
   `nsphere-cache` and that the store path is present there. The client's
   `target=<name>` lines include the activation output up to the failure.
-- **Local job is lost:** the `neko-sphere` switch can restart the runner before
-  the HTTP response arrives, canceling the local matrix job. The transient unit
-  still completes; check it with `journalctl -u avalanche-deploy-transient-<nonce>`.
+- **Local job is lost:** a manual restart of the runner or trigger server, or
+  the restart a rotated secret triggers, can close the stream before the HTTP
+  response arrives, canceling the local matrix job. The transient unit still
+  completes; check it with `journalctl -u avalanche-deploy-transient-<nonce>`.
   Rerun the failed matrix job from the workflow run if needed.
 
 ## Security

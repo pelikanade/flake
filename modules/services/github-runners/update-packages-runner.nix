@@ -66,6 +66,11 @@
         "systemd-tmpfiles-resetup.service"
       ];
 
+      # The runner exits and re-registers after every job, so it picks up a
+      # changed unit by itself. A switch must not restart it: the update job
+      # dispatches the deploy while it is still finishing.
+      systemd.services.${runnerService}.restartIfChanged = false;
+
       services.github-runners.${runnerName} = {
         enable = true;
         url = "https://github.com/pelikanade/flake";

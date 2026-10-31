@@ -47,6 +47,12 @@
           description = "Authenticated pull-based deployment trigger";
           wantedBy = [ "multi-user.target" ];
           after = [ "network.target" ];
+          # The server's unit changes whenever the avalanche package does. A
+          # switch on this host would otherwise restart it while it streams the
+          # deploy that caused the switch, failing that job. The activation
+          # unit continues; the new binary starts at the next boot or manual
+          # restart.
+          restartIfChanged = false;
           serviceConfig = {
             User = "avalanche";
             Group = "avalanche";

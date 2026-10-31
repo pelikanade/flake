@@ -26,7 +26,13 @@
         restartUnits = [ "${runnerService}.service" ];
       };
 
-      systemd.services.${runnerService}.serviceConfig.SupplementaryGroups = [ "avalanche" ];
+      # An ephemeral runner exits and is restarted after every job, so it reads
+      # a changed unit on its own. Restarting it during a switch would kill
+      # that job, which for a deploy is the one activating this host.
+      systemd.services.${runnerService} = {
+        serviceConfig.SupplementaryGroups = [ "avalanche" ];
+        restartIfChanged = false;
+      };
 
       services.github-runners.${runnerName} = {
         enable = true;
