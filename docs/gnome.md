@@ -45,7 +45,9 @@ is what puts it on the shell's search path, and names it in
 | 3193 | Blur my Shell | blur for the panel, dash and overview |
 | 517 | Caffeine | suspend and screensaver inhibition from the top bar |
 | 307 | Dash to Dock | the dock |
+| 94 | Kimpanel | fcitx5's input panel through KDE's kimpanel protocol |
 | 6807 | System Monitor | CPU, memory and network in the top bar |
+| 7065 | Tiling Shell | tiling layouts and keyboard-driven window management |
 | 8594 | Vicinae | the launcher's clipboard and window-management APIs |
 
 Dash to Panel (1160) is installed but deliberately left out of
@@ -71,8 +73,9 @@ Stylix drives GNOME the way it drove the rest of the desktop: its GNOME target
 writes the background, the interface fonts and `color-scheme` through dconf,
 the user-themes extension carries the generated shell stylesheet, and the login
 screen gets the cursor and icon theme from a locked dconf profile plus a replaced
-`gnome-shell-theme.gresource`. `stylix.image` is not set, so the target leaves
-the wallpaper alone and GNOME's own default stands.
+`gnome-shell-theme.gresource`. The cursor is GNOME's own `Adwaita`, and the icon
+theme is `Tela-dark`. `stylix.image` is not set, so the target leaves the
+wallpaper alone and GNOME's own default stands.
 
 GNOME also makes Stylix's Qt target follow the desktop, which is where two
 evaluation warnings come from: it selects the `gnome` platform theme, Home

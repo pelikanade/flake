@@ -19,15 +19,15 @@
         base16Scheme = "${pkgs.base16-schemes}/share/themes/nord.yaml";
         polarity = "dark";
         cursor = {
-          name = "macOS";
-          package = pkgs.apple-cursor;
+          name = "Adwaita";
+          package = pkgs.adwaita-icon-theme;
           size = 24;
         };
         icons = {
           enable = true;
-          package = pkgs.papirus-icon-theme;
-          dark = "Papirus-Dark";
-          light = "Papirus-Dark";
+          package = pkgs.tela-icon-theme;
+          dark = "Tela-dark";
+          light = "Tela-dark";
         };
         /*
           Stylix uses these as the primary fonts for application targets and

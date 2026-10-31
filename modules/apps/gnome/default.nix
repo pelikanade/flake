@@ -45,8 +45,12 @@
           { package = pkgs.gnomeExtensions.caffeine; }
           # 307 — Dash to Dock
           { package = pkgs.gnomeExtensions.dash-to-dock; }
+          # 94 — Kimpanel: fcitx5's input panel through KDE's kimpanel protocol.
+          { package = pkgs.gnomeExtensions.kimpanel; }
           # 6807 — System Monitor
           { package = pkgs.gnomeExtensions.system-monitor; }
+          # 7065 — Tiling Shell: keyboard-driven tiling and snap layouts.
+          { package = pkgs.gnomeExtensions.tiling-shell; }
           # 8594 — Vicinae: the launcher's shell-side half (clipboard events and
           # window management). The daemon is the `vicinae` aspect.
           { package = pkgs.gnomeExtensions.vicinae; }
