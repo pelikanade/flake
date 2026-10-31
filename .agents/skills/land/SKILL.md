@@ -90,10 +90,10 @@ commands are tied to their repository sources:
   `modules/packages/magpie.nix`, `perSystem.packages.magpie`.
   For other packages, verify their actual output definitions before selecting
   the equivalent build target.
-- Documentation-only changes need document and skill validation rather than
-  Nix builds. Check links, applicability, source references, and skill
-  frontmatter. A newly created Land skill must have
-  `metadata.delta-action: land` and `disable-model-invocation: true`.
+- Skill-only changes need skill validation rather than Nix builds. Check
+  applicability, source references, and skill frontmatter. A newly created Land
+  skill must have `metadata.delta-action: land` and
+  `disable-model-invocation: true`.
 - Run `git diff --check` for pending changes and
   `git diff --check <recorded-destination-tip> HEAD` for the full landing diff.
 

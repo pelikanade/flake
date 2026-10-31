@@ -21,9 +21,8 @@
       # — with it at 0 the cell went on charging — so it is not touched.
       #
       # Holding the window does not take the supply away from the system: the
-      # adapter powers the phone whether or not the cell is charging, which the
-      # measurements in docs/alioth.md show, and current the cell is not taking
-      # is current the system can have.
+      # adapter powers the phone whether or not the cell is charging, and
+      # current the cell is not taking is current the system can have.
       systemd.services.alioth-charge-window = {
         description = "Keep the battery inside a charge window";
         wantedBy = [ "multi-user.target" ];

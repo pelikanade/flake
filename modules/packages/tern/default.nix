@@ -4,7 +4,7 @@ let
   # Stencil's build service. That service answers an unauthenticated request with
   # a redirect to auth.stencil.so, so fetchurl cannot take it and no Nix build can
   # reach it. requireFile pins the artifact and names the missing tarball, and the
-  # build succeeds only once its hash is in the store. See docs/tern.md.
+  # build succeeds only once its hash is in the store.
   package =
     {
       lib,

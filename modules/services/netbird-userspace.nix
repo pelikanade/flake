@@ -13,7 +13,7 @@
       # instead of a TUN device, so an unprivileged service user runs it, and it
       # touches no interface, route, resolver entry or firewall rule of the host.
       # Its only opening is a SOCKS5 proxy on loopback, which is what the
-      # tunnels below dial; see docs/netbird-userspace.md.
+      # tunnels below dial.
       netbird = pkgs.unstable.netbird;
 
       # The endpoint and the setup key are data in this feature's own encrypted

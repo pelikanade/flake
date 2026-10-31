@@ -45,8 +45,7 @@ of its own.
 - Land the change first (see the [land skill](../land/SKILL.md)); a push to
   `main` triggers the deploy workflow, and it deploys only the published
   revision, never the working tree. Report the change as pending, not deployed,
-  until the workflow has switched the host. See
-  [Deployment](../../../docs/deployment.md).
+  until the workflow has switched the host.
 - Ask an administrator to run the switch from their own session when the change
   cannot wait for the workflow.
 

@@ -41,6 +41,4 @@ A **host** is a physical or virtual machine; a **machine** is the repository com
 - Use the development shell (`nix develop`) for repository tools. If required tools are missing, ask the user to activate it first.
 - Stage every new file with `git add` so Nix sees it. If Nix reports a missing file that exists locally, check that it is staged before retrying.
 - Format changed Nix files with `nixfmt`. Keep formatting and lint rules in `nixfmt` and `statix`; encode objective repository-wide invariants as flake checks when practical.
-- Choose checks proportionate to the change. Documentation-only work needs document and skill validation. Report the checks actually performed, affected machines where relevant, and outstanding manual or hardware verification; do not treat past test records as new results.
-
-Last updated at: `8dad3a43c2b22dbb3d203cb26c06fe804b5d2826`.
+- Choose checks proportionate to the change. Skill-only work needs skill validation. Report the checks actually performed, affected machines where relevant, and outstanding manual or hardware verification; do not treat past test records as new results.

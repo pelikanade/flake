@@ -196,7 +196,7 @@ in
         # Stem darkening renders correctly only with grayscale antialiasing, and
         # the light hinting style is what keeps the darkened stems from being
         # reshaped. NixOS' `fontconfig` package enables both, so this pins the
-        # choice rather than changing it; see docs/font-rendering.md.
+        # choice rather than changing it.
         hinting = "slight";
         subpixelRendering = "none";
 

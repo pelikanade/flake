@@ -72,7 +72,7 @@
 
       # GNOME resolves fonts itself for its own applications, ahead of what
       # Fontconfig says, so the grayscale antialiasing the stem-darkening tweaks
-      # are calibrated for is named here as well; see docs/font-rendering.md.
+      # are calibrated for is named here as well.
       dconf.settings."org/gnome/desktop/interface".font-antialiasing = "grayscale";
 
       home.packages = [
