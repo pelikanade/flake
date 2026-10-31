@@ -75,7 +75,7 @@ let
           --replace-fail $'\tcanElevate  = update.CanElevate' \
           $'\tcanElevate  = func() bool { return false }'
         substituteInPlace internal/cli/update_cli.go \
-          --replace-fail $'\tfmt.Println(muted.Render("  downloading " + update.BinaryAsset() + via(ctx) + " …"))\n\tif err := update.ReplaceBinary(ctx, rel); err != nil {\n\t\treturn err\n\t}\n\tfmt.Println(green.Render("✓"), "updated to", rel.Version)\n\treturn nil' \
+          --replace-fail $'\tfmt.Println(muted.Render("  downloading " + update.BinaryAsset() + via(ctx) + " …"))\n\tif err := update.ReplaceBinary(ctx, rel); err != nil {\n\t\treturn err\n\t}\n\tfmt.Println(green.Render("✓"), "updated to", rel.Version)\n\tfmt.Println(muted.Render("  " + restartRunning(gateway.URL(), rel.Version)))\n\treturn nil' \
           $'\treturn fmt.Errorf("this magpie is managed by Nix; update its Nix package instead")'
 
         # A failed init call races the host's own death: the write to its stdin
@@ -156,6 +156,19 @@ let
         substituteInPlace internal/library/rtk_wsl_test.go \
           --replace-fail '"PATH=/usr/bin:/bin"' \
           '"PATH=${lib.makeBinPath [ coreutils ]}"'
+        # The probe resolves the home's links with readlink, which the PATH the
+        # test gives it has to reach.
+        substituteInPlace internal/agent/wsl_link_test.go \
+          --replace-fail '"PATH=/usr/bin:/bin"' \
+          '"PATH=${lib.makeBinPath [ coreutils ]}"'
+        # Rex's stand-in shell has to be one the sandbox has.
+        substituteInPlace internal/gui/terminal_rex_test.go \
+          --replace-fail '/usr/bin/true' '${coreutils}/bin/true'
+        # Upstream's settings test predates SearchAll, which the Settings page
+        # doesn't send either.
+        substituteInPlace internal/gui/settings_keep_test.go \
+          --replace-fail $'\twas.RedactModelOff, was.RedactModelAuto = true, true' \
+          $'\twas.RedactModelOff, was.RedactModelAuto = true, true\n\twas.SearchAll = true'
         substituteInPlace internal/provider/codex_keychain_ask_unix_test.go \
           --replace-fail '/bin/sleep' '${coreutils}/bin/sleep'
         # The fake WSL launcher stands in for wsl.exe with /usr/bin/env, which
@@ -180,17 +193,12 @@ let
       '';
       checkPhase = ''
         runHook preCheck
-        # Two of upstream's own tests keep this pin from building cleanly, and
-        # neither failure is the sandbox's: `TestNoCommandBypassesProc` is a
-        # policy test that fails deterministically here, finding
-        # `internal/claudetui/tui.go` calling os/exec instead of the project's
-        # proc.Command, and `TestAddPluginLeavesTheUsersRecord`, which guards the
-        # user's own provider record against `AddPlugin`, failed one run and
-        # passed the next, so it is skipped as flaky rather than trusted either
-        # way. Drop the skip once the pin moves past both, and look at whether
-        # `AddPlugin` still leaves a user's record alone then.
+        # Upstream's `TestAddPluginLeavesTheUsersRecord`, which guards the user's
+        # own provider record against `AddPlugin`, failed one run and passed the
+        # next, so it is skipped as flaky rather than trusted either way. Drop
+        # the skip once it is known to hold.
         go test -tags=production,gtk3 \
-          -skip 'TestNoCommandBypassesProc|TestAddPluginLeavesTheUsersRecord' \
+          -skip 'TestAddPluginLeavesTheUsersRecord' \
           ./...
         runHook postCheck
       '';
