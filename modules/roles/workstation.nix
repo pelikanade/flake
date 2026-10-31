@@ -31,6 +31,7 @@
     netbird-desktop
     obsidian
     omp
+    rustconn
     sing-box
     skills
     splayer-next

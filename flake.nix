@@ -61,6 +61,10 @@
       url = "github:getpaseo/paseo/v0.13.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    rustconn = {
+      url = "github:totoshko88/RustConn";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
