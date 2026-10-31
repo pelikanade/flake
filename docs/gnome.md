@@ -60,8 +60,9 @@ them.
 GNOME runs IBus itself. `modules/apps/ibus.nix` enables
 `i18n.inputMethod.type = "ibus"` and adds Rime as an engine built against
 `rime-ice`; Home Manager then names the two input sources, the plain US layout
-and Rime, in `org.gnome.desktop.input-sources.sources`. `Super+Space` switches
-between them, which is GNOME's own binding.
+and Rime, in `org.gnome.desktop.input-sources.sources`. `Ctrl+Space` switches
+between them and `Shift+Ctrl+Space` reverses, replacing GNOME's default
+`Super+Space` chord.
 
 The session's D-Bus activation starts `ibus-daemon --panel disable`, so GNOME
 Shell draws the candidate window; no KDE kimpanel bridge or shell extension is

@@ -26,7 +26,8 @@ _: {
     { lib, ... }:
     {
       # GNOME's input-source list: the plain US layout and the Rime engine.
-      # `Super+Space` switches between them, which is GNOME's default chord.
+      # Ctrl+Space switches between them; Shift+Ctrl+Space reverses. This
+      # replaces GNOME's default Super+Space chord.
       dconf.settings."org/gnome/desktop/input-sources".sources = [
         (lib.hm.gvariant.mkTuple [
           "xkb"
@@ -37,6 +38,11 @@ _: {
           "rime"
         ])
       ];
+
+      dconf.settings."org/gnome/desktop/wm/keybindings" = {
+        switch-input-source = [ "<Control>space" ];
+        switch-input-source-backward = [ "<Shift><Control>space" ];
+      };
 
       # ibus-rime hardcodes its user data directory to $HOME/.config/ibus/rime,
       # so this is a home file rather than an xdg.configFile.
