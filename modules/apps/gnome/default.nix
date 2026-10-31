@@ -69,6 +69,11 @@
         ];
       };
 
+      # GNOME resolves fonts itself for its own applications, ahead of what
+      # Fontconfig says, so the grayscale antialiasing the stem-darkening tweaks
+      # are calibrated for is named here as well; see docs/font-rendering.md.
+      dconf.settings."org/gnome/desktop/interface".font-antialiasing = "grayscale";
+
       home.packages = [
         # Installed but deliberately left out of `enabled-extensions`: Dash to
         # Panel and Dash to Dock both take over the dash, so enabling both

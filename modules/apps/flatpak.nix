@@ -61,6 +61,11 @@
           <!-- Runtime directories, caches and /app/etc/fonts/local.conf. -->
           <include ignore_missing="yes">/etc/fonts/conf.d</include>
 
+          <!-- The session's own rendering rules. Inside the sandbox
+               /etc/fonts/conf.d belongs to the runtime, and the user's conf.d
+               belongs to the sandbox's home, so neither carries them. -->
+          <include ignore_missing="yes">${osConfig.fontconfigRendering.dir}</include>
+
         ${fontAlias "sans-serif" fontDefaults.sansSerif}
         ${fontAlias "serif" fontDefaults.serif}
         ${fontAlias "monospace" fontDefaults.monospace}
@@ -74,6 +79,11 @@
       services.flatpak = {
         enable = true;
 
+        # A sandbox inherits neither the session's environment nor its Fontconfig
+        # directories, so the rendering stack's inputs are all named here: the
+        # rules above and the directory they live in, plus the two variables
+        # libfreetype and Qt read when they initialise.
+        #
         # Flatpak names the sandbox's timezone by matching TZDIR against the
         # target of /etc/localtime. nixpkgs gives PAM sessions
         # `TZDIR=/etc/zoneinfo`, which matches that target, but hands every
@@ -84,8 +94,11 @@
         # stays on local time. Name the zone in the sandbox so the match is
         # not needed at all.
         overrides.settings.global = {
-          Context.filesystems = [ "${fontConfig}:ro" ];
-          Environment = {
+          Context.filesystems = [
+            "${fontConfig}:ro"
+            "${osConfig.fontconfigRendering.dir}:ro"
+          ];
+          Environment = osConfig.fontconfigRendering.environment // {
             TZ = osConfig.time.timeZone;
             FONTCONFIG_FILE = "${fontConfig}";
           };
