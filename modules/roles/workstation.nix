@@ -17,7 +17,7 @@
     agent-desktops
     delta
     desktop-apps
-    fcitx5
+    ibus
     firefox
     fish
     flatpak
@@ -39,7 +39,6 @@
     tailscale-desktop
     udiskie
     unix-tools
-    vicinae
     xpipe
     zed
 

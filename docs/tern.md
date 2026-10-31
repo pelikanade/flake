@@ -75,34 +75,34 @@ over HTTPS report `TLS support is not available`.
 
 ## Input methods
 
-Tern takes its input method from Wayland's text-input-v3, so fcitx5 serves it
-through its Wayland frontend (`frontend:wayland_v2` in `fcitx5-diagnose`'s
-input-context list; `terminal_ime` and `editor_ime` are on by default). Tern
-0.9.5 never sends `zwp_text_input_v3.disable()` when its surface loses input
+Tern takes its input method from Wayland's text-input-v3. In the GNOME session,
+GNOME Shell implements that protocol and drives IBus, so the IME is the same one
+GNOME uses for every other Wayland client; there is no fcitx5 Wayland frontend in
+the session.
+
+Tern 0.9.5 never sends `zwp_text_input_v3.disable()` when its surface loses input
 focus — a client-side defect, reported upstream as
 [stencil-hq/tern-sdk#95](https://github.com/stencil-hq/tern-sdk/issues/95) (the
 Wayland half of #2, closed not planned) and closed as completed on 2026-10-28,
 so a build newer than the pinned 0.9.5 carries the fix.
 
 That defect only cost anything on a compositor that latches the input method on
-the enabled state. The Hyprland session this repository used to run activates the
-input method only on a false → true transition of it, so fcitx5 never re-armed
-its keyboard grab after the window's first focus change: pinyin then reached the
-pane as raw Latin and the toggle key did nothing, for the window's lifetime
-(measured there as `focus:1` on the first focus and `focus:0` on every later one,
-while Ghostty's context returned to `focus:1` in the same situation). The
-workaround was `tern-wayland-ime`, a `libwayland-client.so.0` shadow placed first
-on the executable's RUNPATH that sent the missing `disable()`, committed it and
-flushed on the text input's leave event. It is deleted along with that session,
-and the desktop's aspect carries the whole input-method setup no further than
-fcitx5.
+the enabled state. The Hyprland session this repository used to run did: it
+activated the input method only on a false → true transition, so fcitx5 never
+re-armed its keyboard grab after the window's first focus change, and pinyin
+reached the pane as raw Latin for the window's lifetime (measured there as
+`focus:1` on the first focus and `focus:0` on every later one, while Ghostty's
+context returned to `focus:1` in the same situation). The `tern-wayland-ime`
+workaround that sent the missing `disable()`, committed it and flushed on the
+leave event is gone with that session, and the desktop's aspect now carries IBus
+instead of fcitx5; the old `fcitx5-diagnose` measurements no longer describe
+this session.
 
 The lever if the pane's IME dies after a focus change again is Tern's own
-display-server switch: `STENCIL_DISPLAY_SERVER=x11 tern` uses XIM
-(`frontend:xim`, `input method connected server="fcitx"`), whose input context
-also survives focus changes — measured as `focus:1`, `focus:0`, `focus:1` across
-a focus change, where the Wayland path gave `focus:1`, `focus:0`, `focus:0` — at
-the cost of running the window under XWayland, where it is opaque.
+display-server switch: `STENCIL_DISPLAY_SERVER=x11 tern` uses XIM, which under
+GNOME reaches `ibus-x11` (started by `Xwayland-session.d`). It has not been
+re-measured in this session and runs the window under XWayland, where it is
+opaque.
 
 ## Moving to a newer build
 

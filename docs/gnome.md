@@ -30,8 +30,8 @@ tumbler — are gone with it:
 | Extensions, startup apps, titlebar buttons | gnome-tweaks |
 
 `wl-clipboard` stays installed for command line use; the session's own clipboard
-is GNOME Shell's, and clipboard history comes from Vicinae, which the extension
-feeds copy events.
+is GNOME Shell's, and clipboard history comes from the Clipboard Indicator
+extension.
 
 ## Extensions
 
@@ -45,10 +45,9 @@ is what puts it on the shell's search path, and names it in
 | 3193 | Blur my Shell | blur for the panel, dash and overview |
 | 517 | Caffeine | suspend and screensaver inhibition from the top bar |
 | 307 | Dash to Dock | the dock |
-| 94 | Kimpanel | fcitx5's input panel through KDE's kimpanel protocol |
+| 779 | Clipboard Indicator | the session's clipboard history |
 | 6807 | System Monitor | CPU, memory and network in the top bar |
 | 7065 | Tiling Shell | tiling layouts and keyboard-driven window management |
-| 8594 | Vicinae | the launcher's clipboard and window-management APIs |
 
 Dash to Panel (1160) is installed but deliberately left out of
 `enabled-extensions`: it and Dash to Dock both take over the dash, so enabling
@@ -56,16 +55,22 @@ both draws two of them. The Extensions app (`gnome-extensions-app`, or
 `gnome-extensions enable dash-to-panel@jderose9.github.com`) switches between
 them.
 
-## Vicinae
+## Input method
 
-`modules/apps/vicinae.nix` runs the daemon as a user service for the whole
-graphical session, so the launcher is up before any hotkey fires.
-`Super+Space` toggles it: GNOME's own `switch-input-source` binding holds that
-chord by default, and the aspect clears both it and its `Shift` counterpart,
-which is free here because fcitx5, not GNOME, owns input methods in this session.
-The keybinding is a GNOME custom keybinding running `vicinae toggle`, the same
-mechanism the desktop's own settings use, so it also shows up in the GNOME
-keyboard panel.
+GNOME runs IBus itself. `modules/apps/ibus.nix` enables
+`i18n.inputMethod.type = "ibus"` and adds Rime as an engine built against
+`rime-ice`; Home Manager then names the two input sources, the plain US layout
+and Rime, in `org.gnome.desktop.input-sources.sources`. `Super+Space` switches
+between them, which is GNOME's own binding.
+
+The session's D-Bus activation starts `ibus-daemon --panel disable`, so GNOME
+Shell draws the candidate window; no KDE kimpanel bridge or shell extension is
+involved. Wayland clients reach IBus through text-input-v3, and XWayland clients
+through `ibus-x11`.
+
+`ibus-rime` keeps its user data under `~/.config/ibus/rime` (it hardcodes that
+path), so `default.custom.yaml` lives there and selects the `rime_ice` schema.
+The old fcitx5 tree under `~/.local/share/fcitx5` is not read.
 
 ## Theming
 
@@ -97,8 +102,7 @@ and the `adwaita-dark` style, which the NixOS side sets.
   and `Alt+Print` stay bound alongside them, and `Ctrl+Shift+Alt+R` opens the
   recording UI. The previous session's `Super+Shift+A` annotation has no
   counterpart here.
-- **CJK input in a Tern pane** after a focus change needs checking; see
-  [Tern](tern.md), whose input-method workaround was removed with the previous
-  session.
+- **CJK input in a Tern pane** after a focus change needs checking; Tern now
+  reaches IBus through GNOME Shell, see [Tern](tern.md).
 - **Clawd's pet** no longer has a window rule; whether it follows every workspace
   needs checking, see [Clawd on Desk](clawd-on-desk.md).

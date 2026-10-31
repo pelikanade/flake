@@ -18,7 +18,7 @@ The two variables are session variables rather than shell ones because
 libfreetype and Qt read them when they initialise: a shell profile would leave
 every application the session starts without them. `environment.sessionVariables`
 is what PAM hands the session, and it reaches both the GNOME session GDM starts
-and the systemd user units (Ghostty's, vicinae's). A Flatpak sandbox inherits
+and the systemd user units (Ghostty's). A Flatpak sandbox inherits
 neither, which is why the flatpak aspect names the variables, the rules and the
 directory holding them.
 

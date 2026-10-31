@@ -156,8 +156,8 @@ in
         };
 
         # PAM hands these to the session early, so the display manager, every
-        # application it launches and the systemd user units (Ghostty's, vicinae's)
-        # all see them.
+        # application it launches and the systemd user units (Ghostty's) all
+        # see them.
         environment.sessionVariables = renderingEnvironment;
 
         fonts = {
