@@ -1,9 +1,4 @@
-{ inputs, ... }: {
-  flake-file.inputs.zed-glassy-nord = {
-    url = "github:matt-gilb/zed_glassy-nord";
-    flake = false;
-  };
-
+_: {
   flake.modules.homeManager.zed =
     { pkgs, lib, ... }:
     let
@@ -19,42 +14,6 @@
           "!vtsls"
           "..."
         ];
-      };
-
-      glassyNord = builtins.fromJSON (
-        builtins.readFile (inputs.zed-glassy-nord + "/themes/glassy_nord.json")
-      );
-
-      # Zed draws drop shadows and fade gradients assuming each surface has an
-      # opaque base. The theme leaves its editor/panel/terminal backgrounds
-      # fully transparent, so those effects render as hard-edged dark patches
-      # over the blurred compositor background. Give every fully transparent
-      # `*.background` a faint tint of the variant's base colour so they blend.
-      tintAlpha = "40";
-
-      tintTheme =
-        theme:
-        let
-          base = builtins.substring 0 7 theme.style.background;
-        in
-        theme
-        // {
-          style = builtins.mapAttrs (
-            name: value:
-            if
-              (name == "background" || lib.hasSuffix ".background" name)
-              && lib.isString value
-              && builtins.stringLength value == 9
-              && lib.hasSuffix "00" value
-            then
-              "${base}${tintAlpha}"
-            else
-              value
-          ) theme.style;
-        };
-
-      tintedTheme = glassyNord // {
-        themes = map tintTheme glassyNord.themes;
       };
     in
     {
@@ -74,8 +33,6 @@
           "nordic-theme"
           "nord"
         ];
-
-        themes.glassy_nord = builtins.toJSON tintedTheme;
 
         userSettings = {
           agent_servers = {
@@ -176,8 +133,8 @@
             scrollbar.show = "never";
           };
           theme = {
-            dark = "Glassy Nord Dark";
-            light = "Glassy Nord Light";
+            dark = "Nord Dark";
+            light = "Nord Light";
             mode = "dark";
           };
           title_bar.show_user_picture = false;

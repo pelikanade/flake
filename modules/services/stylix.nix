@@ -61,7 +61,6 @@
             terminal = 11;
           };
         };
-        opacity.terminal = 0.80;
       };
     };
 

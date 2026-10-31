@@ -53,8 +53,8 @@ neither be dragged nor follow the cursor. The app relaunches itself with
 `CLAWD_OZONE_PLATFORM=wayland|x11|auto` to override that decision.
 
 The wrapper connects that switch to the NixOS convention: when
-`NIXOS_OZONE_WL` is set — this repository's Hyprland session sets it, as
-NixOS users expect Electron applications to honour — and a Wayland display is
+`NIXOS_OZONE_WL` is set — this repository's desktop aspect sets it, as NixOS
+users expect Electron applications to honour — and a Wayland display is
 present, the wrapper sets `CLAWD_OZONE_PLATFORM=wayland`, which leaves the app
 on Chromium's own Ozone default instead of relaunching it under XWayland. So on
 such a session the pet is a native Wayland client and cannot be dragged or
@@ -62,25 +62,26 @@ placed by the app; `CLAWD_OZONE_PLATFORM=x11 clawd-on-desk` restores the
 XWayland behaviour the app is designed around, which is also what happens on a
 session that does not set `NIXOS_OZONE_WL`.
 
-## Hyprland
+## The window manager
 
-`modules/apps/hyprland/default.nix` carries a `clawd-overlays` window rule for
-the pet and its overlay windows (the session HUD, the quota ring, the
-permission bubbles, the click surface and the roam-fence picker). They are
-frameless windows that draw their own pixels on a transparent surface, so the
-compositor's border, rounding, shadow and blur draw a rectangle around a sprite
-that is neither rectangular nor decorated, and the configured move animation
-makes a pet that writes its own position every frame trail behind it. The rule
-matches those windows by title — every frameless page in the app falls back to
-the application name for a title it does not set, and the framed dialogs
-(settings, dashboard, welcome) are localized and keep their decorations.
+The pet and its overlay windows — the session HUD, the quota ring, the
+permission bubbles, the click surface and the roam-fence picker — are frameless
+windows that draw their own pixels on a transparent surface, and the app asks the
+window manager to keep them on every workspace by setting `_NET_WM_STATE_STICKY`
+on them.
 
-The rule also pins them. The app asks the window manager to keep the pet on
-every workspace by setting `_NET_WM_STATE_STICKY` on its windows, which
-Hyprland does not act on, so without the rule the pet lives on whichever
-workspace it was started on and disappears from the rest; `pin` is Hyprland's
-equivalent and carries the overlays that belong to the pet with it. Pinning
-only applies to floating windows, which is why the rule floats them too.
+The Hyprland session this repository used to run acted on none of that, so its
+aspect carried a `clawd-overlays` window rule: it floated and pinned those
+windows and turned off the compositor's border, rounding, shadow, blur and move
+animation, which would otherwise be drawn around a sprite that is neither
+rectangular nor decorated — and would make a pet that writes its own position
+every frame trail behind it.
+
+The GNOME session that replaces it needs no counterpart rule: mutter handles the
+sticky state the app asks for and has no window blur or compositor move
+animation to suppress, and the pet places its own window. Whether the pet follows
+every workspace and keeps its position, which is what the rule used to guarantee,
+still needs checking on the actual hosts after activation.
 
 ## Agent integrations
 

@@ -49,16 +49,5 @@
           updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
         };
       };
-    homeModule = {
-      wayland.windowManager.hyprland.settings.monitor = [
-        {
-          output = "desc:China Star Optoelectronics Technology Co. Ltd MNE007ZA3-4";
-          mode = "2880x1800@120";
-          position = "auto";
-          scale = 1.666667;
-          vrr = 3;
-        }
-      ];
-    };
   };
 }

@@ -705,19 +705,6 @@
         "url": "https://channels.nixos.org/nixos-26.05/nixexprs.tar.zst"
       }
     },
-    "nixpkgs_3": {
-      "locked": {
-        "lastModified": 1792773339,
-        "narHash": "sha256-17eNBI5Khe4JZaRkL5hRGPWf8MZ6qv+bWAr4V8YeKBw=",
-        "rev": "3ec636362e1816bc2f0888fa0fa2c69f1bc9e504",
-        "type": "tarball",
-        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1100280.3ec636362e18/nixexprs.tar.zst"
-      },
-      "original": {
-        "type": "tarball",
-        "url": "https://channels.nixos.org/nixos-unstable/nixexprs.tar.zst"
-      }
-    },
     "nixvim": {
       "inputs": {
         "flake-parts": [
@@ -742,24 +729,6 @@
         "owner": "nix-community",
         "ref": "nixos-26.05",
         "repo": "nixvim",
-        "type": "github"
-      }
-    },
-    "noctalia": {
-      "inputs": {
-        "nixpkgs": "nixpkgs_3"
-      },
-      "locked": {
-        "lastModified": 1793393673,
-        "narHash": "sha256-z+HlqYVhSokpPiSvMpLbpQWffGs0XJViGwN0D6GMf5M=",
-        "owner": "noctalia-dev",
-        "repo": "noctalia",
-        "rev": "e35286e02cd0277aa979299a8e96ad3644aaae5b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "noctalia-dev",
-        "repo": "noctalia",
         "type": "github"
       }
     },
@@ -876,13 +845,11 @@
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",
-        "noctalia": "noctalia",
         "omp": "omp",
         "paseo": "paseo",
         "sops-nix": "sops-nix",
         "stylix": "stylix",
-        "systems": "systems_5",
-        "zed-glassy-nord": "zed-glassy-nord"
+        "systems": "systems_5"
       }
     },
     "rust-overlay": {
@@ -1207,22 +1174,6 @@
       "original": {
         "owner": "numtide",
         "repo": "treefmt-nix",
-        "type": "github"
-      }
-    },
-    "zed-glassy-nord": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1749327740,
-        "narHash": "sha256-r5JeK82KIrWOfPDchLhYcPUECJyOkFg+kxTjRpI6T54=",
-        "owner": "matt-gilb",
-        "repo": "zed_glassy-nord",
-        "rev": "85a30524c022eb7a84852089a1b2c276c901234b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "matt-gilb",
-        "repo": "zed_glassy-nord",
         "type": "github"
       }
     }

@@ -57,7 +57,6 @@
         systems.follows = "systems";
       };
     };
-    noctalia.url = "github:noctalia-dev/noctalia";
     omp = {
       url = "github:can1357/oh-my-pi";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -79,9 +78,5 @@
       };
     };
     systems.url = "github:nix-systems/default";
-    zed-glassy-nord = {
-      url = "github:matt-gilb/zed_glassy-nord";
-      flake = false;
-    };
   };
 }

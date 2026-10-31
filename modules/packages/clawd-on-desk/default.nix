@@ -61,7 +61,7 @@ _: {
       appDir = "${installDir}/resources/app.asar.unpacked";
 
       # The NixOS-wide "Electron applications, use Wayland" switch is set by this
-      # repository's Hyprland session (modules/apps/hyprland/default.nix). The app
+      # repository's desktop aspect (modules/apps/gnome/default.nix). The app
       # has a switch of its own with the same meaning: on a Wayland session with
       # an X server present it relaunches itself under XWayland
       # (--ozone-platform=x11), which is what makes the pet draggable, while

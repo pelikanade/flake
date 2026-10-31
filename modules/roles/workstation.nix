@@ -17,7 +17,6 @@
     agent-desktops
     delta
     desktop-apps
-    dolphin
     fcitx5
     firefox
     fish
@@ -25,12 +24,11 @@
     gdm
     ghostty
     git
+    gnome
     herdr
     keyring
     neovim
     netbird-desktop
-    hyprland
-    noctalia
     obsidian
     omp
     sing-box
@@ -41,6 +39,7 @@
     tailscale-desktop
     udiskie
     unix-tools
+    vicinae
     xpipe
     zed
 

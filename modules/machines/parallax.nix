@@ -47,39 +47,5 @@
 
         hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
       };
-    homeModule = {
-      wayland.windowManager.hyprland.settings = {
-        config.cursor.default_monitor = "DP-1";
-        monitor = [
-          {
-            output = "DP-1";
-            mode = "3840x2160@120";
-            position = "1440x416";
-            scale = 1.333333;
-            vrr = 3;
-          }
-          {
-            output = "DP-3";
-            mode = "2560x1440@165";
-            position = "0x0";
-            scale = 1;
-            transform = 3;
-            vrr = 3;
-          }
-        ];
-        workspace_rule = [
-          {
-            workspace = "1";
-            monitor = "DP-1";
-            default = true;
-          }
-          {
-            workspace = "10";
-            monitor = "DP-3";
-            default = true;
-          }
-        ];
-      };
-    };
   };
 }
