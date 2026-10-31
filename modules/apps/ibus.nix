@@ -53,5 +53,15 @@ _: {
           schema_list:
             - schema: rime_ice
       '';
+
+      # Rime only uses the frontend's hard cursor (a bar) when the preedit is
+      # the composition and the cursor sits at the insertion point. Its shipped
+      # preview/select defaults set `soft_cursor`, which inserts U+2038 (‸) into
+      # the preedit and is what GNOME shows as the small caret.
+      home.file.".config/ibus/rime/ibus_rime.custom.yaml".text = ''
+        patch:
+          style/preedit_style: composition
+          style/cursor_type: insert
+      '';
     };
 }

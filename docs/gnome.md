@@ -71,7 +71,10 @@ through `ibus-x11`.
 
 `ibus-rime` keeps its user data under `~/.config/ibus/rime` (it hardcodes that
 path), so `default.custom.yaml` lives there and selects the `rime_ice` schema.
-The old fcitx5 tree under `~/.local/share/fcitx5` is not read.
+`ibus_rime.custom.yaml` keeps the preedit on the composition and the cursor at
+the insertion point, which makes Rime use the frontend's bar cursor instead of
+its soft `‸` caret. The old fcitx5 tree under `~/.local/share/fcitx5` is not
+read.
 
 ## Theming
 
