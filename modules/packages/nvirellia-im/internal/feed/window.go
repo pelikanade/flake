@@ -2,10 +2,6 @@ package feed
 
 import "time"
 
-// aggregate turns magpie usage into the feed's UTC+8 windows as of now. "Today"
-// is the local day's total; hourly is today's 24 local hours from midnight, with
-// hours after now zero; daily is the 16-week Monday-first grid, with days after
-// today left null.
 func aggregate(u Usage, now time.Time, loc *time.Location) Tokens {
 	local := now.In(loc)
 	y, m, d := local.Date()
@@ -32,7 +28,6 @@ func aggregate(u Usage, now time.Time, loc *time.Location) Tokens {
 	return t
 }
 
-// sumByKey totals each bucket's tokens under its start instant formatted in loc with layout.
 func sumByKey(buckets []Bucket, loc *time.Location, layout string) map[string]Totals {
 	sums := make(map[string]Totals)
 	for _, b := range buckets {
@@ -47,13 +42,10 @@ func sumByKey(buckets []Bucket, loc *time.Location, layout string) map[string]To
 	return sums
 }
 
-// series is one window's four token series.
 type series[T any] struct {
 	Input, CacheRead, CacheWrite, Output []T
 }
 
-// fillSeries builds the four series of length n. Index i takes the wrapped totals
-// from at when at reports ok; otherwise it stays the zero value.
 func fillSeries[T any](n int, at func(i int) (Totals, bool), wrap func(int64) T) series[T] {
 	s := series[T]{Input: make([]T, n), CacheRead: make([]T, n), CacheWrite: make([]T, n), Output: make([]T, n)}
 	for i := range n {

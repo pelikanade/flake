@@ -136,9 +136,6 @@ jobs:
             gate=outside
           fi
 
-          # One build of every updated package, the repaired pins included: it
-          # is the summary the reviewer reads, and the script refuses a pin
-          # whose repair reverted the update instead of adapting to it.
           if [ -z "$gate" ] && ! bun scripts/verify-packages.ts \
             --updates .update-agent/updates.json --log-dir .ci; then
             echo "::error::an updated package does not build"
@@ -146,8 +143,6 @@ jobs:
           fi
 
           if [ -n "$gate" ]; then echo "gate=$gate" >> "$GITHUB_OUTPUT"; fi
-          # The reviewer must leave the tree as it found it, so record it here,
-          # before the review agent starts; a repair that staged nothing is `ok`.
           if [ -z "$gate" ]; then
             if [ -n "$(git status --porcelain -- modules/packages)" ]; then
               mkdir -p .review
@@ -269,8 +264,6 @@ jobs:
             gate=review
           fi
 
-          # The reviewer's contract: a JSON object with a boolean `approve` and
-          # a list of string findings, and approval means no findings at all.
           if [ -z "$gate" ]; then
             verdict=.review/verdict.json
             review=.review/review.md
@@ -294,7 +287,6 @@ jobs:
               echo "verdict: reject"
               jq -r '.summary // ""' "$verdict"
               jq -r '.security_findings[]? | "security finding: " + .' "$verdict"
-              # The report reads this file; a rejection must leave it behind.
               if [ ! -s "$review" ]; then
                 {
                   jq -r '.summary // ""' "$verdict"

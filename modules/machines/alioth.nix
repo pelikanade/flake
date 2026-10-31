@@ -1,6 +1,3 @@
-# The Xiaomi POCO F3 / Redmi K40 / Mi 11X that runs NixOS from its boot and
-# userdata partitions. The device support, including the kernel and the two
-# images the phone boots from, is in modules/devices/alioth.
 {
   inputs,
   ...
@@ -19,9 +16,6 @@
       networking.hostName = "alioth";
     };
 
-    # The tailnet is the only path another host takes to this node, and the API
-    # certificate has to carry the names that path uses: the MagicDNS one and
-    # the short one, which is what a client inside the tailnet may type.
     nixosModule =
       { config, ... }:
       let

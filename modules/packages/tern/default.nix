@@ -41,7 +41,6 @@ let
         hash = "sha256-ApOSXrYtSrfOLOuLx17Ox6xYNeh+awudb+vn0MgKzlI=";
       };
 
-      # The archive holds tern/tern and nothing else.
       unpackPhase = ''
         runHook preUnpack
         tar -xzf "$src"
@@ -57,8 +56,6 @@ let
         makeWrapper
       ];
 
-      # Beyond glibc, which the stdenv supplies, Tern links only libstdc++ and
-      # libgcc_s.
       buildInputs = [ stdenv.cc.cc.lib ];
 
       # Tern draws through wgpu, which dlopens Vulkan, EGL and the Wayland client

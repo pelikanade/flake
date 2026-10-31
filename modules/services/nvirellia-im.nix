@@ -177,7 +177,6 @@
             StateDirectory = "nvirellia-im";
             WorkingDirectory = "/var/lib/nvirellia-im";
 
-            # Binding a privileged port is the only capability the app may need.
             AmbientCapabilities = optional (cfg.port < 1024) "CAP_NET_BIND_SERVICE";
 
             Restart = "on-failure";
@@ -192,8 +191,6 @@
           };
         };
 
-        # The key lives in Magpie's own document; enrollment is per document, so
-        # edge can unwrap all of it even though only the web key is read here.
         # The unit loads the key through `EnvironmentFile`, which systemd reads
         # before it drops to the dynamic user, so root-only is enough.
         sops.secrets."magpie-web-key" = {

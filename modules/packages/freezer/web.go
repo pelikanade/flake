@@ -78,9 +78,6 @@ var pages = template.Must(template.New("pages").Funcs(template.FuncMap{
 	},
 }).ParseFS(webFiles, "web/*.html"))
 
-// humanAgo is the no-JavaScript fallback for a relative timestamp; app.js
-// recomputes it in the browser so a paused page still ages. The 30-day cutoff
-// matches app.js: past it the date is more useful than a growing day count.
 func humanAgo(now, then time.Time) string {
 	d := now.Sub(then)
 	switch {
@@ -98,8 +95,6 @@ func humanAgo(now, then time.Time) string {
 }
 
 func jobDuration(j Job) string {
-	// A job that never took a build slot has no start to measure from; the
-	// zero time would otherwise render as a duration of centuries.
 	if j.StartedAt.IsZero() {
 		return "—"
 	}

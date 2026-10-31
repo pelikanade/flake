@@ -174,9 +174,6 @@ func (p *Prometheus) Probes(ctx context.Context) (Probes, error) {
 		}
 	}
 
-	// The textfile metrics describe the running system, not a live resource
-	// sample, but they go stale the same way when the target stops answering.
-	// Suppress them for a down target like the resource metrics below.
 	for _, s := range revisionSamples {
 		b := builders[sampleHost(s.metric)]
 		if b == nil || b.probe.Status != "up" {
@@ -209,7 +206,7 @@ func (p *Prometheus) Probes(ctx context.Context) (Probes, error) {
 		for _, s := range m.series {
 			b := builders[sampleHost(s.metric)]
 			if b == nil || b.probe.Status != "up" || len(s.points) == 0 {
-				continue // metrics for a down target are stale; leave them blank
+				continue
 			}
 			history := make([]float64, len(s.points))
 			for i, pt := range s.points {
@@ -239,7 +236,6 @@ func (p *Prometheus) Probes(ctx context.Context) (Probes, error) {
 	return Probes{Systems: out}, nil
 }
 
-// promResponse is the part of /api/v1/query the feed reads.
 type promResponse struct {
 	Status string `json:"status"`
 	Error  string `json:"error,omitempty"`
@@ -252,7 +248,6 @@ type promResponse struct {
 	} `json:"data"`
 }
 
-// promRangeResponse is the part of /api/v1/query_range the feed reads.
 type promRangeResponse struct {
 	Status string `json:"status"`
 	Error  string `json:"error,omitempty"`
@@ -265,14 +260,12 @@ type promRangeResponse struct {
 	} `json:"data"`
 }
 
-// promSample is one instant vector element, with its timestamp decoded.
 type promSample struct {
 	metric map[string]string
 	value  float64
 	at     time.Time
 }
 
-// promSeries is one range vector element.
 type promSeries struct {
 	metric map[string]string
 	points []promPoint
@@ -283,7 +276,6 @@ type promPoint struct {
 	value float64
 }
 
-// query runs one PromQL expression and returns its instant vector.
 func (p *Prometheus) query(ctx context.Context, expr string) ([]promSample, error) {
 	var body promResponse
 	target := joinURL(p.baseURL, "/api/v1/query", url.Values{"query": {expr}})
@@ -312,7 +304,6 @@ func (p *Prometheus) query(ctx context.Context, expr string) ([]promSample, erro
 	return out, nil
 }
 
-// queryRange runs one PromQL expression over [start, end] at step.
 func (p *Prometheus) queryRange(ctx context.Context, expr string, start, end time.Time, step time.Duration) ([]promSeries, error) {
 	q := url.Values{
 		"query": {expr},
@@ -353,8 +344,6 @@ func (p *Prometheus) queryRange(ctx context.Context, expr string, start, end tim
 	return out, nil
 }
 
-// promStatusError turns a successful HTTP response carrying an error status
-// into an error.
 func promStatusError(status, msg string) error {
 	if msg != "" {
 		return fmt.Errorf("prometheus: %s", msg)
@@ -362,14 +351,11 @@ func promStatusError(status, msg string) error {
 	return fmt.Errorf("prometheus: status %q", status)
 }
 
-// promTime converts the API's float seconds to a time.
 func promTime(ts float64) time.Time {
 	sec, frac := math.Modf(ts)
 	return time.Unix(int64(sec), int64(frac*1e9))
 }
 
-// sampleHost prefers the host label the deployment adds, then falls back to
-// the scrape instance.
 func sampleHost(metric map[string]string) string {
 	if h := metric["host"]; h != "" {
 		return h
@@ -377,7 +363,6 @@ func sampleHost(metric map[string]string) string {
 	return metric["instance"]
 }
 
-// nonNegative reports v when it is a finite, non-negative number.
 func nonNegative(v float64) (float64, bool) {
 	if math.IsNaN(v) || math.IsInf(v, 0) || v < 0 {
 		return 0, false
@@ -385,7 +370,6 @@ func nonNegative(v float64) (float64, bool) {
 	return v, true
 }
 
-// clampPercent keeps a history sample inside the 0..100 display range.
 func clampPercent(v float64) float64 {
 	if math.IsNaN(v) || math.IsInf(v, 0) {
 		return 0

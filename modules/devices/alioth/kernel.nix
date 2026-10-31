@@ -1,5 +1,3 @@
-# The kernel and device tree of the Xiaomi POCO F3 / Redmi K40 / Mi 11X
-# (codename alioth).
 {
   flake.modules.nixos.alioth =
     {
@@ -22,12 +20,6 @@
       };
 
       config.alioth = {
-        # The phone's kernel is a Linux 6.19.6 fork that the postmarketOS
-        # SM8250 port maintains, because upstream has no device tree for this
-        # phone. The fork, its configuration, and the patch adding the device
-        # tree, panel, and touchscreen drivers are the ones the port is tested
-        # with; `kernel-config.aarch64` is the complete configuration this build
-        # uses, and the symbols this device needs changed are changed in it.
         kernel = pkgs.linuxManualConfig {
           version = "6.19.6";
           modDirVersion = "6.19.6";

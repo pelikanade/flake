@@ -34,8 +34,6 @@ _: {
           RUSTONIG_SYSTEM_LIBONIG = true;
         };
 
-        # Upstream's integration tests exercise Herdr pane behavior and are too
-        # heavyweight for this local plugin package.
         doCheck = false;
 
         postInstall = ''

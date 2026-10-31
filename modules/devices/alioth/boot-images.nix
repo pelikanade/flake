@@ -1,13 +1,3 @@
-# The images the phone boots, and the writer that puts them on it.
-#
-# The device has no NixOS bootloader. Its Qualcomm ABL bootloader boots the
-# layout the vendor images use: a header version 3 boot image with the kernel
-# and the initramfs from `boot_b`, and a vendor boot image with the device tree
-# and the command line from `vendor_boot_b`. The root filesystem is an ext4
-# image on the `userdata` partition. This module builds all of them, as
-# `system.build.aliothBootImage`, `aliothVendorBoot`, `aliothVbmeta` and
-# `aliothRootfsImage`, and the writer `aliothWriteBoot` that puts the first two
-# on the phone from the running system.
 {
   flake.modules.nixos.alioth =
     {
@@ -16,8 +6,6 @@
       ...
     }:
     let
-      # The system closure is cross-compiled, so every tool that runs while
-      # building the images has to come from the build platform.
       inherit (pkgs) buildPackages;
     in
     {
@@ -85,8 +73,6 @@
             avbtool make_vbmeta_image --flags 3 --output $out
           '';
 
-      # An ext4 image holding the system closure and a /init symlink into it,
-      # which is what the initramfs executes after mounting this filesystem.
       system.build.aliothRootfsImage =
         buildPackages.callPackage "${pkgs.path}/nixos/lib/make-ext4-fs.nix"
           {
@@ -104,15 +90,6 @@
             '';
           };
 
-      # The boot partitions are ordinary block devices on the phone, so a
-      # kernel, device tree or command line change can be written onto the slot
-      # this device boots from over SSH instead of through a fastboot session.
-      # The writer is a build output rather than an installed package: the
-      # workstation builds it, copies it over with the images, and runs it
-      # there, the same way the images themselves are handled. A boot image that
-      # does not start leaves the phone needing a fastboot session; ABL's A/B
-      # retry counter falling back to slot A after a few failed boots is the
-      # recovery that does not.
       system.build.aliothWriteBoot = pkgs.writeShellScriptBin "alioth-write-boot" ''
         set -eu
 

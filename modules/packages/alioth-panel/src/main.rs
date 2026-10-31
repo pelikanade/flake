@@ -1,22 +1,3 @@
-//! The status panel: a small pixel renderer for the phone's own display.
-//!
-//! It draws in landscape coordinates (2400x1080) and blits them, rotated, into
-//! the portrait framebuffer (1080x2400, 32bpp, stride 4352). Owning the
-//! framebuffer is what buys true colour and antialiased type on a device whose
-//! GPU has no firmware: there is no GL here, only memory.
-//!
-//! fbcon keeps the console, so the panel takes the display away from it while it
-//! draws (`vtcon1/bind = 0`) and gives it back on the way out — which is also
-//! the whole recovery story: stopping this program repaints the console.
-//!
-//! The cheap facts are read here, straight from /proc and /sys. Everything that
-//! needs a process or the cluster API comes from /run/alioth-panel/status.env,
-//! which `alioth-panel-collect` refreshes every 30 s; the sample's age is drawn
-//! with it, so a stale panel is visible as one.
-//!
-//! `--once [seconds]` draws one frame, holds it, and exits — the way to look at
-//! a frame on the device without handing the panel over to it.
-
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Seek, SeekFrom, Write};
@@ -28,7 +9,6 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use fontdue::{Font, FontSettings};
 use tiny_skia::{Color, Paint, Pixmap, Rect, Transform};
 
-/// Landscape canvas we draw in, and the portrait framebuffer we blit into.
 const W: usize = 2400;
 const H: usize = 1080;
 const FB_STRIDE: usize = 4352;
@@ -44,20 +24,15 @@ const ROTATE_LEFT: bool = true;
 
 const FONT_PX: u32 = 38;
 
-// --- palette ----------------------------------------------------------------
-// AMOLED: black is off, lit pixels cost power and burn in. So: black ground,
-// nothing white, colour only for state (green ok, amber attention, red fault).
-const INK: u32 = 0xBDBDBD; // values
-const DIM: u32 = 0x6B6B6B; // labels, units, section names
-const RULE: u32 = 0x262626; // hairlines under section names and the header
-const BAR: u32 = 0x5A5A5A; // a gauge's normal fill: a gauge, not a status
-const TRACK: u32 = 0x1A1A1A; // a gauge's unfilled part
+const INK: u32 = 0xBDBDBD;
+const DIM: u32 = 0x6B6B6B;
+const RULE: u32 = 0x262626;
+const BAR: u32 = 0x5A5A5A;
+const TRACK: u32 = 0x1A1A1A;
 const OK: u32 = 0x3FA66B;
 const WARN: u32 = 0xD29A3C;
 const HOT: u32 = 0xE0564A;
 const CHARGE: u32 = 0x58A9D0;
-// --- end palette ------------------------------------------------------------
-
 const O_RDWR: i32 = 0o2;
 
 fn solid(rgb: u32) -> Paint<'static> {
@@ -96,7 +71,6 @@ impl Canvas {
         self.pixmap.fill(Color::from_rgba8(0, 0, 0, 255));
     }
 
-    /// A glyph at `px` pixels, rasterised once and kept.
     fn glyph(&mut self, ch: char, bold: bool, px: u32) -> &(fontdue::Metrics, Vec<u8>) {
         let key = (ch, bold, px);
         if !self.cache.contains_key(&key) {
@@ -121,7 +95,6 @@ impl Canvas {
         self.width_px(text, bold, FONT_PX)
     }
 
-    /// `text`, cut short with an ellipsis so that it fits in `max` pixels.
     fn fit(&mut self, text: &str, bold: bool, max: i32) -> String {
         if self.text_width(text, bold) <= max {
             return text.to_string();
@@ -136,19 +109,15 @@ impl Canvas {
         "…".to_string()
     }
 
-    /// Draw a string at the body size, left edge at `x`, baseline at `baseline`.
-    /// Returns the x the pen ended at, so callers can lay out after it.
     fn text(&mut self, x: i32, baseline: i32, text: &str, rgb: u32, bold: bool) -> i32 {
         self.text_px(x, baseline, text, rgb, bold, FONT_PX)
     }
 
-    /// Draw a string with its right edge at `right`.
     fn text_right(&mut self, right: i32, baseline: i32, text: &str, rgb: u32, bold: bool) {
         let w = self.text_width(text, bold);
         self.text(right - w, baseline, text, rgb, bold);
     }
 
-    /// Draw a string at `px` pixels. Returns the x the pen ended at.
     fn text_px(&mut self, x: i32, baseline: i32, text: &str, rgb: u32, bold: bool, px: u32) -> i32 {
         let target = [
             ((rgb >> 16) & 0xFF) as u32,
@@ -201,7 +170,6 @@ impl Canvas {
         }
     }
 
-    /// A track with a filled fraction, for load and memory.
     fn bar(&mut self, x: i32, y: i32, w: i32, h: i32, fraction: f32, rgb: u32) {
         self.rect(x, y, w, h, TRACK);
         self.rect(x, y, (w as f32 * fraction.clamp(0.0, 1.0)) as i32, h, rgb);
@@ -224,7 +192,6 @@ impl Screen {
         })
     }
 
-    /// Rotate the canvas into the framebuffer and write all of it in one go.
     fn blit(&mut self, pixmap: &Pixmap) -> std::io::Result<()> {
         let pixels = pixmap.data();
         for y in 0..H {
@@ -268,8 +235,6 @@ fn env_map() -> HashMap<String, String> {
     map
 }
 
-/// The panel's clock: UTC+8, where the person reading it lives. An offset
-/// rather than a zone, so a frame never depends on the phone's tz data.
 fn utc_clock() -> String {
     let seconds = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -308,7 +273,6 @@ impl Link {
     }
 }
 
-/// The facts this program reads itself, every tick.
 struct Local {
     host: String,
     uptime: String,
@@ -428,18 +392,8 @@ fn sample_local() -> Local {
     }
 }
 
-// --- layout -----------------------------------------------------------------
-// Three bands, most important first. The top band is load, memory and the
-// busiest process, in large type: they are read first. Under it, the supporting
-// detail in four smaller columns — network, cluster, host, battery (quiet). The
-// last band ranks the pods, so the numbers above are explained by what is
-// spending them.
-//
-// Vertical rhythm: 40 px rows and 56 px from a band's last baseline to the
-// next section's baseline. Five ranking rows leave a 48 px lower margin.
 const MARGIN: i32 = 64;
 const RIGHT: i32 = W as i32 - MARGIN;
-/// Hero cells: load, memory, busiest process.
 const HERO_X: [i32; 3] = [64, 816, 1568];
 const HERO_W: [i32; 3] = [720, 720, 768];
 const HERO_Y: i32 = 232;
@@ -447,22 +401,18 @@ const BIG_PX: u32 = 96;
 const BIG_BASE: i32 = 342;
 const HERO_BAR_Y: i32 = 356;
 const HERO_SUB: i32 = 420;
-/// Supporting detail, four columns.
 const DETAIL_Y: i32 = 476;
 const DETAIL_FIRST: i32 = 546;
 const DETAIL_ROW: i32 = 40;
 const COL_X: [i32; 4] = [64, 608, 1152, 1824];
 const COL_W: [i32; 4] = [512, 512, 640, 512];
-/// Pod rankings, last.
 const RANK_Y: i32 = 802;
 const RANK_FIRST: i32 = 872;
 const RANK_ROW: i32 = 40;
 const RANK_W: i32 = 1104;
 const RANK_X: [i32; 2] = [MARGIN, RIGHT - RANK_W];
-/// Inside a detail column: a label, then a value; a gauge sits between them.
 const LABEL_W: i32 = 184;
 const GAUGE_W: i32 = 120;
-/// Network column: where the address starts after the state word.
 const ADDR_X: i32 = 130;
 const STATE_W: i32 = 112;
 
@@ -477,7 +427,6 @@ fn unix_now() -> u64 {
         .unwrap_or(0)
 }
 
-/// A status.env value, or "n/a" when the collector left it empty.
 fn field(env: &HashMap<String, String>, key: &str) -> String {
     match env.get(key).map(|v| v.trim()) {
         Some(v) if !v.is_empty() => v.to_string(),
@@ -485,19 +434,16 @@ fn field(env: &HashMap<String, String>, key: &str) -> String {
     }
 }
 
-/// Every run of decimal digits in `text`, in order.
 fn numbers(text: &str) -> Vec<u64> {
     text.split(|c: char| !c.is_ascii_digit())
         .filter_map(|s| s.parse().ok())
         .collect()
 }
 
-/// A sysfs integer in some unit, divided down: 4020000 µV is 4.02 V.
 fn scaled(text: &str, divide: f64) -> Option<f64> {
     text.parse::<f64>().ok().map(|v| v / divide)
 }
 
-/// Seconds as one or two units: `42s`, `29m`, `3h12m`.
 fn span(seconds: u64) -> String {
     if seconds < 120 {
         format!("{seconds}s")
@@ -508,8 +454,6 @@ fn span(seconds: u64) -> String {
     }
 }
 
-/// A pod row from `rank_cpu` or `rank_mem`: the name and both measures as written,
-/// and both as numbers for the bars.
 struct Pod {
     name: String,
     cpu: String,
@@ -536,7 +480,6 @@ fn ranking(list: &str) -> Vec<Pod> {
         .collect()
 }
 
-/// `27m` or `1` (cores) as millicores.
 fn millicores(text: &str) -> f64 {
     match text.strip_suffix('m') {
         Some(n) => n.parse().unwrap_or(0.0),
@@ -544,7 +487,6 @@ fn millicores(text: &str) -> f64 {
     }
 }
 
-/// `28Mi`, `1Gi`, `512Ki` as MiB.
 fn mebibytes(text: &str) -> f64 {
     if let Some(n) = text.strip_suffix("Gi") {
         n.parse::<f64>().unwrap_or(0.0) * 1024.0
@@ -557,20 +499,17 @@ fn mebibytes(text: &str) -> f64 {
     }
 }
 
-/// Section name in dim caps with a hairline under it.
 fn section(c: &mut Canvas, x: i32, w: i32, y: i32, name: &str) {
     c.text(x, y, name, DIM, true);
     c.rect(x, y + 20, w, 2, RULE);
 }
 
-/// A label, then a value in the shared value column, clipped to the column.
 fn pair(c: &mut Canvas, x: i32, w: i32, y: i32, label: &str, value: &str, tone: u32) {
     c.text(x, y, label, DIM, false);
     let value = c.fit(value, false, w - LABEL_W);
     c.text(x + LABEL_W, y, &value, tone, false);
 }
 
-/// A label, a gauge, and a value after it, clipped to the column.
 fn gauge(c: &mut Canvas, x: i32, w: i32, y: i32, label: &str, fraction: f64, fill: u32, value: &str, tone: u32) {
     c.text(x, y, label, DIM, false);
     c.bar(x + LABEL_W, y - 24, GAUGE_W, 14, fraction as f32, fill);
@@ -578,7 +517,6 @@ fn gauge(c: &mut Canvas, x: i32, w: i32, y: i32, label: &str, fraction: f64, fil
     c.text(x + LABEL_W + GAUGE_W + 14, y, &value, tone, false);
 }
 
-/// Up is quiet green, down is red, anything else is named as it is.
 fn link_state(state: &str) -> (String, u32) {
     match state {
         "up" => ("up".to_string(), OK),
@@ -587,7 +525,6 @@ fn link_state(state: &str) -> (String, u32) {
     }
 }
 
-/// Label and value pairs run in one line.
 fn flow(c: &mut Canvas, mut x: i32, y: i32, items: &[(&str, String, u32)]) {
     for (label, value, tone) in items {
         x = c.text(x, y, label, DIM, false) + 12;
@@ -595,7 +532,6 @@ fn flow(c: &mut Canvas, mut x: i32, y: i32, items: &[(&str, String, u32)]) {
     }
 }
 
-/// A pod state, shortened so that a row of counts fits a column.
 fn short_state(state: &str) -> String {
     match state {
         "Running" => "run".to_string(),
@@ -614,14 +550,12 @@ fn pod_counts(rows: &[(&str, &str)]) -> String {
         .join("  ")
 }
 
-/// The number of a hero cell in large type, its unit beside it, a note at the right.
 fn hero_number(c: &mut Canvas, x: i32, w: i32, value: &str, tone: u32, unit: &str, note: &str) {
     let end = c.text_px(x, BIG_BASE, value, tone, true, BIG_PX);
     c.text(end + 24, BIG_BASE, unit, DIM, false);
     c.text_right(x + w, BIG_BASE, note, DIM, false);
 }
 
-/// Load average against the core count: the one-minute figure is the number.
 fn load_cell(c: &mut Canvas, local: &Local, cores: f64) {
     let (x, w) = (HERO_X[0], HERO_W[0]);
     section(c, x, w, HERO_Y, "LOAD");
@@ -645,7 +579,6 @@ fn load_cell(c: &mut Canvas, local: &Local, cores: f64) {
     );
 }
 
-/// Memory in use, and how much is still available.
 fn memory_cell(c: &mut Canvas, local: &Local) {
     let (x, w) = (HERO_X[1], HERO_W[1]);
     section(c, x, w, HERO_Y, "MEMORY");
@@ -667,7 +600,6 @@ fn memory_cell(c: &mut Canvas, local: &Local) {
     );
 }
 
-/// What the CPUs are doing right now, and which process is doing most of it.
 fn cpu_cell(c: &mut Canvas, env: &HashMap<String, String>) {
     let (x, w) = (HERO_X[2], HERO_W[2]);
     section(c, x, w, HERO_Y, "CPU");
@@ -754,8 +686,6 @@ fn header(c: &mut Canvas, local: &Local, env: &HashMap<String, String>, age: Opt
     c.rect(MARGIN, 180, RIGHT - MARGIN, 2, RULE);
 }
 
-/// Battery and charger: values in the same ink as everything else, with the
-/// charger named by what the port actually negotiated.
 fn power(c: &mut Canvas, local: &Local, env: &HashMap<String, String>, x: i32, w: i32) {
     section(c, x, w, DETAIL_Y, "POWER");
     let capacity = local.battery_capacity.parse::<i64>().ok();
@@ -776,7 +706,6 @@ fn power(c: &mut Canvas, local: &Local, env: &HashMap<String, String>, x: i32, w
     pair(c, x, w, detail_y(5), "charger", &charger, INK);
 }
 
-/// Temperatures, clocks, tasks and the disk.
 fn host(c: &mut Canvas, local: &Local, env: &HashMap<String, String>, x: i32, w: i32) {
     section(c, x, w, DETAIL_Y, "HOST");
     let temps = [
@@ -808,7 +737,6 @@ fn host(c: &mut Canvas, local: &Local, env: &HashMap<String, String>, x: i32, w:
     pair(c, x, w, detail_y(5), "disk", &disk, INK);
 }
 
-/// Three links: each a state and an address, with its throughput under it.
 fn network(c: &mut Canvas, local: &Local, env: &HashMap<String, String>, rates: &[(f32, f32); 3], x: i32, w: i32) {
     section(c, x, w, DETAIL_Y, "NETWORK");
     let tailnet = field(env, "tailnet");
@@ -840,7 +768,6 @@ fn network(c: &mut Canvas, local: &Local, env: &HashMap<String, String>, rates: 
     }
 }
 
-/// k3s, node, deployments, tailscale peers, and pods by state.
 fn cluster(c: &mut Canvas, env: &HashMap<String, String>, x: i32, w: i32) {
     section(c, x, w, DETAIL_Y, "CLUSTER");
 
@@ -938,8 +865,6 @@ fn cluster(c: &mut Canvas, env: &HashMap<String, String>, x: i32, w: i32) {
     }
 }
 
-/// Pod rankings across the middle band: the same pods sorted by CPU on the left,
-/// by memory on the right, each with a bar for the sorted measure.
 fn rankings(c: &mut Canvas, env: &HashMap<String, String>) {
     let by_cpu = ranking(&field(env, "rank_cpu"));
     let by_mem = ranking(&field(env, "rank_mem"));
@@ -970,17 +895,6 @@ fn rank_table(c: &mut Canvas, x: i32, pods: &[Pod], by_mem: bool) {
     }
 }
 
-/// Draw one frame. This function is the whole interface: whatever it paints is
-/// what the phone shows.
-///
-/// Available to you:
-///   canvas — `clear`, `text`, `text_px`, `text_right`, `text_width`, `width_px`,
-///            `fit`, `rect`, `bar`; colour is 0xRRGGBB
-///   local  — the device facts read straight off /proc and /sys (struct `Local`)
-///   env    — the collector's `status.env` key/values, see `collect.sh`
-///   rates  — last measured (rx, tx) MiB/s, in the order wifi, usb, tailnet
-///   sample_age — seconds since the collector took its sample; when the caller
-///            has none, it is worked out from `sample_epoch` in env
 fn draw(
     canvas: &mut Canvas,
     local: &Local,
@@ -1009,8 +923,6 @@ fn draw(
     cluster(canvas, env, COL_X[3], COL_W[3]);
 }
 
-/// Read a status.env-style file: the collector's own format, so a copy of the
-/// phone's file renders the phone's panel on a workstation.
 fn read_status_file(path: &str) -> HashMap<String, String> {
     fs::read_to_string(path)
         .map(|text| {
@@ -1022,12 +934,9 @@ fn read_status_file(path: &str) -> HashMap<String, String> {
         .unwrap_or_default()
 }
 
-/// The screenshot writer, so a frame can be looked at off the device.
 mod png;
 
 fn main() {
-    // `--png <path>` renders one frame to an image and exits — the way the
-    // layout is checked on a workstation, where there is no /dev/fb0 to own.
     let args: Vec<String> = std::env::args().skip(1).collect();
     let png_path = args
         .iter()
@@ -1105,7 +1014,6 @@ fn main() {
         let local = sample_local();
         let env = env_map();
 
-        // Throughput since the last tick, in MiB/s.
         let elapsed = Instant::now().duration_since(previous).as_secs_f32().max(0.5);
         let links = [&local.wifi, &local.usb, &local.tailnet];
         for (index, link) in links.iter().enumerate() {
@@ -1148,8 +1056,6 @@ fn main() {
         if once && started.elapsed() >= Duration::from_secs(hold) {
             break;
         }
-        // The preview ticks at the panel's own pace rather than spinning: the
-        // frame is the same size either way, and a phone is not a space heater.
         sleep(Duration::from_secs(2));
     }
 

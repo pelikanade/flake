@@ -83,11 +83,6 @@ func NewServer(cfg Config) (*Server, error) {
 	return s, nil
 }
 
-// pollRepositories resolves every registered repository's default-branch head on
-// the configured interval, starting at once, so a deployment GitHub cannot reach
-// still builds pushes. Nothing else changes: an unchanged head stops at the
-// last-built check without touching the commit status, and a changed one runs
-// exactly the event a delivered push would have started.
 func (s *Server) pollRepositories() {
 	defer s.wg.Done()
 	for {
@@ -110,11 +105,6 @@ func (s *Server) Close() {
 	}
 }
 
-// enqueue puts an event in the repository's queue, where a newer event replaces
-// the waiting one — except that a non-forced event never displaces a waiting
-// Build now. A poll tick must not turn the repair path into an ordinary event,
-// and Build now resolves the branch head when it runs anyway, so it covers the
-// push that would have replaced it.
 func (s *Server) enqueue(repo *repositoryRun, event BuildEvent) {
 	s.mu.Lock()
 	if repo.queued == nil || event.Force || !repo.queued.Force {
@@ -314,9 +304,6 @@ schedule:
 		}(job, plan)
 	}
 	workers.Wait()
-	// An event can end with work still unstarted: the operator stopped it, or a
-	// recording step failed. Those jobs never ran, so they say so instead of
-	// sitting in the list as planned forever.
 	for _, job := range jobs {
 		if job.Result.Status != "planned" {
 			continue

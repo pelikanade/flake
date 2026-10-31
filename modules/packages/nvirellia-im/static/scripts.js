@@ -1,11 +1,3 @@
-/* Profile — System Monitor. Small vanilla JS, no libraries.
-   Without JS the page is the static Profile
-   sheet; Resources still renders server-side and is reached via #resources (:target).
-
-   Data: the feed embedded in <script id="cl-stats">. Drawn once on load; not refreshed.
-
-   URL hash: #profile | #resources | #status picks a tab (plain links work too);
-   range=7d starts the history graph on the 7-day range. */
 (() => {
   'use strict';
   const $ = (s, r = document) => r.querySelector(s);
@@ -18,34 +10,32 @@
     return e;
   };
   const set = (id, v) => { $('#' + id).textContent = v; };
-  // 4477200 -> "4.5M", 182300 -> "182k", 4710 -> "4.7k"
   const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? Math.round(n / 1e3) + 'k'
     : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(n);
   const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const TABS = ['profile', 'resources', 'status'].filter(n => document.getElementById(n));   // panels exist only when their upstreams have data
+  const TABS = ['profile', 'resources', 'status'].filter(n => document.getElementById(n));
 
   const data = JSON.parse($('#cl-stats').textContent);
-  let m = null;                       // derived view of `data`, rebuilt on every render
+  let m = null;
   let range = 'today';
 
   function derive(d) {
     const T = d.tokens;
-    if (!T) return null;                                            // magpie has no data: no Resources panel
+    if (!T) return null;
     const H = T.hourly, D = T.daily;
     const hCache = H.cacheRead.map((v, i) => v + H.cacheWrite[i]);
     const dCache = D.cacheRead.map((v, i) => v == null ? null : v + D.cacheWrite[i]);
     const hourTot = H.input.map((v, i) => v + hCache[i] + H.output[i]);
     const dayTot = D.input.map((v, i) => v == null ? null : v + dCache[i] + D.output[i]);
-    let last = dayTot.length - 1; while (last > 0 && dayTot[last] == null) last--;   // index of "today"
+    let last = dayTot.length - 1; while (last > 0 && dayTot[last] == null) last--;
     return {
       T, hourTot, dayTot, last,
       H0: parseInt(T.hourly.start.slice(11, 13), 10),
-      nowAt: (Date.parse(d.generatedAt) - Date.parse(T.hourly.start)) / 36e5,   // hours past local midnight at snapshot
+      nowAt: (Date.parse(d.generatedAt) - Date.parse(T.hourly.start)) / 36e5,
     };
   }
   const hourLabel = i => String((m.H0 + i) % 24).padStart(2, '0') + ':00';
-  // dates are read as plain calendar values so the viewer's own time zone never shifts them
   const dayAt = i => new Date(Date.parse(m.T.daily.start + 'T00:00:00Z') + i * 864e5);
   const dayLabel = d => `${WD[d.getUTCDay()]} ${String(d.getUTCDate()).padStart(2, '0')}`;
   const iso = d => d.toISOString().slice(0, 10);
@@ -58,7 +48,6 @@
     el('polyline', { points: pts, class: 'sp-l' }, svg, 1);
   }
 
-  /* ---------- notebook tabs (ARIA tabs, automatic activation, hash = tab) ---------- */
   function selectTab(name, focus) {
     TABS.forEach(n => {
       const on = n === name, tab = $('#tab-' + n);
@@ -67,7 +56,7 @@
       $('#' + n).classList.toggle('on', on);
     });
     if (focus) $('#tab-' + name).focus();
-    if (name === 'resources') drawGraph();                       // needs a laid-out width
+    if (name === 'resources') drawGraph();
   }
   TABS.forEach((n, i) => {
     const tab = $('#tab-' + n);
@@ -80,12 +69,12 @@
       selectTab(next, true); setHash(next);
     });
   });
-  const setHash = n => history.replaceState(null, '', '#' + n);   // no history spam, no scroll jump
+  const setHash = n => history.replaceState(null, '', '#' + n);
   function applyHash() {
     const o = {};
     location.hash.slice(1).split('&').forEach(t => { const [k, v] = t.split('='); if (v === undefined) o.tab = k; else o[k] = v; });
     if (TABS.includes(o.tab)) selectTab(o.tab);
-    else if (o.tab) {                    // e.g. #main or #h-who: show the panel that holds it
+    else if (o.tab) {
       const t = document.getElementById(o.tab), p = t && t.closest('[role=tabpanel]');
       if (p) selectTab(p.id);
     }
@@ -93,7 +82,6 @@
   }
   window.addEventListener('hashchange', applyHash);
 
-  /* ---------- Resources: history graph (SVG, redrawn on resize / range change) ---------- */
   const niceStep = v => { const p = 10 ** Math.floor(Math.log10(v)); return p * [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(k => k * p >= v); };
   function series() {
     const { last } = m;
@@ -105,9 +93,9 @@
   }
   function drawGraph() {
     const svg = $('#graph');
-    if (!svg || !m) return;                                         // no panel: magpie has no data
+    if (!svg || !m) return;
     const W = svg.clientWidth, H = svg.clientHeight;
-    if (!W) return;                                                 // panel hidden
+    if (!W) return;
     const s = series(), n = s.total.length;
     const L = 46, R = 12, TOP = 8, B = 22, pw = W - L - R, ph = H - TOP - B;
     const total = s.total;
@@ -116,12 +104,12 @@
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.textContent = '';
     el('rect', { x: L + .5, y: TOP + .5, width: pw, height: ph, class: 'g-plot' }, svg, 1);
-    for (let g = 0; g <= 4; g++) {                                  // horizontal grid + y labels
+    for (let g = 0; g <= 4; g++) {
       const gy = Math.round(TOP + ph * g / 4) + .5;
       if (g && g < 4) el('line', { x1: L, x2: L + pw, y1: gy, y2: gy, class: 'g-grid' }, svg, 1);
       el('text', { x: L - 6, y: gy + 4, 'text-anchor': 'end', class: 'g-ax', text: fmt(max * (4 - g) / 4) }, svg, 1);
     }
-    const every = s.step * (W < 520 && n > 12 ? 2 : 1);             // fewer x labels when narrow
+    const every = s.step * (W < 520 && n > 12 ? 2 : 1);
     for (let i = 0; i < n; i++) {
       if (i % every) continue;
       const gx = Math.round(x(i)) + .5;
@@ -134,12 +122,12 @@
     el('polygon', { points: `${L},${TOP + ph} ${path} ${L + pw},${TOP + ph}`, class: 'a-total' }, svg, 1);
     el('polyline', { points: path, class: 'l-total' }, svg, 1);
     el('circle', { cx: x(n - 1), cy: y(total[n - 1]), r: 3, class: 'd-total' }, svg, 1);
-    if (s.now >= 0 && s.now <= n - 1) {                             // today: the snapshot's place in the day
+    if (s.now >= 0 && s.now <= n - 1) {
       const nx = x(s.now), end = s.now > (n - 1) / 2;
       el('line', { x1: nx, x2: nx, y1: TOP, y2: TOP + ph, class: 'g-now' }, svg, 1);
       el('text', { x: end ? nx - 4 : nx + 4, y: TOP + 11, 'text-anchor': end ? 'end' : 'start', class: 'g-ax', text: 'now' }, svg, 1);
     }
-    for (let i = 0; i < n; i++) {                                    // hover strips with native tooltips
+    for (let i = 0; i < n; i++) {
       const w = pw / (n - 1);
       const hit = el('rect', { x: Math.max(L, x(i) - w / 2), y: TOP, width: w / (i && i < n - 1 ? 1 : 2), height: ph, class: 'g-hit' }, svg, 1);
       el('title', { text: `${s.label(i)}: ${fmt(total[i])} tokens` }, hit, 1);
@@ -155,7 +143,6 @@
   let resizeTimer;
   window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawGraph, 120); });
 
-  /* ---------- Resources: 16-week heatmap (columns = weeks, Mon..Sun) ---------- */
   function renderHeat() {
     const { dayTot } = m, heat = $('#heat');
     const hmax = Math.max(0, ...dayTot.filter(v => v != null));
@@ -163,7 +150,7 @@
     ['', 'Mon', '', 'Wed', '', 'Fri', '', ''].forEach(t => el('span', t ? { class: 'dl', text: t } : {}, heat));
     dayTot.forEach((v, i) => {
       const d = dayAt(i);
-      if (i % 7 === 0) {                                             // month label above each week column
+      if (i % 7 === 0) {
         const mo = d.getUTCMonth(), show = i === 0 || mo !== dayAt(i - 7).getUTCMonth();
         el('span', { class: 'hm', text: show ? MON[mo] : '' }, heat);
       }
@@ -176,18 +163,16 @@
   }
   $('#heat')?.addEventListener('mouseover', e => { if (e.target.dataset.label) set('heat-read', e.target.dataset.label); });
 
-  /* ---------- render everything from the current feed ---------- */
   function render() {
     m = derive(data);
-    if (!m || !$('#resources')) return;                             // magpie has no data: no panel to draw
+    if (!m || !$('#resources')) return;
     renderStatus(); renderHeat(); drawGraph();
   }
 
-  /* ---------- window controls: minimise / maximise / close ---------- */
   const win = $('.window'), dlg = $('#quit-dlg'), info = $('#infobar');
   const bMin = $('.wm .min'), bMax = $('.wm .max'), bCls = $('.wm .cls');
   $$('.wm button').forEach(b => { b.disabled = false; });
-  function minimise(on) {                    // window -> task chip on a GNOME 2 bottom panel, and back
+  function minimise(on) {
     win.hidden = on; $('#gpanel').hidden = !on; $('#desk-note').hidden = !on;
     (on ? $('#taskchip') : bMin).focus();
   }
@@ -202,7 +187,6 @@
   });
   $('#info-ok').addEventListener('click', () => { info.hidden = true; bCls.focus(); });
 
-  /* ---------- start: hash picks tab and range ---------- */
   render();
   const o = applyHash();
   if (o.range === '7d') $('[data-range="7d"]')?.click();

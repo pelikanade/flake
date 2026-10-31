@@ -11,7 +11,6 @@ import (
 
 const zoneName = "Asia/Shanghai"
 
-// Layouts for the daily and hourly keys. Both are read in the feed zone (UTC+8).
 const (
 	dayLayout  = "2006-01-02"
 	hourLayout = "2006-01-02T15"
@@ -171,19 +170,16 @@ type Usage struct {
 	Days  []Bucket
 }
 
-// Window sizes shared by aggregation and the daily layout.
 const (
 	hourlyWindow = 24
 	dailyWeeks   = 16
 	dailyDays    = 7 * dailyWeeks
 )
 
-// weekdayIndex maps a time to its Monday-first index: Mon=0 … Sun=6.
 func weekdayIndex(t time.Time) int {
 	return (int(t.Weekday()) + 6) % 7
 }
 
-// dailyStart is local midnight of the Monday that opens the 16-week window.
 func dailyStart(local time.Time) time.Time {
 	y, m, d := local.Date()
 	return time.Date(y, m, d-weekdayIndex(local)-7*(dailyWeeks-1), 0, 0, 0, 0, local.Location())

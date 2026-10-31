@@ -1,4 +1,3 @@
-# Repository operations. Bare `just` lists every recipe.
 
 default:
     @just --list
@@ -33,9 +32,6 @@ rdeploy hostname target:
 elevate command:
     pkexec /run/current-system/sw/bin/bash -c {{ quote(command) }}
 
-# A target that is not a NixOS installer is kexec'd, which discards /run, so an
-# encrypted layout needs its passphrase file passed as the third argument.
-#
 # Install a machine over SSH with nixos-anywhere.
 [group('provisioning')]
 install hostname target luks-key="":
@@ -63,16 +59,6 @@ collect-machine-info target:
 build-installer-iso:
     nix build .#nixosConfigurations.installer.config.system.build.isoImage -L
 
-# Flash a phone that has no NixOS on it, from fastboot mode. The vendor system
-# on slot A is left alone, and it is also where fastbootd comes from: the
-# bootloader's own fastboot refuses the chunked write a multi-gigabyte root
-# filesystem needs ("unknown command" on the first sparse chunk), so the root
-# filesystem is written while slot A is active and the slot is switched back in
-# the bootloader afterwards. Erases userdata.
-#
-# Everything after the first boot goes over SSH instead: `just rdeploy` switches
-# the system and writes the boot images with it, and `just alioth-write-boot`
-# does that same write on its own.
 [group('alioth')]
 [doc("Flash a phone with no system on it: slot B images, root filesystem on userdata, slot B active. Erases userdata.")]
 alioth-flash:
@@ -118,11 +104,6 @@ alioth-flash:
     fastboot set_active b
     fastboot reboot
 
-# The phone can write its own boot partitions, so a kernel or device tree
-# change does not need a fastboot session. What the phone boots today is kept
-# on this machine first: a boot image that does not start leaves the phone
-# needing fastboot to recover (ABL falls back to slot A after a few failed
-# boots).
 [group('alioth')]
 [doc("Write newly built boot images onto the phone's boot_b and vendor_boot_b over SSH.")]
 alioth-write-boot host="alioth" target="root@172.16.42.1":

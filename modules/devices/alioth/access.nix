@@ -1,5 +1,3 @@
-# The ways into the phone, which has no display session: a serial getty on the
-# gadget's port, sshd, and root's own credentials.
 {
   flake.modules.nixos.alioth =
     { config, ... }:
@@ -24,8 +22,6 @@
         ];
       };
 
-      # The device has one owner; root is reachable with their key over the
-      # USB link and with their password on the serial console.
       users.users.root = {
         initialHashedPassword = config.constants.nvirellia.hashedPassword;
         openssh.authorizedKeys.keys = [ config.constants.nvirellia.sshPubKey ];

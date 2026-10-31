@@ -26,8 +26,6 @@ var (
 	binPath string
 	cst     = time.FixedZone("UTC+8", 8*3600)
 
-	// Revisions the probe and GitHub stubs agree on. The old revision is a
-	// clean commit, so a host on it renders "outdated" rather than "modified".
 	latestRev = "abcdef1" + strings.Repeat("0", 33)
 	oldRev    = "1234567" + strings.Repeat("0", 33)
 )
@@ -51,8 +49,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// series is one magpie bucket on the wire: a point of /api/usage's series, cache
-// reads and writes among its token counts.
 type series struct {
 	Time       time.Time `json:"time"`
 	Input      int64     `json:"input"`
@@ -61,8 +57,6 @@ type series struct {
 	Output     int64     `json:"output"`
 }
 
-// magpieStub speaks magpie's web API: GET /?k=<key> sets a session cookie, and
-// /api/usage needs that cookie. Setting down makes every request fail.
 type magpieStub struct {
 	URL   string
 	key   string
@@ -118,10 +112,6 @@ func newMagpieStub(t *testing.T, key string, hours, days []series) *magpieStub {
 	return s
 }
 
-// gatusStub speaks gatus' status API. Every monitor reports 99.99% over 24h and
-// 99.90% over 7d; one key contains an apostrophe so uptime path escaping is
-// exercised. Gatus has 60 results, the oldest 10 failed, so the 50-check cap is
-// visible. Setting down makes every request fail.
 type gatusStub struct {
 	URL  string
 	down atomic.Bool
@@ -200,10 +190,6 @@ func newGatusStub(t *testing.T) *gatusStub {
 	return s
 }
 
-// prometheusStub answers /api/v1/query. Three node targets are scraped: edge
-// and asymmetry are up, neko-sphere is down; the metric queries still carry
-// stale neko-sphere values, which the feed must suppress. edge runs latestRev,
-// asymmetry runs oldRev, and neko-sphere has no revision because it is down.
 type prometheusStub struct {
 	URL  string
 	down atomic.Bool
@@ -319,8 +305,6 @@ func newPrometheusStub(t *testing.T) *prometheusStub {
 	return s
 }
 
-// githubStub answers the public commit lookup for pelikanade/flake's main.
-// Setting down makes every request fail, leaving up-to-date unknown.
 type githubStub struct {
 	URL  string
 	sha  string
@@ -347,7 +331,6 @@ func newGitHubStub(t *testing.T, sha string) *githubStub {
 	return s
 }
 
-// syncBuffer collects child output while the process is still running.
 type syncBuffer struct {
 	mu sync.Mutex
 	b  bytes.Buffer
@@ -365,7 +348,6 @@ func (s *syncBuffer) String() string {
 	return s.b.String()
 }
 
-// siteEnv is the parent environment minus every variable the tests set.
 func siteEnv() []string {
 	var env []string
 	for _, kv := range os.Environ() {
@@ -390,8 +372,6 @@ func freeAddr(t *testing.T) string {
 	return addr
 }
 
-// startSite runs the binary from an empty directory (so no repo .env is read)
-// and waits for /healthz. It returns the base URL.
 func startSite(t *testing.T, extra ...string) string {
 	t.Helper()
 	addr := freeAddr(t)
@@ -511,7 +491,6 @@ func fetchStats(t *testing.T, base string) statsResp {
 	return s
 }
 
-// localMidnight is 00:00 today in UTC+8, the zone the feed reports in.
 func localMidnight() time.Time {
 	now := time.Now().In(cst)
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, cst)
@@ -576,7 +555,6 @@ func TestMagpieServesTokensAndResources(t *testing.T) {
 	}
 
 	_, page := get(t, base+"/")
-	// the panel counts the cache, not just the prompt and output
 	for _, want := range []string{`id="resources"`, `href="#resources"`,
 		"<dt>tokens today</dt><dd>1.2k</dd>", "<dt>cache read</dt><dd>900</dd>", "<dt>cache write</dt><dd>6</dd>"} {
 		if !strings.Contains(page, want) {
@@ -695,7 +673,6 @@ func TestGatusServesUptime(t *testing.T) {
 			t.Errorf("page missing %q", want)
 		}
 	}
-	// Every bar has 50 slots whatever the history length, so short histories pad instead of stretching.
 	bars := regexp.MustCompile(`(?s)<div class="ubar"[^>]*>(.*?)</div>`).FindAllStringSubmatch(page, -1)
 	if len(bars) != 3 {
 		t.Fatalf("uptime bars = %d, want 3", len(bars))
@@ -767,7 +744,6 @@ func TestPrometheusServesProbes(t *testing.T) {
 			t.Errorf("page missing %q", want)
 		}
 	}
-	// Only edge draws graphs: cpu, memory and disk. The other targets get none.
 	if n := strings.Count(page, `<svg class="sparkline"`); n != 3 {
 		t.Errorf("sparklines = %d, want 3 for edge and none for the others", n)
 	}

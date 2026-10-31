@@ -92,9 +92,6 @@ _: {
           isDefault = true;
           name = "Brunette";
 
-          # Sidebery draws the tabs in the sidebar, so Firefox's own tab strip and
-          # the header above the sidebar go away; the chrome sheet carries nothing
-          # else.
           userChrome = ''
             #TabsToolbar {
               display: none;

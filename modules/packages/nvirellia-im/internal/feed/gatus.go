@@ -37,7 +37,6 @@ func NewGatus(baseURL string) (*Gatus, error) {
 
 // Uptime implements UptimeSource.
 func (g *Gatus) Uptime(ctx context.Context) (Uptime, error) {
-	// Ask for the history Gatus' own cards draw: one segment per result.
 	q := url.Values{"page": {"1"}, "pageSize": {"50"}}
 	var statuses []gatusStatus
 	if err := getJSON(ctx, g.client, g.endpoint("/api/v1/endpoints/statuses", q), "gatus", &statuses); err != nil {
@@ -46,7 +45,7 @@ func (g *Gatus) Uptime(ctx context.Context) (Uptime, error) {
 
 	endpoints := make([]Endpoint, len(statuses))
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 8) // the instance is local; cap bursty fan-out anyway
+	sem := make(chan struct{}, 8)
 	for i, s := range statuses {
 		endpoints[i] = Endpoint{Name: s.Name, Group: s.Group, Key: s.Key}
 		if n := len(s.Results); n > 0 {
@@ -95,7 +94,6 @@ func (g *Gatus) Uptime(ctx context.Context) (Uptime, error) {
 	return Uptime{Endpoints: endpoints}, nil
 }
 
-// gatusStatus is the part of /api/v1/endpoints/statuses the feed reads.
 type gatusStatus struct {
 	Name    string `json:"name"`
 	Group   string `json:"group"`
@@ -108,9 +106,6 @@ type gatusStatus struct {
 	} `json:"results"`
 }
 
-// uptime fetches one window and converts gatus' 0..1 fraction to a percentage.
-// A missing endpoint or malformed body yields nil, never an error for the whole
-// status fetch.
 func (g *Gatus) uptime(ctx context.Context, key, window string) *float64 {
 	target := g.endpoint("/api/v1/endpoints/"+url.PathEscape(key)+"/uptimes/"+window, nil)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
@@ -138,7 +133,6 @@ func (g *Gatus) uptime(ctx context.Context, key, window string) *float64 {
 	return &pct
 }
 
-// endpoint joins a path and query onto the base URL.
 func (g *Gatus) endpoint(path string, q url.Values) string {
 	return joinURL(g.baseURL, path, q)
 }

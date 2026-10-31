@@ -20,8 +20,6 @@ _: {
           # Stylix's Ghostty target defaults to its generated theme; use the
           # built-in Nord theme instead.
           theme = lib.mkForce "Nord";
-          # The systemd instance starts with --initial-window=false; keep it
-          # resident so opening a window never pays GTK startup again.
           quit-after-last-window-closed = false;
         };
       };

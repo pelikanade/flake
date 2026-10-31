@@ -8,13 +8,9 @@ keys:
   # root filesystem, so a full flash of the device produces a new one.
   - &alioth age1m88lf2h2uhdqmy88waefyrr06h7e686s9mgsc6daflmy7h79fsjqfpajg5
 creation_rules:
-  # A host appears only in the rule for a document its activation reads, because
-  # a recipient decrypts the whole document. Every consumer, Home Manager
-  # programs included, reads a NixOS-provisioned file, so each document lists
-  # just the hosts that decrypt it, plus the maintainer where it must stay
-  # editable. sops applies the first matching rule, so keep the patterns
-  # disjoint; there is no catch-all, and a document that matches no rule cannot
-  # be encrypted until one names exactly who decrypts it.
+  # sops applies the first matching rule, so keep the patterns disjoint; there is
+  # no catch-all, and a document that matches no rule cannot be encrypted until
+  # one names exactly who decrypts it.
   - path_regex: ^modules/secrets/sing-box\.yaml$
     key_groups:
       - age:

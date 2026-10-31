@@ -42,10 +42,10 @@ type Sources struct {
 }
 
 const (
-	upstreamTimeout = 3 * time.Second  // per magpie request timeout
-	statusTimeout   = 5 * time.Second  // per gatus/prometheus fetch timeout
-	revisionTTL     = 5 * time.Minute  // upstream main moves at most daily; stay under GitHub's rate limit
-	maxStale        = 10 * time.Minute // oldest last-good value served on error
+	upstreamTimeout = 3 * time.Second
+	statusTimeout   = 5 * time.Second
+	revisionTTL     = 5 * time.Minute
+	maxStale        = 10 * time.Minute
 )
 
 // Service builds Feed snapshots. It is safe for concurrent use.
@@ -101,9 +101,6 @@ func (s *Service) Feed() Feed {
 		TZ:          s.loc.String(),
 	}
 
-	// Each cache serializes its own upstream, but the four are independent;
-	// fetching them together keeps a cold page at the slowest timeout instead
-	// of the sum of all four.
 	var (
 		wg           sync.WaitGroup
 		usage        Usage
@@ -146,9 +143,6 @@ func (s *Service) Feed() Feed {
 		f.Status.Uptime = &up
 	}
 	if haveProbes && len(probes.Systems) > 0 {
-		// Probe values are cached and shared between snapshots. Copy the slice
-		// before attaching the comparison so concurrent Feed calls never write
-		// through the cache.
 		systems := make([]Probe, len(probes.Systems))
 		copy(systems, probes.Systems)
 		compare := haveRevision && freshRev && revision != ""

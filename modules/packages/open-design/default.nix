@@ -1,7 +1,5 @@
 { inputs, ... }:
 {
-  # The package resolves pnpm-lock.yaml integrity hashes through
-  # importPnpmLock/iplConfigHook, which nixpkgs does not provide.
   flake-file.inputs.importPnpmLock = {
     url = "git+https://tangled.org/scrumplex.net/importPnpmLock.nix?rev=4bd9cc54e6a5431930b4d09898e1ef49cb2ed241";
     inputs = {

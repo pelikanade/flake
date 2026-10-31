@@ -54,8 +54,6 @@
         restartUnits = [ "${runnerService}.service" ];
       };
 
-      # The template is rendered before normal services start, so the tree it
-      # writes into must exist and belong to the runner user first.
       systemd.tmpfiles.rules = [
         "d ${runnerHome} 0700 ${runnerUser} ${runnerUser} -"
         "d ${runnerHome}/.omp 0700 ${runnerUser} ${runnerUser} -"

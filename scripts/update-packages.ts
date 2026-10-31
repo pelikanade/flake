@@ -318,9 +318,6 @@ async function updateNixUpdate(name: string, label: string, metadata: Metadata):
 }
 
 async function updateRevPackage(name: string, label: string, metadata: Metadata): Promise<void> {
-  // Update an upstream that pins `src.rev` to a commit. nix-update alone would
-  // change `version` while leaving the old revision in place. Resolve the
-  // release tag to a commit first, then let nix-update recompute the hashes.
   const path = metadata.file;
   const repoName = metadata.repo;
   if (!path || !repoName) {

@@ -1,5 +1,3 @@
-# The USB gadget that gives the phone a serial console and a network link over
-# the single USB port it has.
 {
   flake.modules.nixos.alioth =
     {
@@ -8,22 +6,13 @@
       ...
     }:
     let
-      # The USB gadget gives the phone a console and a network link over the
-      # single USB port it has, which is also how it is flashed. Both are
-      # configured from the initramfs so that early boot output is visible
-      # before anything is loaded from the root filesystem.
       gadgetIdVendor = "0x1d6b";
       gadgetIdProduct = "0x0104";
       gadgetDeviceMac = "02:01:02:03:04:05";
       gadgetHostMac = "02:01:02:03:04:06";
 
-      # The serial number is what names the device on the host side
-      # (/dev/serial/by-id), so it carries the phone's own name.
       gadgetSerial = config.networking.hostName;
 
-      # The serial console and the network link are the only ways into a
-      # device whose display has no graphical session, and the address is
-      # static because nothing on the phone serves DHCP to itself.
       gadgetAddress = "172.16.42.1";
       gadgetPrefixLength = 24;
 
@@ -91,10 +80,6 @@
         echo "$udc" > UDC
       '';
 
-      # The gadget exists from the initramfs on, so early boot output is
-      # visible before anything is loaded from the root filesystem; the stage 2
-      # unit is the same thing for a boot that skipped the initramfs, or for a
-      # port whose controller only exposes a UDC later than the initramfs waits.
       gadgetUnit = {
         description = "Expose a serial console and a network link over USB";
         wantedBy = [ "sysinit.target" ];
@@ -110,17 +95,8 @@
       };
     in
     {
-      # The gadget script is deliberately *not* listed in
-      # `boot.initrd.systemd.storePaths`. Listing it made the initrd run this
-      # unit for the first time, and on this port a boot with it never reached
-      # switch-root: the hardware watchdog fired a pretimeout and reset the
-      # phone. A serial console during the initramfs is not worth an unbootable
-      # device, so the unit stays in the initrd without the script and fails
-      # with "No such file or directory" as it always did.
       boot.initrd.systemd.services.alioth-usb-gadget = gadgetUnit // {
         enable = true;
-        # Until the gadget binds there is no serial console, so these lines land
-        # on the display.
         serviceConfig = gadgetUnit.serviceConfig // {
           StandardOutput = "journal+console";
           StandardError = "journal+console";
@@ -134,8 +110,6 @@
         };
       };
 
-      # The ethernet function of the gadget is matched by its address, which
-      # is the one the script above gives it.
       systemd.network.networks."10-usb-gadget" = {
         matchConfig.MACAddress = gadgetDeviceMac;
         address = [ "${gadgetAddress}/${toString gadgetPrefixLength}" ];

@@ -111,9 +111,6 @@ let
     </fontconfig>
   '';
 
-  # The rules the session and the Flatpak sandbox both apply; the session gets
-  # them through Home Manager's conf.d, the sandbox through its own
-  # `FONTCONFIG_FILE`, and both read them from this one directory.
   renderingConfs = {
     "20-stem-darkening-embolden" = emboldenSmallText;
     "70-icon-fonts-no-embolden" = iconFonts;
@@ -155,9 +152,6 @@ in
           environment = renderingEnvironment;
         };
 
-        # PAM hands these to the session early, so the display manager, every
-        # application it launches and the systemd user units (Ghostty's) all
-        # see them.
         environment.sessionVariables = renderingEnvironment;
 
         fonts = {

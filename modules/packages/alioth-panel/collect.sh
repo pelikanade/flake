@@ -1,28 +1,10 @@
 #!/usr/bin/env bash
-# The slow half of the panel: everything that needs a process, a bus or the
-# cluster API, gathered once and left in /run/alioth-panel/status.env for the
-# renderer. Written to a temporary file and renamed, so the renderer never reads
-# a half-written sample; every value is allowed to come out empty and render as
-# n/a rather than making this fail.
-#
-# Keys the renderer reads (keep the two files in step):
-#   sample_epoch gen disk services_ok
-#   wifi_addr usb_addr ts_addr tailnet tailnet_short
-#   k3s_short nodes_short pods_short k3s_detail
-#   rank_head rank_row1 rank_row2 rank_row3 rank_cpu rank_mem
-#   top_short top firewall_short firewall watchdog_short watchdog
-#   addresses ssh_sessions
 set -u
 
 PATH=/run/current-system/sw/bin
 run=${ALIOTH_PANEL_RUN:-/run/alioth-panel}
 mkdir -p "$run"
 
-# --- brightness bands -------------------------------------------------------
-# The panel is on all day, so it never sits at the console's default: dim for
-# the day, dimmer for the evening, and dimmest overnight — but the frame is
-# still drawn there, so the overnight floor has to stay readable rather than
-# switch the light off.
 hour=$(printf '%(%H)T' -1)
 case "$hour" in
   0[6-9] | 1[0-9] | 2[0-1]) bright=700 ;;
@@ -34,7 +16,6 @@ if [ "$(cat "$run/band" 2>/dev/null)" != "$bright" ]; then
   printf '%s\n' "$bright" >"$run/band"
 fi
 
-# --- helpers ----------------------------------------------------------------
 active() {
   case "$(systemctl is-active "$1" 2>/dev/null)" in
     active) echo ok ;;
@@ -43,7 +24,6 @@ active() {
 }
 addr4() { ip -4 -o addr show "$1" 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1; }
 
-# --- services ---------------------------------------------------------------
 units="sshd tailscaled k3s systemd-networkd wpa_supplicant nftables alioth-charge-window"
 ok=0 total=0 bad=""
 for unit in $units; do
@@ -57,7 +37,6 @@ done
 services_ok="$ok/$total ok"
 [ -n "$bad" ] && services_ok="$ok/$total 异常: $bad"
 
-# --- tailscale --------------------------------------------------------------
 ts_json=$(timeout 10 tailscale status --json 2>/dev/null)
 ts_state=$(printf '%s' "$ts_json" | grep -o '"BackendState": "[^"]*"' | cut -d'"' -f4)
 ts_ip=$(printf '%s' "$ts_json" | grep -o '"100\.[0-9.]*"' | head -1 | tr -d '"')
@@ -66,7 +45,6 @@ peers_total=$(printf '%s' "$ts_json" | grep -c '"DNSName"')
 peers_online=$(printf '%s' "$ts_json" | grep -c '"Online": true')
 tailnet="${ts_state:-n/a}  $((peers_total - 1)) 节点 ($((peers_online)) 在线)  ${self_name%%.*}"
 
-# --- the cluster ------------------------------------------------------------
 k3s_short="未运行"
 nodes_short=""
 pods_short=""
@@ -86,7 +64,6 @@ if systemctl is-active --quiet k3s && command -v kubectl >/dev/null; then
 
   # A pod's name is its deployment plus a replica-set hash and an id; dropping
   # the last two fields leaves the deployment, which is the name worth printing.
-  # One `|` between rows, spaces inside one.
   rank() { # rank <sort-by> <lines>
     timeout 25 kubectl top pods -A --sort-by="$1" --no-headers 2>/dev/null |
       awk -v n="$2" 'NR<=n { name=$2; sub(/-[^-]+-[^-]+$/, "", name); printf "%s %s %s\n", name, $3, $4 }' | paste -sd'|' -
@@ -95,7 +72,6 @@ if systemctl is-active --quiet k3s && command -v kubectl >/dev/null; then
   rank_mem=$(rank memory 5)
 fi
 
-# --- the rest ---------------------------------------------------------------
 # `ps` reports CPU use averaged over a process's whole life, so a helper that
 # has just started outranks everything else; the busiest process worth naming
 # is the first that is neither such a tool nor one of this script's children.
@@ -136,10 +112,6 @@ else
   charger="${active_type:-unknown}"
 fi
 
-# --- write it ---------------------------------------------------------------
-# Plain key=value lines for the panel program to read: nothing needs quoting,
-# and any newline a command produced is folded to a space so a single value
-# cannot tear the file apart.
 tmp=$run/status.env.tmp
 kv() { printf '%s=%s\n' "$1" "${2//$'\n'/ }"; }
 {

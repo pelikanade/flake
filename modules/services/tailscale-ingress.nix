@@ -67,9 +67,6 @@
           description = "Advertise this host's Tailscale Services";
           wantedBy = [ "multi-user.target" ];
           wants = [ "tailscaled.service" ];
-          # No ordering against `network-online.target`: the daemon's backend
-          # reaching `Running` is the readiness signal, and this unit polls for
-          # it below rather than treating the system's network as up.
           after = [
             "tailscaled.service"
             "tailscaled-autoconnect.service"
@@ -80,10 +77,6 @@
             RemainAfterExit = true;
             TimeoutStartSec = 600;
 
-            # `set-config` needs a node that is logged in. The unit starts after
-            # the autoconnect helper, but the daemon's backend can still be
-            # settling on a slow boot, so wait for it rather than fail the
-            # advertisement until the next switch.
             ExecStart = pkgs.writeShellScript "tailscale-serve" ''
               set -euo pipefail
 

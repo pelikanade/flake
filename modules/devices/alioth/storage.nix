@@ -1,5 +1,3 @@
-# The storage quirk of this phone: its UFS host controller must stay out of
-# runtime suspend.
 {
   flake.modules.nixos.alioth = _: {
     # The UFS host controller's runtime suspend is the path that took the

@@ -7,8 +7,6 @@
   flake-file.inputs.paseo = {
     url = "github:getpaseo/paseo/v0.13.0";
 
-    # The package expressions use this nixpkgs' Electron and native build
-    # inputs.
     inputs.nixpkgs.follows = "nixpkgs";
   };
 

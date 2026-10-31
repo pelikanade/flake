@@ -1,17 +1,6 @@
 # Copied from Mooling0602/nix-packages (pkgs/by-name/de/deepseek-harness-desktop)
 # by Mooling0602: https://github.com/Mooling0602/nix-packages
 #
-# Why this is a separate package and not a second output of
-# deepseek-harness-git: Nix builds every output of a derivation in one builder
-# invocation. Measured on a probe derivation with outputs = [ "out" "desktop" ]
-# whose desktop output referenced a unique throwaway dependency, `nix build
-# ...out` printed "these 2 derivations will be built" and built that
-# desktop-only dependency as well. A second output would therefore make every
-# plain `nix build .#deepseek-harness-git` fetch a 360 MiB Electron and run the
-# desktop installPhase. Keeping the two separate means CLI/Web users never touch
-# Electron. (The two outputs' *runtime closures* are in fact independent; it is
-# the build cost, not closure size, that forces the split.)
-#
 #  1. The Electron binary must NOT be named 'electron'. Electron treats an
 #     executable by that name as "the default app" and reports
 #     app.isPackaged === false, which sends main.ts down its development branch.
@@ -75,12 +64,7 @@
 #     failure the desktop writes to
 #     ~/.config/@deepseek-ai/dsh-desktop/logs/crash-<time>-host.log as "dsh
 #     desktop host stopped", with only sharp's own [SharpElectronLinux] warning
-#     on the captured stderr. Reproduced in isolation: a 4x4
-#     sharp({ create }).png().toBuffer() under ELECTRON_RUN_AS_NODE=1
-#     ./deepseek-harness exits 139, and preloading glib into a plain Node 24.20.0
-#     makes the same pipeline exit 139 there too, while Node 24.20.0 alone exits
-#     0. LD_DEBUG=bindings names the wrong library on the addon's g_object_ref
-#     and g_object_unref bindings; sharp documents the same conflict under
+#     on the captured stderr. sharp documents the same conflict under
 #     "Electron and Linux" (https://sharp.pixelplumbing.com/install) and tracks
 #     it upstream as electron#46323.
 _: {
@@ -141,8 +125,7 @@ _: {
 
       # Names and versions must satisfy isDistributionMap() in
       # tool-workspace-dependencies: names ^[A-Za-z0-9][A-Za-z0-9._-]*$ and versions
-      # ^[0-9][\w.!+-]*$. Read from the very packages linked below, so the manifest
-      # cannot drift from the payload.
+      # ^[0-9][\w.!+-]*$.
       pythonPackages = {
         numpy = python312.pkgs.numpy.version;
         pandas = python312.pkgs.pandas.version;
@@ -302,21 +285,12 @@ _: {
       pnpmRoot = "${outPath}/node_modules/pnpm";
       skillOfficeAssets = "${outPath}/packages/skill/skill-office/assets";
 
-      # The desktop shell's lib tree with this package's one source change applied
-      # (note 6). applyPatches is the standard patch phase over a tree this
-      # derivation does not unpack itself: it copies the tree, runs patchPhase
-      # with `patches`, and installs the result, so the hunk is applied by the
-      # same machinery as any nixpkgs `patches = [...]`, with its -p1 default and
-      # a failed build when the context no longer matches. Its output holds the
-      # tree's contents at the root, which is why hide-menu-bar.patch names
-      # main.js rather than lib/main.js.
       appLib = applyPatches {
         name = "deepseek-harness-desktop-lib";
         src = "${appRoot}/lib";
         patches = [ ./hide-menu-bar.patch ];
       };
 
-      # nixpkgs's Electron ships its payload under libexec/electron.
       electronDir = "${electron.unwrapped}/libexec/electron";
 
       # wrapGAppsHook3 only auto-wraps $out/bin and this binary is not there, so the

@@ -27,8 +27,7 @@
         # daemon's sandbox refuses the setuid helper that an in-process rootless
         # Podman needs. A subordinate ID range and a lingering user manager —
         # which owns `/run/user/<uid>`, where that runtime keeps its cgroups —
-        # are what the API service needs. No group grants container control, and
-        # the daemon has no container runtime to order against.
+        # are what the API service needs.
         autoSubUidGidRange = true;
         linger = true;
         home = "/var/lib/paseo";
@@ -36,22 +35,10 @@
         homeMode = "0700";
         shell = pkgs.bashInteractive;
 
-        # The Grok Bot box pulls omp session logs from `.omp` once a night, and
-        # this key is its only way in. sshd runs a forced command through the
-        # account's login shell — `execve($shell, "-c", $command)` — so the
-        # account keeps `pkgs.bashInteractive` rather than a nologin shell,
-        # which would refuse the pull. Nothing interactive follows from that:
-        # the password is locked, password and keyboard-interactive
-        # authentication are off, and this is the account's only key.
-        #
-        # `restrict` denies port, agent and X11 forwarding, PTY allocation and
-        # the user rc file, and the forced command replaces whatever the client
-        # asks for, so no shell and no sftp session is reachable either way.
-        # `rrsync -ro` accepts `--sender` requests only, so the peer cannot
-        # write, and the path bounds it to this one directory. `rrsync` is its
-        # own package: `pkgs.rsync` installs `rsync` and `rsync-ssl` alone. That
-        # directory also holds `.omp/agent/magpie.yaml`, the Magpie credential,
-        # which the puller therefore reads as well.
+        # sshd runs a forced command through the account's login shell —
+        # `execve($shell, "-c", $command)` — so the account keeps
+        # `pkgs.bashInteractive` rather than a nologin shell, which would refuse
+        # the pull.
         openssh.authorizedKeys.keys = [
           ''restrict,command="${pkgs.rrsync}/bin/rrsync -ro ${config.users.users.paseo.home}/.omp" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEHBB0wxvOIXXPPIrrCCp1D/WsIZshxOLnlw1N+JY+e5 grokbot-box omp-ro pull''
         ];
@@ -62,9 +49,6 @@
         pkgs.devenv
       ];
 
-      # The daemon hashes PASEO_PASSWORD at startup, and that hash takes precedence
-      # over any password stored in its config.json. The value lives in its own
-      # document, read only by this host.
       sops.secrets.paseo-password = {
         format = "yaml";
         key = "password";
@@ -111,27 +95,11 @@
               extensions = [ "${pkgs.selfPackages.omp-magpie}/share/omp/extensions/magpie" ];
             }
           );
-          # Tailnet peers reach the daemon on this host's tailnet address, and the
-          # firewall admits them by interface: a peer's connection arrives on
-          # `tailscale0`. It binds every interface, and the password from the sops
-          # environment file below is what bounds it.
           PASEO_LISTEN = lib.mkDefault "0.0.0.0:6767";
           PASEO_NODE_ENV = "production";
           SHELL = lib.getExe pkgs.bashInteractive;
-          # Rootless Podman cannot run inside this service's own sandbox: the
-          # multi-line uid/gid map it needs comes from the setuid
-          # `newuidmap`/`newgidmap`, which `NoNewPrivileges` refuses, and
-          # `ProtectHome` hides the user manager's socket under `/run/user`. Both
-          # clients therefore address the published API, whose service runs as
-          # this account outside the sandbox, so every agent, terminal and MCP
-          # server the daemon starts inherits the endpoint.
           CONTAINER_HOST = "unix://${config.virtualisation.podman.runtimeApis.paseo.socketPath}";
           DOCKER_HOST = "unix://${config.virtualisation.podman.runtimeApis.paseo.socketPath}";
-          # Paseo ships its built-in omp provider disabled, and it rewrites this
-          # daemon's config.json for pairing and relay state. Enabling the provider
-          # is a manual change there, outside this repository. Leave relay
-          # enablement there too: a deployment env override would prevent later
-          # changes.
         }
         // lib.optionalAttrs ((config.services.tailscale-ingress.services or { }) != { }) {
           # The daemon answers a Host header it was not told about with 403
@@ -164,22 +132,9 @@
           ProtectHome = true;
           PrivateTmp = true;
 
-          # Every agent, terminal and MCP server the daemon starts lives in this
-          # one cgroup, so these limits bind the whole set rather than a single
-          # process. High makes the kernel reclaim and throttle inside the
-          # cgroup before the workload reaches the host's last pages; Max stops
-          # a runaway set from taking the machine with it, which is what turns a
-          # heavy agent load into a system-wide OOM kill, or into a host too
-          # stalled to feed the hardware watchdog.
           MemoryHigh = "20G";
           MemoryMax = "24G";
 
-          # systemd-oomd acts only on cgroups that opt in, and no cgroup on this
-          # host did, so it never fired. A kill here is the last resort: memory
-          # pressure for 80% of oomd's sampling window is past the point where
-          # MemoryHigh reclaimed and the kernel's own in-cgroup OOM killer
-          # applies, and since this cgroup holds every agent, one kill
-          # interrupts all of them.
           ManagedOOMMemoryPressure = "kill";
           ManagedOOMMemoryPressureLimit = "80%";
         };

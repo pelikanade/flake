@@ -13,7 +13,6 @@ import (
 	"time"
 )
 
-// maxBody caps upstream response bodies.
 const maxBody = 8 << 20
 
 // Magpie reads token usage from magpie's web API. Its routes need a session:
@@ -59,8 +58,6 @@ func (m *Magpie) Usage(ctx context.Context) (Usage, error) {
 	return Usage{Hours: hours, Days: days}, nil
 }
 
-// login exchanges the key for the session cookie. The key travels only in this
-// request's query, and errors never carry the URL.
 func (m *Magpie) login(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, m.endpoint("/", url.Values{"k": {m.key}}), nil)
 	if err != nil {
@@ -80,8 +77,6 @@ func (m *Magpie) login(ctx context.Context) error {
 	return nil
 }
 
-// wireUsage is the part of magpie's /api/usage body the feed reads. A point is
-// one bucket's totals; magpie counts reasoning tokens inside output.
 type wireUsage struct {
 	Period string `json:"period"`
 	Bucket string `json:"bucket"`
@@ -94,7 +89,6 @@ type wireUsage struct {
 	} `json:"series"`
 }
 
-// usage fetches one period and rejects it unless magpie served that period at that grain.
 func (m *Magpie) usage(ctx context.Context, period, bucket string) ([]Bucket, error) {
 	var body wireUsage
 	if err := getJSON(ctx, m.client, m.endpoint("/api/usage", url.Values{"period": {period}}), "magpie", &body); err != nil {
@@ -110,12 +104,10 @@ func (m *Magpie) usage(ctx context.Context, period, bucket string) ([]Bucket, er
 	return out, nil
 }
 
-// endpoint joins a path and query onto the base URL.
 func (m *Magpie) endpoint(path string, q url.Values) string {
 	return joinURL(m.baseURL, path, q)
 }
 
-// joinURL joins path and q onto baseURL, which may carry a trailing slash.
 func joinURL(baseURL, path string, q url.Values) string {
 	u := strings.TrimRight(baseURL, "/") + path
 	if len(q) > 0 {
@@ -124,13 +116,10 @@ func joinURL(baseURL, path string, q url.Values) string {
 	return u
 }
 
-// drainBody discards up to maxBody bytes left in resp's body so the connection can be reused.
 func drainBody(resp *http.Response) {
 	io.Copy(io.Discard, io.LimitReader(resp.Body, maxBody))
 }
 
-// getJSON GETs a URL and decodes the JSON body.
-// Errors name the upstream and status only; the body never appears in them.
 func getJSON(ctx context.Context, client *http.Client, target, name string, out any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
@@ -153,7 +142,6 @@ func getJSON(ctx context.Context, client *http.Client, target, name string, out 
 	return nil
 }
 
-// errorWithoutURL strips the *url.Error wrapper so request errors carry no target URL.
 func errorWithoutURL(err error) error {
 	var ue *url.Error
 	if errors.As(err, &ue) {

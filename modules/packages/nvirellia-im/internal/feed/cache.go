@@ -7,11 +7,9 @@ import (
 	"time"
 )
 
-// cached holds one upstream's last good value. At most one fetch runs at a time
-// (the mutex is held across it), and a failed fetch is not retried until ttl has passed.
 type cached[T any] struct {
 	name     string
-	fetch    func(context.Context) (T, error) // nil when the upstream is unconfigured
+	fetch    func(context.Context) (T, error)
 	now      func() time.Time
 	ttl      time.Duration
 	timeout  time.Duration
@@ -24,9 +22,6 @@ type cached[T any] struct {
 	retryAt   time.Time
 }
 
-// get returns the value to serve, whether any value exists, and whether it is
-// fresh (fetched successfully within ttl). A stale value is served only while it
-// is younger than maxStale; otherwise get reports no value.
 func (c *cached[T]) get() (val T, have, fresh bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -40,7 +35,6 @@ func (c *cached[T]) get() (val T, have, fresh bool) {
 	if now.Before(c.retryAt) {
 		return c.stale(now)
 	}
-	// Detached from the request context: one caller's cancellation must not poison the cache.
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 	v, err := c.fetch(ctx)

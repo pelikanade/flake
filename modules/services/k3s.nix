@@ -1,7 +1,3 @@
-# One k3s server, which is the whole cluster. With a single node there is no
-# peer to agree with, so nothing about the fabric needs configuring here. A
-# machine that has to be reachable from somewhere adds the names its API has to
-# answer to, because those are what its certificate has to carry.
 {
   flake.modules.nixos.k3s = {
     # k3s's proxy and flannel write their rules into their own tables, and

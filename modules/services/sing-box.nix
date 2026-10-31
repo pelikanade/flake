@@ -7,20 +7,11 @@
       ...
     }:
     let
-      # NetBird reaches its management, relays and peers with its own WireGuard,
-      # STUN and relay traffic, which does not survive being proxied. Its peers
-      # and its accepted routes are in the carrier-grade NAT range, which the tun
-      # excludes below, so that traffic keeps the routes NetBird installed on its
-      # own interface; the client's packets are not captured and no rule has to
-      # name them.
       netbirdInterface = config.services.netbird.clients.default.interface or null;
 
       # The configuration is declared here and assembled at activation: the
       # nixpkgs module replaces every `_secret` below with the contents of the
-      # named file. Proxy credentials and endpoints stay in sing-box.yaml, so no
-      # secret reaches Nix evaluation, the store or git. The tailnet is not part
-      # of this feature: it has its own module and its own key, and the tun keeps
-      # out of its addresses.
+      # named file.
       nodes = [
         {
           tag = "snemeow-vless-laxp";
@@ -224,14 +215,6 @@
             auto_route = true;
             auto_redirect = true;
             auto_redirect_output_mark = config.services.sing-box.tunBypassMark;
-            # The carrier-grade NAT range belongs to interfaces the kernel owns:
-            # the tailnet's `tailscale0` and NetBird's tunnel both carry their own
-            # addresses and routes, and a connection to one of their peers is not
-            # the proxy's business. Excluding the range keeps it out of the tun's
-            # routes and out of the redirect that carries local traffic into it, so
-            # those connections keep the route the kernel gave them — and DNS sent
-            # to the tailnet's resolver at 100.100.100.100 is not hijacked into
-            # sing-box either.
             route_exclude_address = [
               "10.0.0.0/8"
               "100.64.0.0/10"
@@ -389,9 +372,6 @@
           });
         '';
 
-        # The root pre-start renderer reads these files into the runtime config, so
-        # the service itself never needs direct secret-file access and every
-        # credential file stays root-only.
         sops.secrets = lib.genAttrs singBoxSecrets (secretFrom "sing-box.yaml");
 
         services.sing-box = {

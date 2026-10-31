@@ -9,9 +9,6 @@ import (
 	"strings"
 )
 
-// loadDotEnv sets KEY=VALUE lines from path in the environment. Blank lines and
-// lines starting with # are skipped. Variables already set in the environment win,
-// and a missing file is not an error. Values are never echoed in errors.
 func loadDotEnv(path string) error {
 	f, err := os.Open(path)
 	if errors.Is(err, fs.ErrNotExist) {

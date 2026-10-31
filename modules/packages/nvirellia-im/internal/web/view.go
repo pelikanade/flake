@@ -13,9 +13,8 @@ import (
 	"github.com/pelikanade/nvirellia.im/internal/feed"
 )
 
-// page is the template data for the sheet. Field names are used by templates/*.html.
 type page struct {
-	Resources bool // magpie has data: the Resources tab, its panel, and the status readouts render
+	Resources bool
 	Status    *statusView
 	FeedJSON  template.JS
 	Updated   string
@@ -31,63 +30,54 @@ type legend struct {
 	Total string
 }
 
-// statusView is the Status panel, already formatted for the template.
 type statusView struct {
 	Uptime *uptimeView
 	Probes *probeView
 }
 
-// uptimeSlots is the segment count of every uptime bar, matching the history
-// gatus returns. Short histories are padded on the oldest side, so bars line up
-// and a three-check monitor never stretches three segments across the row.
 const uptimeSlots = 50
 
 type uptimeView struct {
-	Summary   string // "3 monitors · 2 up · 1 down"
+	Summary   string
 	Endpoints []uptimeRow
 }
 
 type uptimeRow struct {
 	Name, Group, State  string
 	Uptime24h, Uptime7d string
-	Last, Latency       string // time and latency of the newest check
-	Oldest              string // time of the oldest check in the bar
-	Tally               string // "2 of 3 checks up"
-	BarLabel            string // the bar's accessible name
+	Last, Latency       string
+	Oldest              string
+	Tally               string
+	BarLabel            string
 	Slots               []checkSlot
 }
 
-// checkSlot is one bar segment: up, down, or none for padding before the
-// first recorded check. Title is its native tooltip.
 type checkSlot struct {
 	State, Title string
 }
 
 type probeView struct {
-	Summary string // "2 hosts · 1 up · 1 down"
-	Window  string // history span, "6h"
+	Summary string
+	Window  string
 	Systems []probeRow
 }
 
 type probeRow struct {
 	Name, Host, State, Uptime, Seen string
-	Version, VersionFull            string // short hash shown, full hash in the tooltip
-	VersionState, VersionLabel      string // "up-to-date", "outdated", "modified", "unknown"
-	Updated                         string // last generation activation in the feed zone
+	Version, VersionFull            string
+	VersionState, VersionLabel      string
+	Updated                         string
 	Metrics                         []metricView
 }
 
-// metricView is one host metric: its reading, a meter, and a sparkline. Fill,
-// Line and Area are empty when the target has no live value or history.
 type metricView struct {
 	Key, Label, Value string
-	Fill              string // meter width as a CSS percentage
-	Level             string // "", "warn" or "crit"
-	Line, Area        string // sparkline points in a sparkW x sparkH box
+	Fill              string
+	Level             string
+	Line, Area        string
 	GraphLabel        string
 }
 
-// newPage derives everything the templates show from one feed snapshot.
 func newPage(f feed.Feed) (page, error) {
 	generated, err := time.Parse(time.RFC3339, f.GeneratedAt)
 	if err != nil {
@@ -128,7 +118,7 @@ func newPage(f feed.Feed) (page, error) {
 		last = i
 	}
 
-	nowH := generated.Hour() // hourly starts at local midnight, so the index is the hour
+	nowH := generated.Hour()
 	peak := slices.Index(hourTot, slices.Max(hourTot))
 	var last7 int64
 	for i := max(0, last-6); i <= last; i++ {
@@ -157,14 +147,10 @@ func newPage(f feed.Feed) (page, error) {
 	return p, nil
 }
 
-// hourLabel is the "HH:00" label of the hour at index i past the window start.
 func hourLabel(start time.Time, i int) string {
 	return fmt.Sprintf("%02d:00", (start.Hour()+i)%24)
 }
 
-// newStatusView formats gatus and Prometheus data for the Status panel. It
-// returns nil when neither source has anything to show, so the tab stays out of
-// the page.
 func newStatusView(s *feed.Status, loc *time.Location) *statusView {
 	if s == nil {
 		return nil
@@ -227,7 +213,6 @@ func newStatusView(s *feed.Status, loc *time.Location) *statusView {
 	return v
 }
 
-// stateSummary counts states for a frame caption: "3 monitors · 2 up · 1 down".
 func stateSummary(states []string, one, many string) string {
 	noun := many
 	if len(states) == 1 {
@@ -252,9 +237,6 @@ func countOf(states []string, want string) int {
 	return n
 }
 
-// uptimeBar lays the newest uptimeSlots checks into a fixed-width bar, oldest
-// first, padding the oldest side with empty slots. It also returns the visible
-// tally and the oldest check's time.
 func uptimeBar(results []feed.Check, loc *time.Location) (slots []checkSlot, tally, oldest string) {
 	if len(results) > uptimeSlots {
 		results = results[len(results)-uptimeSlots:]
@@ -278,7 +260,6 @@ func uptimeBar(results []feed.Check, loc *time.Location) (slots []checkSlot, tal
 	return slots, fmt.Sprintf("%d of %d checks up", up, len(results)), fmtClock(results[0].At, loc)
 }
 
-// checkTitle is one segment's tooltip: "Oct 23 23:01 · down · HTTP 503 · 12ms".
 func checkTitle(c feed.Check, state string, loc *time.Location) string {
 	parts := []string{"time unknown", state}
 	if t, err := time.Parse(time.RFC3339, c.At); err == nil {
@@ -293,12 +274,8 @@ func checkTitle(c feed.Check, state string, loc *time.Location) string {
 	return strings.Join(parts, " · ")
 }
 
-// Sparkline box: the viewBox of every metric graph. The vertical scale is a
-// fixed 0..100%, like a load applet, so hosts and metrics compare at a glance.
 const sparkW, sparkH = 120, 30
 
-// newMetric formats one host metric. A nil value or empty history renders as
-// a dash and an empty graph, never as stale numbers.
 func newMetric(key, label string, v *float64, history []float64, window string) metricView {
 	m := metricView{Key: key, Label: label, Value: "—"}
 	if v != nil {
@@ -322,8 +299,6 @@ func newMetric(key, label string, v *float64, history []float64, window string) 
 	return m
 }
 
-// sparkline maps percentage samples, oldest first, to a polyline and its
-// filled area. A single sample draws a flat line.
 func sparkline(values []float64) (line, area string) {
 	if len(values) == 1 {
 		values = []float64{values[0], values[0]}
@@ -341,7 +316,6 @@ func sparkline(values []float64) (line, area string) {
 	return line, fmt.Sprintf("0,%d %s %d,%d", sparkH, line, sparkW, sparkH)
 }
 
-// endpointState is the gatus monitor state shown on the Status row.
 func endpointState(e feed.Endpoint) string {
 	switch {
 	case !e.Known:
@@ -353,7 +327,6 @@ func endpointState(e feed.Endpoint) string {
 	}
 }
 
-// probeState keeps Prometheus' states and maps anything else to unknown.
 func probeState(s string) string {
 	switch s {
 	case "up", "down":
@@ -363,7 +336,6 @@ func probeState(s string) string {
 	}
 }
 
-// fmtPercent renders gatus' 0..1-derived percentage; nil means no data for the window.
 func fmtPercent(p *float64) string {
 	if p == nil {
 		return "—"
@@ -371,12 +343,10 @@ func fmtPercent(p *float64) string {
 	return fmt.Sprintf("%.2f%%", *p)
 }
 
-// fmtPercentValue renders a Prometheus percentage.
 func fmtPercentValue(v float64) string {
 	return fmt.Sprintf("%.0f%%", v)
 }
 
-// fmtDuration renders a host uptime in the largest two units that fit.
 func fmtDuration(sec uint64) string {
 	if sec == 0 {
 		return "—"
@@ -392,7 +362,6 @@ func fmtDuration(sec uint64) string {
 	}
 }
 
-// fmtClock is an RFC 3339 instant as "15:04" in the feed zone.
 func fmtClock(s string, loc *time.Location) string {
 	if s == "" {
 		return "—"
@@ -404,8 +373,6 @@ func fmtClock(s string, loc *time.Location) string {
 	return t.In(loc).Format("15:04")
 }
 
-// fmtMoment is an RFC 3339 instant as "2006-01-02 15:04" in the feed zone. The
-// last update can be days old, so it carries the date that fmtClock omits.
 func fmtMoment(s string, loc *time.Location) string {
 	if s == "" {
 		return "—"
@@ -417,9 +384,6 @@ func fmtMoment(s string, loc *time.Location) string {
 	return t.In(loc).Format("2006-01-02 15:04")
 }
 
-// versionInfo formats a host's flake revision and its relation to upstream
-// main. A dirty tree based on main is "modified", not "outdated"; a nil
-// comparison means the upstream revision is unavailable.
 func versionInfo(p feed.Probe) (short, full, state, label string) {
 	if p.Revision == "" {
 		return "—", "", "", ""
@@ -437,8 +401,6 @@ func versionInfo(p feed.Probe) (short, full, state, label string) {
 	}
 }
 
-// shortRevision keeps the first seven hex characters of a git revision, and
-// any suffix such as "-dirty".
 func shortRevision(rev string) string {
 	base, suffix, _ := strings.Cut(rev, "-")
 	if len(base) > 7 {
@@ -450,7 +412,6 @@ func shortRevision(rev string) string {
 	return base
 }
 
-// fmtTokens matches the page script's readout format: 4477200 -> "4.5M", 182300 -> "182k", 4710 -> "4.7k".
 func fmtTokens(n int64) string {
 	switch {
 	case n >= 1e6:
@@ -464,7 +425,6 @@ func fmtTokens(n int64) string {
 	}
 }
 
-// icon is the sprite reference for id, a fixed literal from the templates.
 func icon(id string) template.HTML {
 	return template.HTML(`<svg class="ic" aria-hidden="true"><use href="#` + id + `"/></svg>`)
 }

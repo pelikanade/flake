@@ -5,40 +5,35 @@
   --cl-base: #ffffff;
   --cl-stripe: #f4f3f2;
   /* ink (Tango Aluminium / Sky Blue) */
-  --cl-text: #2e3436;          /* 10.7:1 on bg */
-  --cl-muted: #555753;         /* 6.2:1 on bg, 7.3:1 on base */
-  --cl-dim: #888a85;           /* decoration only */
-  --cl-link: #204a87;          /* 8.8:1 on base */
-  --cl-accent: #3465a4;        /* 5.6:1 on base */
+  --cl-text: #2e3436;
+  --cl-muted: #555753;
+  --cl-dim: #888a85;
+  --cl-link: #204a87;
+  --cl-accent: #3465a4;
   --cl-focus: #3465a4;
-  /* edges */
   --cl-edge: #8a8680;
   --cl-sunken: #9d9a96 #c4c1bd #d8d6d3;
   --cl-etch: #c8c6c4;
-  /* gradients */
   --cl-btn: linear-gradient(to bottom, #ffffff 0%, #f6f5f4 45%, #e3e1de 100%);
   --cl-btn-hover: linear-gradient(to bottom, #f4f8fd 0%, #dfe9f6 45%, #cfddf0 100%);
   --cl-btn-active: linear-gradient(to bottom, #c9c7c4 0%, #dedcd9 100%);
   --cl-tab: linear-gradient(to bottom, #e9e7e5, #d8d6d3);
   --cl-toolbar: linear-gradient(to bottom, #f4f3f2 0%, #ebeae9 60%, #e4e3e2 100%);
   --cl-title: linear-gradient(to bottom, #4f80c2 0%, #3f72b3 48%, #3767a6 52%, #2c5a97 100%);
-  /* tab bevels */
   --cl-tab-hi: inset 0 1px 0 rgba(255,255,255,.65);
   --cl-tab-sel: inset 0 2px 0 #7aa3d8, inset 0 3px 0 var(--cl-base);
-  /* type */
   --cl-font: "DejaVu Sans", "Bitstream Vera Sans", Verdana, "Noto Sans", sans-serif;
   --cl-mono: "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Menlo, Consolas, monospace;
   --cl-size: 13px;
   --cl-size-sm: 12px;
-  --cl-size-xs: 11px;          /* floor for labels */
+  --cl-size-xs: 11px;
   --cl-radius: 3px;
   --rail: 288px;
 }
 * { box-sizing: border-box; }
 body {
-  display: flow-root;   /* the top gap is the window's margin, painted by body's background; no bottom margin, so it adds no scroll */
+  display: flow-root;
   margin: 0; font: var(--cl-size)/1.5 var(--cl-font); color: var(--cl-text);
-  /* pale desktop: very soft blue-grey, like an untouched GNOME 2 backdrop */
   background: linear-gradient(to bottom, #e3e6ea, #d2d6dc) fixed;
   min-height: 100vh;
 }
@@ -59,7 +54,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 }
 .skip:focus { top: 8px; }
 
-/* ---------- window ---------- */
 .window {
   position: relative; max-width: 1240px; margin: 24px auto 0; background: var(--cl-bg);
   border: 1px solid #5f5c58; border-radius: 5px 5px 2px 2px; overflow: hidden;
@@ -101,7 +95,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .tb-spring { flex: 1; }
 .tb-note { color: var(--cl-muted); font-size: var(--cl-size-sm); white-space: nowrap; padding: 0 6px; }
 
-/* ---------- masthead ---------- */
 .masthead {
   display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
   padding: 18px 24px 16px; background: var(--cl-base); border-bottom: 1px solid #c3c1be;
@@ -119,7 +112,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .mast-lede .motto { margin-top: 3px; color: var(--cl-link); font-size: var(--cl-size-sm); }
 .mast-lede .src { color: var(--cl-muted); white-space: nowrap; }
 
-/* ---------- panes ---------- */
 .panes { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); position: relative; }
 
 .sidepane { grid-column: 1; grid-row: 1; padding: 10px 8px 14px 10px; border-right: 1px solid #c3c1be; }
@@ -155,11 +147,10 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .mainpane > section + section { margin-top: 20px; }
 .sec-h { font-size: 14px; font-weight: bold; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; }
 .sec-h .aside { font-weight: normal; font-size: var(--cl-size-sm); color: var(--cl-muted); }
-.indent { padding-left: 12px; }         /* GNOME 2 HIG: content indented under a bold label */
+.indent { padding-left: 12px; }
 .bio p { max-width: 80ch; }
 .bio p + p { margin-top: 6px; }
 
-/* GtkFrame group boxes */
 .frame { position: relative; border: 1px solid var(--cl-etch); border-radius: var(--cl-radius); padding: 16px 14px 13px; margin-top: 8px;
   box-shadow: 0 1px 0 var(--cl-base), inset 0 1px 0 var(--cl-base); }
 .frame > .legend {
@@ -196,7 +187,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
   border: 1px solid var(--cl-edge); border-radius: var(--cl-radius); background: var(--cl-btn);
   box-shadow: inset 0 1px 0 var(--cl-base);
 }
-/* "now" reads as toggled-in: the pressed, selection-tinted state of a GtkToggleButton */
 .pills.now .pill { background: linear-gradient(to bottom, #d3e2f4, #e9f0f9); border-color: #6f8fb8; box-shadow: inset 0 1px 2px rgba(32,74,135,.18); }
 
 .know li { position: relative; padding-left: 22px; }
@@ -207,7 +197,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
   position: absolute; right: -10px; bottom: -14px; width: 330px; height: auto; opacity: .07; z-index: 0; pointer-events: none;
 }
 
-/* ---------- statusbar ---------- */
 .statusbar {
   display: flex; align-items: stretch; font-size: var(--cl-size-sm); color: var(--cl-muted);
   background: var(--cl-bg); border-top: 1px solid #c3c1be; box-shadow: inset 0 1px 0 var(--cl-base); min-height: 24px;
@@ -221,21 +210,16 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
   background: linear-gradient(135deg, transparent 0 45%, #a8a5a1 45% 52%, transparent 52% 62%, #a8a5a1 62% 69%, transparent 69% 79%, #a8a5a1 79% 86%, transparent 86%);
 }
 
-/* ---------- responsive ---------- */
 @media (max-width: 860px) {
   :root { --rail: 248px; }
   .projects { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* =====================================================================
-   System Monitor (notebook tabs, Resources, window controls)
-   ===================================================================== */
 [hidden] { display: none !important; }
 .no-js .js-only { display: none !important; }
 .js .nojs-only { display: none !important; }
 .photo { position: relative; }
 
-/* title-bar buttons are real <button>s (disabled without JS) */
 .wm button { padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; }
 .wm button:disabled { cursor: default; }
 .wm button:not(:disabled):hover { background: linear-gradient(to bottom, #9cbde6, #6a97d0 55%, #5583c0); }
@@ -245,7 +229,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .wm .max[aria-pressed="true"]::after { content: ""; left: 3px; top: 6px; right: 6px; bottom: 3px; background: #3f6fae; border: 1px solid var(--cl-base); box-shadow: none; }
 .window.wide { max-width: none; margin: 0; border-radius: 0; border-width: 0 0 1px; }
 
-/* toolbar applet: CPU-monitor-style sparkline (multiload look) */
 .spark { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; padding: 2px; color: var(--cl-muted); text-decoration: none;
   border: 1px solid; border-color: var(--cl-sunken); border-radius: 2px; background: var(--cl-base); }
 .spark:hover { border-color: #6f8fb8; }
@@ -253,13 +236,11 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .sp-a { fill: rgba(114,159,207,.45); }
 .sp-l { fill: none; stroke: #9ec4ea; stroke-width: 1.2; stroke-linejoin: round; }
 
-/* GtkInfoBar (shown after "Quit") */
 .infobar { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid #c4a000;
   background: linear-gradient(to bottom, #fff7c9, #fcec9c); }
 .infobar p { flex: 1; }
 .infobar .ic { width: 20px; height: 20px; }
 
-/* GtkNotebook tabs */
 .notebook:focus { outline: none; }
 .notebook-tabs { display: flex; align-items: flex-end; gap: 10px; padding: 8px 10px 0; background: var(--cl-bg); border-bottom: 1px solid #9d9a96; }
 .notebook-tabs [role="tablist"] { display: flex; align-items: flex-end; gap: 2px; }
@@ -272,7 +253,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .ntab:focus-visible { outline: 2px solid var(--cl-focus); outline-offset: -5px; border-radius: 3px 3px 0 0; }
 .ntab:disabled, .ntab[aria-disabled="true"] { color: var(--cl-dim); cursor: default; background: var(--cl-tab); }
 
-/* monitor pages */
 .mon { background: var(--cl-base); padding: 16px 22px 22px; }
 .mon-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-bottom: 12px; }
 .mon-head h2 { font-size: 14px; }
@@ -284,7 +264,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .frame-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
 .frame-tools .cap { color: var(--cl-muted); font-size: var(--cl-size-sm); }
 
-/* GtkToggleButton group */
 .toggles { display: inline-flex; }
 .toggles .btn { border-radius: 0; cursor: pointer; font-family: inherit; min-width: 46px; justify-content: center; }
 .toggles .btn + .btn { margin-left: -1px; }
@@ -293,7 +272,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .toggles .btn[aria-pressed="true"] { background: linear-gradient(to bottom, #c9daf0, #e3ecf8); border-color: #6f8fb8; box-shadow: inset 0 1px 2px rgba(32,74,135,.25); position: relative; }
 .toggles .btn:focus-visible { position: relative; z-index: 1; }
 
-/* history graph (drawn by JS into this <svg>) */
 .graph { display: block; width: 100%; height: 212px; }
 .g-plot { fill: var(--cl-base); stroke: #9d9a96; }
 .g-grid { stroke: #d3e1f2; shape-rendering: crispEdges; }
@@ -304,7 +282,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .g-hit { fill: transparent; } .g-hit:hover { fill: rgba(52,101,164,.08); }
 .g-now { stroke: var(--cl-link); stroke-width: 1; stroke-dasharray: 3 2; }
 
-/* legend + readouts, System Monitor style: swatch, name, values */
 .legend-row { display: flex; flex-wrap: wrap; gap: 8px 34px; margin-top: 10px; padding-left: 46px; }
 .lg { display: grid; grid-template-columns: 18px auto; column-gap: 8px; align-items: center; }
 .lg .sw { width: 16px; height: 16px; border: 1px solid; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
@@ -312,7 +289,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .lg b { font-weight: bold; }
 .lg span.v { grid-column: 2; color: var(--cl-muted); font-size: var(--cl-size-sm); }
 
-/* readout grid */
 .readouts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 18px; margin: 0; }
 .readouts div { min-width: 0; }
 .readouts .big { grid-column: 1 / -1; }
@@ -321,7 +297,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .readouts .big dd { font-size: 28px; color: var(--cl-link); }
 .ro-note { margin-top: 12px; padding-top: 8px; border-top: 1px dotted #d3d0cc; font-size: var(--cl-size-sm); color: var(--cl-muted); }
 
-/* ---------- Status panel ---------- */
 .mon > .frame + .frame { margin-top: 22px; }
 .state { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; flex: none;
@@ -329,9 +304,8 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .state.up::before { background: #73d216; }
 .state.down::before { background: #ef2929; }
 .state.unknown::before { background: #edd400; }
-.state.down { color: #a40000; font-weight: bold; }   /* 8.2:1 on base */
+.state.down { color: #a40000; font-weight: bold; }
 
-/* frame caption keys: swatch + word, so colour is never the only label */
 .key { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--cl-size-xs); color: var(--cl-muted); }
 .key > span { display: inline-flex; align-items: center; gap: 5px; }
 .key .useg { width: 7px; height: 13px; }
@@ -341,7 +315,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .sw.mem { background: #8ae234; border-color: #4e9a06; }
 .sw.disk { background: #fcaf3e; border-color: #ce5c00; }
 
-/* Uptime: a GtkTreeView whose middle column is a discrete-block progress bar, one block per check */
 .uptime { --u-cols: minmax(150px, 210px) minmax(0, 1fr) 82px 82px; overflow: hidden; }
 .u-head, .urow { display: grid; grid-template-columns: var(--u-cols); align-items: center; }
 .u-head { background: var(--cl-btn); border-bottom: 1px solid #b8b5b1; box-shadow: inset 0 1px 0 var(--cl-base);
@@ -360,14 +333,12 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .u-group { overflow-wrap: anywhere; }
 .u-group::before { content: "·"; margin-right: 8px; color: var(--cl-dim); }
 
-/* the trough is a sunken progress bar; every bar has 50 slots, so short histories pad, never stretch */
 .ubar { display: grid; grid-template-columns: repeat(50, minmax(0, 1fr)); gap: 2px; height: 24px; padding: 2px;
   background: linear-gradient(to bottom, #dcdad7, #e8e6e3); border: 1px solid; border-color: var(--cl-sunken);
   border-radius: 2px; box-shadow: inset 0 1px 2px rgba(0,0,0,.14); }
 .useg { display: block; min-width: 0; border-radius: 1px; }
 .useg.up { background: linear-gradient(to bottom, #a4e868, #73d216 50%, #5da811);
   box-shadow: inset 0 0 0 1px rgba(46,106,4,.55), inset 0 2px 0 rgba(255,255,255,.35); }
-/* failures are hatched as well as red, so they stand out without colour */
 .useg.down { background: repeating-linear-gradient(135deg, #ef2929 0 3px, #b80000 3px 5px);
   box-shadow: inset 0 0 0 1px #820000; }
 .useg.none { background: rgba(255,255,255,.5); box-shadow: inset 0 0 0 1px rgba(136,138,133,.4); }
@@ -378,12 +349,11 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .urow.down .u-tally { color: #a40000; }
 .u-nums { display: contents; margin: 0; }
 .u-nums > div { padding: 0 10px; text-align: right; align-self: start; }
-.u-nums dt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }   /* the header names the column */
+.u-nums dt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .u-nums dd { margin: 0; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 24px; }
 .u-nums .d24 dd { font-size: 14px; font-weight: bold; }
 .u-nums .d7 dd { color: var(--cl-muted); }
 
-/* Probes: one card per host, each metric a meter plus a multiload-style applet graph */
 .hosts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 16px; }
 .host { display: flex; flex-direction: column; background: var(--cl-base); border: 1px solid #b8b5b1; border-radius: var(--cl-radius);
   box-shadow: 0 1px 2px rgba(0,0,0,.07); overflow: hidden; }
@@ -417,7 +387,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .metric + .metric { border-top: 1px dotted #dcdad7; }
 .m-name { display: inline-flex; align-items: center; gap: 7px; font-size: var(--cl-size-sm); }
 .m-val { font-variant-numeric: tabular-nums; text-align: right; }
-/* GtkProgressBar: sunken trough, glossy Clearlooks fill */
 .meter { display: block; height: 14px; padding: 1px; background: linear-gradient(to bottom, #dcdad7, #e8e6e3);
   border: 1px solid; border-color: var(--cl-sunken); border-radius: 2px; box-shadow: inset 0 1px 1px rgba(0,0,0,.12); }
 .meter > span { display: block; height: 100%; min-width: 2px; border-radius: 1px;
@@ -438,7 +407,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .spark-axis > span { grid-column: 4; grid-row: 1; }
 .spark-axis > span:last-child { justify-self: end; }
 
-/* contribution-style heatmap: 16 weeks x 7 days, filled by JS column by column */
 .heat { display: grid; grid-auto-flow: column; grid-template-rows: 14px repeat(7, 13px); grid-template-columns: 30px; grid-auto-columns: 13px; gap: 3px; }
 .heat .dl, .heat .hm { font-size: var(--cl-size-xs); line-height: 13px; color: var(--cl-muted); white-space: nowrap; }
 .hc { border-radius: 2px; border: 1px solid rgba(32,74,135,.18); }
@@ -450,11 +418,9 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .scale .hc { display: inline-block; width: 11px; height: 11px; }
 .heat-read { margin-top: 6px; min-height: 1.5em; font-size: var(--cl-size-sm); }
 
-/* statusbar monitor line */
 .sb-mon b { color: var(--cl-text); font-weight: normal; }
 .js .sb-upd { flex: none; }
 
-/* close dialog (GtkMessageDialog) */
 .gtkdlg { padding: 0; width: min(430px, calc(100vw - 24px)); color: var(--cl-text); background: var(--cl-bg);
   border: 1px solid #5f5c58; border-radius: 5px 5px 2px 2px; box-shadow: 0 4px 10px rgba(0,0,0,.2), 0 18px 40px rgba(20,30,50,.3); }
 .gtkdlg::backdrop { background: rgba(28,38,56,.32); }
@@ -467,7 +433,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .dlg-btns .btn { min-width: 90px; min-height: 28px; justify-content: center; font: inherit; cursor: pointer; }
 .dlg-btns .btn .ic { width: 16px; height: 16px; }
 
-/* GNOME 2 bottom panel with the minimised window's task button */
 .gpanel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; align-items: center; gap: 4px; height: 30px; padding: 2px 6px;
   background: linear-gradient(to bottom, #f6f5f4, #dedcd8); border-top: 1px solid #a9a6a2; box-shadow: inset 0 1px 0 var(--cl-base); }
 .gpanel .ws { margin-left: auto; display: flex; gap: 2px; }
@@ -479,7 +444,7 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
 .desk-note { position: fixed; inset: 0 0 30px; display: grid; place-items: center; color: #3c4a5c; font-size: var(--cl-size); text-align: center; padding: 20px; }
 
 @media (max-width: 480px) {
-  .spark { display: none; }   /* no room next to the porch links; the statusbar line still carries the numbers */
+  .spark { display: none; }
 }
 @media (max-width: 1100px) {
   .lower { grid-template-columns: minmax(0, 1fr); }
@@ -518,7 +483,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
   .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .statusbar { flex-wrap: wrap; }
   .js .statusbar .sb-who { display: none; }
-  /* uptime rows stack: name and percentages on one line, the full-width bar below */
   .uptime { --u-cols: minmax(0, 1fr) auto; }
   .u-head { display: none; }
   .urow { grid-template-areas: "id nums" "track track"; row-gap: 7px; padding: 9px 0 8px; }
@@ -540,7 +504,6 @@ code, .mono { font-family: var(--cl-mono); font-size: 12px; }
   .host-facts { padding: 8px 10px 2px; }
 }
 
-/* ---------- no-JS: Profile sheet; Resources reached by :target ---------- */
 .js .tabpanel:not(.on) { display: none !important; }
 .no-js .mon { display: none; }
 .no-js .mon:target { display: block; }

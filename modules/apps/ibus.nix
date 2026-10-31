@@ -25,9 +25,6 @@ _: {
   flake.modules.homeManager.ibus =
     { lib, ... }:
     {
-      # GNOME's input-source list: the plain US layout and the Rime engine.
-      # Ctrl+Space switches between them; Shift+Ctrl+Space reverses. This
-      # replaces GNOME's default Super+Space chord.
       dconf.settings."org/gnome/desktop/input-sources".sources = [
         (lib.hm.gvariant.mkTuple [
           "xkb"

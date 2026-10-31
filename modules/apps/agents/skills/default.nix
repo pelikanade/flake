@@ -1,9 +1,5 @@
 { lib, ... }:
 let
-  # A skill is a directory containing a SKILL.md, and a source keeps its skills
-  # in one of the generic locations that the skills CLI searches. Dot
-  # directories are skipped because they hold per-agent copies of the same
-  # skills.
   findSkills =
     directory:
     if !(builtins.pathExists directory) then
@@ -21,9 +17,6 @@ let
         )
       ) (builtins.attrNames entries);
 
-  # A source may instead publish its skills through the plugin manifest that
-  # the skills CLI reads, which is how an upstream marks the skills it
-  # considers released.
   publishedSkills =
     source:
     let
@@ -36,8 +29,6 @@ let
     else
       [ ];
 
-  # The frontmatter is the only place that a lone Markdown skill file carries
-  # its name.
   declaredName =
     file:
     let

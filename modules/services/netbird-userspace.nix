@@ -9,19 +9,12 @@
     let
       cfg = config.services.netbird-userspace;
 
-      # A userspace (netstack) client: WireGuard runs on a Go TCP/IP stack
-      # instead of a TUN device, so an unprivileged service user runs it, and it
-      # touches no interface, route, resolver entry or firewall rule of the host.
-      # Its only opening is a SOCKS5 proxy on loopback, which is what the
-      # tunnels below dial.
       netbird = pkgs.unstable.netbird;
 
-      # The endpoint and the setup key are data in this feature's own encrypted
-      # document, so neither is a repository value and neither reaches the Nix
-      # store. netbird reads the endpoint from an environment variable, so a
-      # wrapper hands it over from the provisioned file wherever a login runs;
-      # the client itself stores it in its profile at registration, which is what
-      # the daemon reads afterwards.
+      # netbird reads the endpoint from an environment variable, so a wrapper
+      # hands it over from the provisioned file wherever a login runs; the client
+      # itself stores it in its profile at registration, which is what the daemon
+      # reads afterwards.
       managementUrl = config.sops.secrets."netbird-userspace-management-url".path;
       setupKey = config.sops.secrets."netbird-userspace-setup-key".path;
 
@@ -148,10 +141,6 @@
 
         environment.systemPackages = [ cli ];
 
-        # Both values live in one document, because a host recipient decrypts the
-        # whole of it and only this feature's client reads it. The service user
-        # is what needs them: registration runs as that user, and root reads the
-        # same files through the CLI.
         sops.secrets."netbird-userspace-management-url" = {
           format = "yaml";
           key = "management_url";

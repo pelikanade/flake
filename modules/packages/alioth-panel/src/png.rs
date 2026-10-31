@@ -1,10 +1,3 @@
-//! A minimal PNG writer, kept in-tree because the panel's build must not depend
-//! on anything that can break on a foreign machine.
-//!
-//! Only the parts a screenshot needs: RGBA8, one IHDR, one IDAT made of stored
-//! (uncompressed) deflate blocks, and IEND. These images exist to be looked at,
-//! not to be small.
-
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
@@ -59,7 +52,6 @@ pub fn write(path: &str, width: u32, height: u32, rgba: &[u8]) -> Result<(), Str
         raw.extend_from_slice(&rgba[row * stride..(row + 1) * stride]);
     }
 
-    // A zlib stream around stored deflate blocks.
     let mut zlib = vec![0x78, 0x01];
     let mut offset = 0;
     while offset < raw.len() {

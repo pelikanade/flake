@@ -62,15 +62,11 @@ func (s *server) index(w http.ResponseWriter, _ *http.Request) {
 	w.Write(buf.Bytes())
 }
 
-// healthz reports the process only; it never calls upstream.
 func healthz(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	io.WriteString(w, "ok")
 }
 
-// assetURL returns a template function that appends the file's content hash to
-// its URL. A changed asset gets a new URL, so the week-long cache can never
-// pair fresh HTML with a stale stylesheet or script.
 func assetURL(static fs.FS) func(string) (string, error) {
 	return func(name string) (string, error) {
 		b, err := fs.ReadFile(static, name)

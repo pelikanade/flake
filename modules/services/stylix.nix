@@ -29,17 +29,6 @@
           dark = "Tela-dark";
           light = "Tela-dark";
         };
-        /*
-          Stylix uses these as the primary fonts for application targets and
-          inserts them into Fontconfig's default-font lists at order 600.
-          modules/services/fonts.nix appends its `fallbackFonts` at order 1500
-          through `lib.mkAfter`, producing this precedence:
-
-            Stylix primary -> CJK fallback -> Nerd Font symbols -> emoji
-
-          Keep Stylix's Fontconfig target enabled so the primary fonts remain
-          synchronized with application-specific Stylix targets.
-        */
         fonts = {
           serif = {
             name = "Noto Serif";

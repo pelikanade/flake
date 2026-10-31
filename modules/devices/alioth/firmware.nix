@@ -1,4 +1,3 @@
-# The firmware the phone loads, and the option that carries it.
 {
   flake.modules.nixos.alioth =
     {
@@ -25,11 +24,6 @@
         }/* $out/
       '';
 
-      # The WiFi and Bluetooth firmware comes from `linux-firmware`, which the
-      # default firmware closure leaves out; only what this handset's radios
-      # read is taken. The WiFi driver loads two boot images and a board file,
-      # and `btqca` loads a patch and a NVM image. `regulatory.db` is not here
-      # because `networking.wireless` installs it with the database itself.
       radioFirmware = pkgs.buildPackages.runCommand "alioth-radio-firmware" { } ''
         mkdir -p $out/lib/firmware/ath11k $out/lib/firmware/qca
         cp -a ${pkgs.buildPackages.linux-firmware}/lib/firmware/ath11k/QCA6390 \
@@ -40,12 +34,6 @@
           $out/lib/firmware/qca/
       '';
 
-      # The GPU firmware `msm` asks for on this SoC, from `linux-firmware`: its
-      # Adreno 650 entry names `qcom/a650_sqe.fw` for the SQE microcode and
-      # `qcom/a650_gmu.bin` for the GMU, and `linux-firmware` carries both under
-      # `qcom/`. The zap shader is deliberately not taken from here: the device
-      # tree names the device-specific image the vendor extraction above
-      # already carries.
       gpuFirmware = pkgs.buildPackages.runCommand "alioth-gpu-firmware" { } ''
         mkdir -p $out/lib/firmware/qcom
         cp -a \
@@ -69,8 +57,6 @@
 
         hardware.firmware = config.alioth.firmware;
 
-        # The default closure of redistributable firmware is close to a
-        # gigabyte, and this device loads only the blobs above.
         hardware.enableRedistributableFirmware = false;
       };
     };

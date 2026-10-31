@@ -1,5 +1,3 @@
-# The charge window that keeps the battery of a phone that lives plugged in
-# from sitting at its design charge voltage.
 {
   flake.modules.nixos.alioth =
     { pkgs, ... }:
@@ -19,10 +17,6 @@
       # stops the charge, and writing 0 then 1 starts one. The other writable
       # property, `current_max`, did nothing a two-hour controlled run could see
       # — with it at 0 the cell went on charging — so it is not touched.
-      #
-      # Holding the window does not take the supply away from the system: the
-      # adapter powers the phone whether or not the cell is charging, and
-      # current the cell is not taking is current the system can have.
       systemd.services.alioth-charge-window = {
         description = "Keep the battery inside a charge window";
         wantedBy = [ "multi-user.target" ];

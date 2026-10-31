@@ -60,10 +60,6 @@
           };
         };
 
-        # A QEMU guest drives its virtio devices from in-kernel drivers; the
-        # redistributable firmware blobs, which dominate a default closure at
-        # roughly a gigabyte, have nothing here to load. The host applies
-        # microcode updates to the CPU this guest runs on.
         hardware.enableRedistributableFirmware = false;
 
         disko.devices.disk.main.device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0-0-0-0";
@@ -86,9 +82,6 @@
           }
         ];
 
-        # Automatic HTTPS issues a certificate per name once its A/AAAA record
-        # resolves here, so pointing the names at this host is the whole
-        # deployment step. The site keeps the module's default port.
         services.caddy.virtualHosts = {
           "status.nvirellia.im".extraConfig = "reverse_proxy 127.0.0.1:3001";
           "nvirellia.im" = {

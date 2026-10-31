@@ -1,21 +1,7 @@
-# The status panel on the phone's own display.
-#
-# A small Rust program owns tty1's framebuffer: it draws in landscape
-# coordinates and blits them, rotated, into the portrait panel, which is what
-# buys true colour and antialiased type without a GPU — this device's has no
-# firmware, so there is no GL to be had. It takes the display away from fbcon
-# while it draws and gives it back on the way out, so a crash leaves a working
-# console behind it, and `systemctl start getty@tty1` is a way back in.
-#
-# `alioth-panel-collect` feeds it the facts that need a process or the cluster
-# API; everything cheap it reads itself.
 {
   flake.modules.nixos.alioth =
     { lib, pkgs, ... }:
     let
-      # The panel is a package of its own (`modules/packages/alioth-panel`): it
-      # already knows how to build for this phone from whatever machine compiles
-      # it, so this module only wires it to the display.
       panel = pkgs.selfPackages.alioth-panel;
       collect = pkgs.selfPackages.alioth-panel.passthru.collect;
 
@@ -26,14 +12,10 @@
       '';
     in
     {
-      # The console behind the panel is rotated to match, so a boot that never
-      # reaches the panel does not come up sideways. This reaches the boot image
-      # through `boot.kernelParams`, which the vendor boot image carries.
       boot.kernelParams = [ "fbcon=rotate:3" ];
       console.font = "ter-132n";
       console.packages = [ pkgs.terminus_font ];
 
-      # tty1 is the panel's, so nothing starts a login prompt there.
       systemd.targets.getty.wants = lib.mkForce [ ];
 
       systemd.tmpfiles.rules = [
@@ -48,8 +30,6 @@
           Type = "simple";
           ExecStart = lib.getExe panel;
           Environment = [
-            # The font is read straight from its store path, so no font stack is
-            # installed for this: one file, one path.
             "ALIOTH_PANEL_FONT_DIR=${pkgs.maple-mono.NF-CN}/share/fonts/truetype"
           ];
           Restart = "always";
@@ -76,8 +56,6 @@
         };
       };
 
-      # The second view runs `fastfetch` and shows what it prints, so the
-      # binary has to be on the service's PATH.
       environment.systemPackages = [
         panel
         collect

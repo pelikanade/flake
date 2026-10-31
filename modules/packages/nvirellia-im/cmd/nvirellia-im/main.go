@@ -29,9 +29,6 @@ type config struct {
 	GitHubAPIURL  string
 }
 
-// loadConfig reads the environment. An unset MAGPIE_URL leaves magpie
-// unconfigured, so the sheet renders without the Resources panel; an unset
-// GATUS_URL or PROMETHEUS_URL leaves that half of the Status panel out.
 func loadConfig(getenv func(string) string) (config, error) {
 	c := config{
 		ListenAddr:    orDefault(getenv("LISTEN_ADDR"), ":8080"),
@@ -108,7 +105,6 @@ func run() error {
 		}
 		probes = prometheus
 
-		// The probe section is the only consumer of the upstream revision.
 		github, err := feed.NewGitHub(cfg.GitHubAPIURL, cfg.FlakeRepo)
 		if err != nil {
 			return err

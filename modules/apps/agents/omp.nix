@@ -3,11 +3,6 @@
   ...
 }:
 let
-  # omp brings its own tools, shell, native code and browser; add the
-  # interpreter its eval cells use, the system tools its calls reach for, and
-  # the Chromium its browser tool finds on PATH (upstream's managed download
-  # does not run on NixOS). agent-browser supplies the automation runtime that
-  # tool drives.
   ompPackages =
     pkgs:
     (with pkgs; [
@@ -106,12 +101,10 @@ in
         # Upstream owns the agent directory and installs config.yml as a
         # writable copy overwritten on every switch, so every setting worth
         # keeping is declared here; a runtime /settings change is lost at the
-        # next switch. These are the role assignments and interface settings the
-        # desktop user runs today. Cursor's OAuth Sonnet plans and advises, and
-        # Codex's gpt-6-astra:xhigh runs the slow role. These selectors require
-        # `omp /login cursor` and `omp /login openai-codex`. setupVersion is the
-        # onboarding wizard's completion marker (omp's CURRENT_SETUP_VERSION);
-        # raise it when omp raises that constant, or the wizard reappears.
+        # next switch. These selectors require `omp /login cursor` and
+        # `omp /login openai-codex`. setupVersion is the onboarding wizard's
+        # completion marker (omp's CURRENT_SETUP_VERSION); raise it when omp
+        # raises that constant, or the wizard reappears.
         programs.omp = {
           enable = lib.mkDefault true;
           settings = {

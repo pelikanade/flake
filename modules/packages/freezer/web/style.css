@@ -1,33 +1,30 @@
 /* Clearlooks tokens and original Tango-palette drawings; Tango palette is public domain. */
 :root {
   color-scheme: light;
-  /* surfaces */
   --fz-bg: #edeceb;            /* gtkrc bg_color */
   --fz-base: #ffffff;          /* gtkrc base_color */
   --fz-stripe: #f4f3f2;        /* treeview rules-hint row = mix(base, bg) */
-  --fz-prelight: #eaf1fa;      /* row hover: base tinted 15% toward selected */
+  --fz-prelight: #eaf1fa;
   --fz-desktop: linear-gradient(to bottom, #e3e6ea, #d2d6dc); /* GNOME 2 backdrop the window floats on */
   /* ink (Tango Aluminium) */
   --fz-text: #2e3436;          /* Aluminium 6 — 10.7:1 on bg */
   --fz-muted: #555753;         /* Aluminium 5 — 6.2:1 on bg, 7.3:1 on base */
   --fz-link: #204a87;          /* Sky Blue 3 — 8.8:1 on base */
-  /* selection / accent */
   --fz-selected: #86abd9;      /* gtkrc selected_bg_color */
-  --fz-selected-hi: #a9c6ea;   /* top stop of the selection gradient */
+  --fz-selected-hi: #a9c6ea;
   --fz-accent: #3465a4;        /* Tango Sky Blue 2 — focus ring, progress */
   --fz-focus: #3465a4;
   /* edges (sampled Clearlooks 2.20 + QS prototype) */
-  --fz-edge: #8a8680;          /* button / frame outline — 3.1:1 on bg */
-  --fz-edge-soft: #bdbab8;     /* treeview header separators */
-  --fz-etch-dark: #c8c6c4;     /* etched separator dark half */
+  --fz-edge: #8a8680;
+  --fz-edge-soft: #bdbab8;
+  --fz-etch-dark: #c8c6c4;
   --fz-frame: #5f5c58;         /* window frame outline (Metacity) */
-  --fz-cast: 0 2px 4px rgba(0,0,0,.12), 0 10px 28px rgba(30,40,60,.18); /* its shadow on the backdrop */
-  /* gradients */
+  --fz-cast: 0 2px 4px rgba(0,0,0,.12), 0 10px 28px rgba(30,40,60,.18);
   --fz-btn: linear-gradient(to bottom, #ffffff 0%, #f6f5f4 45%, #e3e1de 100%);
   --fz-btn-hover: linear-gradient(to bottom, #f4f8fd 0%, #dfe9f6 45%, #cfddf0 100%); /* prelight = mix(.6, lighter(bg), selected) */
   --fz-btn-active: linear-gradient(to bottom, #c9c7c4 0%, #dedcd9 100%);            /* shade(.85, bg) */
-  --fz-header: linear-gradient(to bottom, #fcfcfc 0%, #f1f0ef 50%, #e7e6e5 100%);    /* column header, sampled */
-  --fz-toolbar: linear-gradient(to bottom, #f4f3f2 0%, #ebeae9 60%, #e4e3e2 100%);   /* toolbar, sampled */
+  --fz-header: linear-gradient(to bottom, #fcfcfc 0%, #f1f0ef 50%, #e7e6e5 100%);
+  --fz-toolbar: linear-gradient(to bottom, #f4f3f2 0%, #ebeae9 60%, #e4e3e2 100%);
   --fz-title: linear-gradient(to bottom, #4f80c2 0%, #3f72b3 48%, #3767a6 52%, #2c5a97 100%); /* Metacity, darkened for AA */
   --fz-select: linear-gradient(to bottom, var(--fz-selected-hi), var(--fz-selected));
   --fz-track: linear-gradient(to bottom, #c5c5c5, #efefef);
@@ -37,11 +34,10 @@
   --fz-warn-bg: #fcaf3e;    --fz-warn-edge: #b07a2b;
   --fz-quest-bg: #c6d8ee;   --fz-quest-edge: #627bd9;
   --fz-err-bg: #f6cdc9;     --fz-err-edge: #a82727;
-  /* type */
   --fz-font: "DejaVu Sans", "Bitstream Vera Sans", Verdana, "Noto Sans", sans-serif;
   --fz-mono: "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Menlo, Consolas, monospace;
   --fz-size: 13px;    /* ≈ GNOME "Sans 10" at 96 dpi */
-  --fz-size-sm: 12px; /* statusbar, secondary */
+  --fz-size-sm: 12px;
   --fz-radius: 3px;
 }
 * { box-sizing: border-box; }
@@ -62,10 +58,6 @@ h1, h2 { margin: 0; font-weight: bold; }
 .ic-xl { width: 32px; height: 32px; }
 .ic-dlg { width: 48px; height: 48px; }
 
-/* ---------- window chrome ---------- */
-/* Body's padding is the desktop strip; the window fills what is left of the
-   viewport and grows with the page. ≤640px the frame collapses to full bleed
-   (see the narrow block) so the mobile layout stays edge to edge. */
 .window {
   flex: 1; min-width: 0; width: 100%; max-width: 1240px; margin: 0 auto;
   display: flex; flex-direction: column;
@@ -105,7 +97,6 @@ h1, h2 { margin: 0; font-weight: bold; }
   background: var(--fz-bg); border-bottom: 1px solid #c3c1be; overflow-x: auto; scrollbar-width: none;
 }
 
-/* ---------- buttons (GtkButton) ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 5px;
   min-height: 26px; padding: 2px 10px; font: inherit; color: var(--fz-text); text-decoration: none; white-space: nowrap;
@@ -116,9 +107,8 @@ h1, h2 { margin: 0; font-weight: bold; }
 .btn:active, .btn[aria-current="page"] { background: var(--fz-btn-active); border-color: #6f6b65; box-shadow: inset 0 1px 2px rgba(0,0,0,.2); }
 .btn-sm { min-height: 22px; padding: 1px 7px; font-size: var(--fz-size-sm); }
 .btn-path[aria-current="page"] { font-weight: bold; background: linear-gradient(to bottom, #e8eff8, #cbdaee); border-color: #6f8fb8; box-shadow: inset 0 1px 0 rgba(255,255,255,.8); }
-.btn-default { box-shadow: inset 0 1px 0 #fff, 0 0 0 1px #9ab3d6; } /* GTK default-button ring */
+.btn-default { box-shadow: inset 0 1px 0 #fff, 0 0 0 1px #9ab3d6; }
 
-/* ---------- infobar (GtkInfoBar) ---------- */
 .infobar {
   flex: none; display: flex; align-items: center; gap: 10px; padding: 7px 12px;
   border-bottom: 1px solid; font-size: var(--fz-size);
@@ -134,7 +124,6 @@ h1, h2 { margin: 0; font-weight: bold; }
 .infobar.error { background: var(--fz-err-bg); border-color: var(--fz-err-edge); }
 .infobar code { background: rgba(255,255,255,.55); padding: 0 3px; border-radius: 2px; }
 
-/* ---------- content ---------- */
 .content { flex: 1; min-width: 0; padding: 12px 14px 18px; }
 .section { margin-top: 16px; }
 .section-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
@@ -143,7 +132,6 @@ h1, h2 { margin: 0; font-weight: bold; }
 .section-head .push { margin-left: auto; display: flex; gap: 6px; }
 .hint { color: var(--fz-muted); font-size: var(--fz-size-sm); margin: 5px 0 0; }
 
-/* ---------- treeview (GtkTreeView in a shadow-in GtkScrolledWindow) ---------- */
 .tv { border: 1px solid var(--fz-edge); border-top-color: #77736d; background: var(--fz-base); box-shadow: 0 1px 0 #fff; overflow-x: auto; }
 .tv table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
 .tv thead th {
@@ -165,12 +153,6 @@ h1, h2 { margin: 0; font-weight: bold; }
 .tv .entry a { font-family: var(--fz-mono); font-size: 12px; text-decoration: none; }
 .tv .entry a:hover { text-decoration: underline; }
 .tv .num { width: 130px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
-/* 110px holds the widest relative label ("59 min ago") and the 10-character
-   UTC date fallback for jobs older than 30 days, both inside 2×7px padding;
-   the absolute stamp stays available in the title. Both cells are nowrap, and
-   a column narrower than its text paints over the next one instead of
-   wrapping, so these two carry their content width; the columns that can
-   lose width (.grp, .res) are the ones that give it up. */
 .tv .when { width: 110px; white-space: nowrap; font-variant-numeric: tabular-nums; overflow: hidden; }
 .tv .res { width: 145px; color: var(--fz-muted); max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tv .act { text-align: right; width: 105px; white-space: nowrap; }
@@ -185,12 +167,10 @@ h1, h2 { margin: 0; font-weight: bold; }
 .queued-row td { background: var(--fz-quest-bg); }
 .notice-detail { white-space: pre-wrap; overflow-wrap: anywhere; }
 
-/* status: icon + word, never colour alone */
 .st { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .st-failed .w { font-weight: bold; }
 .st-interrupted .w { font-style: italic; }
 
-/* ---------- progress (GtkProgressBar, pulse mode) ---------- */
 .pbar { position: relative; display: inline-block; width: 96px; height: 14px; vertical-align: -3px; border: 1px solid #7a7671; border-radius: 2px; background: var(--fz-track); box-shadow: inset 0 1px 2px rgba(0,0,0,.2); overflow: hidden; }
 .pbar::after {
   content: ""; position: absolute; top: 0; bottom: 0; width: 34%; left: 0;
@@ -204,7 +184,6 @@ h1, h2 { margin: 0; font-weight: bold; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .pbar::after { animation: none; left: 33%; } .spin { animation: none; } }
 
-/* ---------- job header + properties ---------- */
 .hero { display: flex; gap: 12px; align-items: flex-start; margin: 2px 0 12px; }
 .hero > div { min-width: 0; flex: 1; }
 .hero h1 { font-family: var(--fz-mono); font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
@@ -225,11 +204,10 @@ h1, h2 { margin: 0; font-weight: bold; }
 .running-box .row .pbar { flex: 1; width: auto; }
 .running-box p { margin: 6px 0 0; color: var(--fz-muted); }
 
-/* ---------- transcript (sunken GtkTextView, gedit-ish) ---------- */
 .textview {
   border: 1px solid var(--fz-edge); border-top-color: #77736d; background: var(--fz-base);
   max-height: min(50vh, 400px); overflow: auto; overscroll-behavior: contain;
-  display: flex; flex-direction: column-reverse;   /* opens scrolled to the END, no JS */
+  display: flex; flex-direction: column-reverse;
 }
 .textview pre { min-width: 0; margin: 0; padding: 4px 0; font: 12px/1.5 var(--fz-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .textview .l { display: grid; grid-template-columns: 6ch 1fr; column-gap: 8px; padding-right: 8px; min-height: 18px; white-space: pre-wrap; }
@@ -241,7 +219,6 @@ h1, h2 { margin: 0; font-weight: bold; }
 .textview.empty p { margin: 0; max-width: 60ch; }
 .textview.empty .ic-xl { opacity: .9; }
 
-/* ---------- message dialog (error pages) ---------- */
 .dialog { max-width: 540px; margin: 40px auto; background: var(--fz-bg); border: 1px solid #6a6660; border-radius: 4px; box-shadow: inset 1px 1px 0 #fff, 2px 3px 8px rgba(0,0,0,.18); }
 .dialog .dt { background: var(--fz-title); color: #fff; font-weight: bold; text-align: center; padding: 4px; border-radius: 3px 3px 0 0; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
 .dialog .db { display: flex; gap: 14px; padding: 16px 16px 8px; }
@@ -250,7 +227,6 @@ h1, h2 { margin: 0; font-weight: bold; }
 .dialog .code { color: var(--fz-muted); font-size: var(--fz-size-sm); }
 .dialog .da { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 16px 14px; }
 
-/* ---------- statusbar (GtkStatusbar) ---------- */
 .statusbar {
   flex: none; display: flex; align-items: stretch; font-size: var(--fz-size-sm); color: var(--fz-text);
   background: var(--fz-bg); border-top: 1px solid #c3c1be; box-shadow: inset 0 1px 0 #fff; min-height: 24px;
@@ -259,30 +235,16 @@ h1, h2 { margin: 0; font-weight: bold; }
 .statusbar > span.grow { flex: 1; }
 .statusbar > span:last-child { border-right: 0; box-shadow: none; }
 
-/* ---------- empty state in a treeview ---------- */
 .tv-empty { padding: 22px 16px; text-align: center; color: var(--fz-muted); }
 .tv-empty p { margin: 4px 0 0; }
 .tv-empty strong { color: var(--fz-text); }
 
 @media (max-width: 1100px) { .props { grid-template-columns: max-content minmax(0,1fr) max-content minmax(0,1fr); } }
-/* A scaled `table-layout: fixed` column paints its nowrap text over the next
-   one, so the fixed columns keep their widths down to 641px and the shortfall
-   goes to the treeview's scroller instead. The Result column drops out below
-   1101px (it repeats what the status icon and word already say, and ≤640px
-   hides it too), which leaves 701px of fixed columns; the floor adds 140px for
-   the entry, the narrowest that still shows a path rather than one character
-   per line. Above 1101px the declared widths leave the entry 148px or more on
-   their own, so no floor is needed there. */
 @media (max-width: 1100px) and (min-width: 641px) {
   .tv .res { display: none; }
   .tv.jobs table { min-width: 841px; }
-  /* The desktop strip costs this band 34px, which is more than the repositories
-     table's unspecified Last-built column was living on: it scaled to zero and
-     painted over Latest job. Same floor as the jobs table — 645px of declared
-     columns plus 76px for its widest cell. */
   .tv.repos table { min-width: 721px; }
 }
-/* ---------- narrow (≤ 640px) ---------- */
 @media (max-width: 640px) {
   body { font-size: 14px; padding: 0; background: var(--fz-bg); }
   .window { max-width: none; border: 0; border-radius: 0; box-shadow: none; }
@@ -295,18 +257,12 @@ h1, h2 { margin: 0; font-weight: bold; }
   .content { padding: 10px 8px 14px; }
   .tv thead { display: none; }
   .tv .c-hide { display: none; }
-  /* With the header row gone, `table-layout: fixed` has no widths to take from the
-     first row and splits the table into one equal track per column — including the
-     five the block above hides — so the entry column came out 58px wide at 467px
-     and wrapped its text one character per line. Auto layout sizes the two that have
-     widths (icon, action) and gives the entry the rest, which is this breakpoint's
-     stated design: icon + entry + secondary line, action still visible. */
   .tv.jobs table { table-layout: auto; }
   .tv td, .tv tbody th { height: auto; padding: 6px 6px; }
   .tv .stc { width: 28px; padding-right: 0; vertical-align: top; padding-top: 8px; }
   .tv .act { width: 100px; }
   .repos .name { width: auto; }
-  .tv .stc .w { display: none; }      /* the word moves into .sub */
+  .tv .stc .w { display: none; }
   .tv .entry a { font-size: 13px; }
   .tv .sub { display: block; color: var(--fz-muted); font-size: 12px; margin-top: 2px; font-family: var(--fz-font); }
   .tv .sub .sw { color: var(--fz-text); }
