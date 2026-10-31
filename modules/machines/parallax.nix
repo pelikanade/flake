@@ -8,7 +8,6 @@
       efi
       nvidia
       games
-      hmcl
       i18n
       substituter-cn
     ];
