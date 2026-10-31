@@ -15,8 +15,8 @@ _: {
         ;
 
       pname = "clawd-on-desk";
-      version = "1.4.0";
-      rev = "93a0e67004f1d7f1b20b72ad08256ecd00dbfe27";
+      version = "1.5.0";
+      rev = "e752627dab167772acc943f8383daf1c8c39de35";
 
       host = stdenv.hostPlatform;
 
@@ -83,10 +83,10 @@ _: {
           owner = "rullerzhou-afk";
           repo = "clawd-on-desk";
           inherit rev;
-          hash = "sha256-p/SaWXj/GLu9JbUAMwmWGglWpyjKZNM08DCW7o7k2to=";
+          hash = "sha256-L0l5tiWZsysdLDXEnFEt+WbKm4ekGowHGXhJ+ZD/YeQ=";
         };
 
-        npmDepsHash = "sha256-cvVGMqbrCJX4DtERHzhfEoo4AHofpHPujm0Ks5ZEPkc=";
+        npmDepsHash = "sha256-duwyYffG3twhtm0thteSInCcXdeh19GQ6A+ZUfGM/EU=";
 
         # The devDependencies are the packaging toolchain — electron,
         # electron-builder, @electron/asar — and the app runs on this
