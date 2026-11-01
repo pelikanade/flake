@@ -1,10 +1,9 @@
 { inputs, ... }:
 {
   # Tern's browser pane is a WebKitGTK view, and WebKit's network process takes
-  # its TLS backend from a GIO module. It cannot come from the tern package's
-  # wrapper: Tern registers itself with the path of the binary it runs from,
-  # which is the wrapped executable the wrapper execs, so the desktop entry and
-  # the `~/.local/bin/tern` link both launch it without that environment. The
+  # its TLS backend from a GIO module. GIO finds modules through
+  # GIO_EXTRA_MODULES, which the wrapper cannot supply: it only prefixes PATH,
+  # and the entries `tern register` writes exec the unwrapped binary anyway. The
   # session carries the module directory instead, and NixOS's own module for
   # this composes with the dconf module's list rather than replacing it.
   flake.modules.nixos.agent-desktops = {

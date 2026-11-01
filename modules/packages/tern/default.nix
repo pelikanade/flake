@@ -12,6 +12,8 @@ let
       requireFile,
       autoPatchelfHook,
       makeWrapper,
+      makeDesktopItem,
+      copyDesktopItems,
       versionCheckHook,
       desktop-file-utils,
       git,
@@ -54,6 +56,7 @@ let
       nativeBuildInputs = [
         autoPatchelfHook
         makeWrapper
+        copyDesktopItems
       ];
 
       buildInputs = [ stdenv.cc.cc.lib ];
@@ -94,6 +97,13 @@ let
       # through `gdbus` from glib.
       postFixup = ''
         mv $out/bin/tern $out/bin/.tern-wrapped
+
+        # autoPatchelfHook's own postFixup hook runs after this one, and
+        # `tern register` below has to execute the binary, which has no
+        # interpreter until it has been patched. Patch it here; the hook's pass
+        # then finds nothing left to do.
+        autoPatchelf "$out"
+
         makeWrapper $out/bin/.tern-wrapped $out/bin/tern \
           --prefix PATH : ${
             lib.makeBinPath [
@@ -104,7 +114,79 @@ let
               xdg-utils
             ]
           }
+
+        # A launch from a package store never writes desktop integration itself
+        # ("desktop integration left to the package store"); only `tern
+        # register` does, and it is also the only thing that renders the icons.
+        # Take the icons from it here, into a throwaway home, rather than from a
+        # copy that drifts with the version.
+        export HOME="$TMPDIR/register-home"
+        export XDG_DATA_HOME="$HOME/.local/share"
+        export XDG_CONFIG_HOME="$HOME/.config"
+        export XDG_STATE_HOME="$HOME/.local/state"
+        mkdir -p "$HOME"
+        timeout 120 $out/bin/tern register
+        icon_root="$XDG_DATA_HOME/icons"
+        for icon in "$icon_root"/hicolor/*/apps/so.stencil.tern.png; do
+          install -Dm644 "$icon" "$out/share/icons/''${icon#"$icon_root"/}"
+        done
       '';
+
+      # `tern register` writes these three entries, with Exec on the binary it
+      # ran from — the unwrapped store path, which carries none of the wrapper's
+      # PATH. The wrapper is what a launcher should start, so they name `tern`
+      # on PATH instead, as the other agent desktops here do. Everything else is
+      # upstream's: GNOME matches the window by StartupWMClass, and the file
+      # types and the tern:// scheme are what Open With and a pairing link offer.
+      desktopItems = [
+        (makeDesktopItem {
+          name = "so.stencil.tern";
+          desktopName = "Tern";
+          exec = "tern";
+          icon = "so.stencil.tern";
+          terminal = false;
+          categories = [
+            "System"
+            "TerminalEmulator"
+          ];
+          startupWMClass = "so.stencil.tern";
+          extraConfig."X-TerminalArgExec" = "-e";
+        })
+        (makeDesktopItem {
+          name = "so.stencil.tern.url";
+          desktopName = "Tern";
+          exec = "tern --open-url %u";
+          icon = "so.stencil.tern";
+          noDisplay = true;
+          terminal = false;
+          mimeTypes = [ "x-scheme-handler/tern" ];
+          startupWMClass = "so.stencil.tern";
+        })
+        (makeDesktopItem {
+          name = "so.stencil.tern.open";
+          desktopName = "Tern";
+          exec = "tern --open-file %f";
+          icon = "so.stencil.tern";
+          noDisplay = true;
+          terminal = false;
+          mimeTypes = [
+            "text/plain"
+            "text/markdown"
+            "text/x-source"
+            "image/png"
+            "image/jpeg"
+            "image/gif"
+            "image/webp"
+            "image/svg+xml"
+            "application/vnd.sqlite3"
+            "application/x-sqlite3"
+            "application/x-sqbpro"
+            "application/x-ipynb+json"
+            "inode/directory"
+          ];
+          startupWMClass = "so.stencil.tern";
+        })
+      ];
 
       doInstallCheck = true;
       nativeInstallCheckInputs = [ versionCheckHook ];
