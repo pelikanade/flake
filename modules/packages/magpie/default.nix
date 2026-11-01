@@ -99,6 +99,12 @@ let
         substituteInPlace internal/autostart/autostart.go \
           --replace-fail 'exe, err := os.Executable()' \
           'exe, err := os.Executable(); if filepath.Base(exe) == ".magpie-wrapped" { exe = filepath.Join(filepath.Dir(exe), "magpie") }'
+
+        # steadyPercent reads this after each collection; a variable lets the
+        # test hold its heap under the room, as tightGCRoom's tests already do.
+        substituteInPlace internal/gui/sessions.go \
+          --replace-fail 'const steadyGCRoom = 32 << 20' \
+          'var steadyGCRoom int64 = 32 << 20'
       '';
 
       nativeCheckInputs = [
@@ -109,6 +115,11 @@ let
       ];
       preCheck = ''
         export MAGPIE_BUN="${lib.getExe bun}"
+        # The build's /bin/sh is busybox, whose sh ends `cat >/dev/null` at
+        # once when its standard input is a pipe; the reader's test needs the
+        # distro shell's blocking stdin, which bash here has.
+        substituteInPlace internal/claudetui/wslread_test.go \
+          --replace-fail '"/bin/sh"' '"${lib.getExe bash}"'
         substituteInPlace internal/gui/scheme_linux_test.go \
           --replace-fail $'\t\t\texe, err := os.Executable()' $'\t\t\t_, err := os.Executable()' \
           --replace-fail '"Exec="+exe+" %u\n"' '"Exec=magpie %u\n"'
@@ -190,6 +201,25 @@ let
         substituteInPlace internal/gateway/claude_client_cache_test.go \
           --replace-fail '\\u003cexternal_system_instructions\\u003e\nshared\n\\u003c/external_system_instructions\\u003e\n\n' \
           '\\u003cexternal_system_instructions\\u003e\\nshared\\n\\u003c/external_system_instructions\\u003e\\n\\n'
+        # The usage page's per-account "Check in now" has no per-account
+        # command yet (`magpie accounts checkin` checks every account), so
+        # name it as stage 3 usage rather than leave parity red.
+        substituteInPlace internal/cli/settings_parity_test.go \
+          --replace-fail $'\t"POST /api/usage/trae-checkin":               U,  // usage.go' \
+          $'\t"POST /api/usage/checkin-account":            U,  // usage.go\n\t"POST /api/usage/trae-checkin":               U,  // usage.go'
+        # An earlier test in this package puts a 0.165.0 Codex through the
+        # backend, and the version seen is process-wide; the pool test then
+        # forwards 0.165.0 where it wants its own client's 0.161.0. Keep the
+        # fixture from claiming a newer client than that test's.
+        substituteInPlace internal/gateway/additional_tools_test.go \
+          --replace-fail 'codex/0.165.0 (Mac OS 27.2; arm64) UnknownTerminal' \
+          'codex/0.161.0 (Mac OS 27.2; arm64) UnknownTerminal'
+        # This package's test heap holds more than steadyGCRoom (its embedded
+        # assets are most of it), so raise the room for the test that expects
+        # a collection to put GOGC back at Go's default, and put it back.
+        substituteInPlace internal/gui/warm_gc_test.go \
+          --replace-fail $'func TestSteadyGCRetunesAfterACollection(t *testing.T) {\n\tsteadyOff(t)\n\tt.Setenv("GOGC", "")' \
+          $'func TestSteadyGCRetunesAfterACollection(t *testing.T) {\n\tsteadyOff(t)\n\troom := steadyGCRoom\n\tsteadyGCRoom = 1 << 40\n\tdefer func() { steadyGCRoom = room }()\n\tt.Setenv("GOGC", "")'
       '';
       checkPhase = ''
         runHook preCheck
