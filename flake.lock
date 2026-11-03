@@ -410,11 +410,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791909798,
-        "narHash": "sha256-VAhpCOmrun/KXimYfR8NM88bciKCui7CqHHhThSzgag=",
+        "lastModified": 1793686154,
+        "narHash": "sha256-Zb/0L3soxrkfcrywpfp0J++0WFLB3tzh0Xtx9up+VNc=",
         "owner": "cachix",
         "repo": "git-hooks.nix",
-        "rev": "1ba1dbfe28738c9a71c266be6efa5b89e75491a9",
+        "rev": "204b6977e00caac19e2313015a598543ca7be150",
         "type": "github"
       },
       "original": {
@@ -555,11 +555,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1793666530,
-        "narHash": "sha256-vDuAHv7BZPLE59lBIdX0xjAZulrcpZfKpnOOghaXmA8=",
+        "lastModified": 1793708775,
+        "narHash": "sha256-TCztCGO7C7rgg3S4JscvKm4lA5b1R3zy5MPKfYirOHI=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "4a7cf5e43f499c22c6a97479f941e154ca7bfd95",
+        "rev": "a854ddf4456f5fd67474e2d844cb4a29c32702d0",
         "type": "github"
       },
       "original": {
@@ -748,11 +748,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1793659107,
-        "narHash": "sha256-wFmUqVhs5Rx1EQjx88SdJ3X+jtcutbdqLH5DZ8kOMvU=",
+        "lastModified": 1793736032,
+        "narHash": "sha256-hi8qpHN9ruTw6RY1IwTAoEHn854Nhg2JRhYD5dNtYmM=",
         "owner": "can1357",
         "repo": "oh-my-pi",
-        "rev": "ef3293b64fbcbef7882430859f9685ddf5443ff5",
+        "rev": "ff0a986b88c223a0a746ed95cda8ddada236140c",
         "type": "github"
       },
       "original": {
