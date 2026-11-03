@@ -89,6 +89,15 @@ let
           --replace-fail 'crashed := !h.alive()' \
           'crashed := !h.alive() || errors.Is(err, syscall.EPIPE)'
 
+        # Claude Code's end was told as soon as it was reaped, while the pty's
+        # reader could still hold what it drew last, so an interactive mode that
+        # died at start said why only when the reader won the race; under load
+        # TestShimNeverPrints/failed_start lost it. Tell the end once the reader
+        # has drained, or after a second if something else holds the terminal.
+        substituteInPlace internal/claudetui/child_unix.go \
+          --replace-fail $'\tgo func() {\n\t\terr := cmd.Wait()\n\t\ts.exit = err\n\t\tclose(s.exited)\n\t}()\n\tgo s.read()' \
+          $'\tread := make(chan struct{})\n\tgo func() {\n\t\terr := cmd.Wait()\n\t\tselect {\n\t\tcase <-read:\n\t\tcase <-time.After(time.Second):\n\t\t}\n\t\ts.exit = err\n\t\tclose(s.exited)\n\t}()\n\tgo func() { s.read(); close(read) }()'
+
         # Scheme registration shadows the packaged desktop item. Use the profile
         # command, not a store path that becomes stale after an upgrade and GC.
         substituteInPlace internal/gui/scheme_linux.go \
@@ -201,12 +210,6 @@ let
         substituteInPlace internal/gateway/claude_client_cache_test.go \
           --replace-fail '\\u003cexternal_system_instructions\\u003e\nshared\n\\u003c/external_system_instructions\\u003e\n\n' \
           '\\u003cexternal_system_instructions\\u003e\\nshared\\n\\u003c/external_system_instructions\\u003e\\n\\n'
-        # The usage page's per-account "Check in now" has no per-account
-        # command yet (`magpie accounts checkin` checks every account), so
-        # name it as stage 3 usage rather than leave parity red.
-        substituteInPlace internal/cli/settings_parity_test.go \
-          --replace-fail $'\t"POST /api/usage/trae-checkin":               U,  // usage.go' \
-          $'\t"POST /api/usage/checkin-account":            U,  // usage.go\n\t"POST /api/usage/trae-checkin":               U,  // usage.go'
         # An earlier test in this package puts a 0.165.0 Codex through the
         # backend, and the version seen is process-wide; the pool test then
         # forwards 0.165.0 where it wants its own client's 0.161.0. Keep the
@@ -220,6 +223,16 @@ let
         substituteInPlace internal/gui/warm_gc_test.go \
           --replace-fail $'func TestSteadyGCRetunesAfterACollection(t *testing.T) {\n\tsteadyOff(t)\n\tt.Setenv("GOGC", "")' \
           $'func TestSteadyGCRetunesAfterACollection(t *testing.T) {\n\tsteadyOff(t)\n\troom := steadyGCRoom\n\tsteadyGCRoom = 1 << 40\n\tdefer func() { steadyGCRoom = room }()\n\tt.Setenv("GOGC", "")'
+        # The listing's allocation budget assumes its folders' listings are
+        # still held, but readDirectory reads a folder modified in the last
+        # racyDirectory again, and the test lists right after writing. Darwin's
+        # bulk stat hides those ~6k allocations under the budget; Linux stats
+        # each file and doesn't. Age the folders past racyDirectory first.
+        substituteInPlace internal/sessions/cc_names_test.go \
+          --replace-fail $'\t"fmt"\n\t"os"' $'\t"fmt"\n\t"io/fs"\n\t"os"' \
+          --replace-fail $'\t"testing"\n)' $'\t"testing"\n\t"time"\n)' \
+          --replace-fail $'\tccListed.Clear()\n\tt.Cleanup(' \
+          $'\told := time.Now().Add(-time.Minute)\n\tfilepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {\n\t\tif err == nil && d.IsDir() {\n\t\t\tos.Chtimes(p, old, old)\n\t\t}\n\t\treturn err\n\t})\n\tccListed.Clear()\n\tt.Cleanup('
       '';
       checkPhase = ''
         runHook preCheck
