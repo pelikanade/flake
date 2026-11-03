@@ -13,7 +13,7 @@
       magpie
       netbird-userspace
       obsidian-headless
-      podman
+      docker
       paseo-daemon
       freezer
       harmonia

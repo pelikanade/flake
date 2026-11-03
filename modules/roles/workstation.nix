@@ -7,7 +7,7 @@
     fonts
     networkmanager
     plymouth
-    podman
+    docker
     power
     stylix
     u2f

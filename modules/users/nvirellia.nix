@@ -24,6 +24,7 @@ _: {
           "video"
           "networkmanager"
           "input"
+          "docker"
         ];
         shell = pkgs.fish;
         initialHashedPassword = nvirellia.hashedPassword;

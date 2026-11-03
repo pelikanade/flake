@@ -2,7 +2,7 @@
 {
   flake.modules.aspects.paseo-daemon.imports = [
     inputs.self.modules.aspects.omp
-    inputs.self.modules.aspects.podman
+    inputs.self.modules.aspects.docker
   ];
 
   flake.modules.nixos.paseo-daemon =
@@ -16,20 +16,15 @@
       paseoDaemon = pkgs.selfPackages.paseo-daemon;
     in
     {
-      virtualisation.podman.runtimeApis.paseo = { };
-
       users.groups.paseo = { };
       users.users.paseo = {
         isSystemUser = true;
         group = "paseo";
-        # Agents run as this account and drive `podman` or `docker`, which address
-        # the API socket published below rather than a runtime of their own: the
-        # daemon's sandbox refuses the setuid helper that an in-process rootless
-        # Podman needs. A subordinate ID range and a lingering user manager —
-        # which owns `/run/user/<uid>`, where that runtime keeps its cgroups —
-        # are what the API service needs.
-        autoSubUidGidRange = true;
-        linger = true;
+        # Agents run as this account and drive `docker`, which addresses the
+        # daemon's socket. The `docker` group owns `/run/docker.sock`, so
+        # membership is what opens it to the account's processes from inside
+        # the daemon's sandbox.
+        extraGroups = [ "docker" ];
         home = "/var/lib/paseo";
         createHome = true;
         homeMode = "0700";
@@ -98,8 +93,7 @@
           PASEO_LISTEN = lib.mkDefault "0.0.0.0:6767";
           PASEO_NODE_ENV = "production";
           SHELL = lib.getExe pkgs.bashInteractive;
-          CONTAINER_HOST = "unix://${config.virtualisation.podman.runtimeApis.paseo.socketPath}";
-          DOCKER_HOST = "unix://${config.virtualisation.podman.runtimeApis.paseo.socketPath}";
+          DOCKER_HOST = "unix:///run/docker.sock";
         }
         // lib.optionalAttrs ((config.services.tailscale-ingress.services or { }) != { }) {
           # The daemon answers a Host header it was not told about with 403
