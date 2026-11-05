@@ -89,15 +89,6 @@ let
           --replace-fail 'crashed := !h.alive()' \
           'crashed := !h.alive() || errors.Is(err, syscall.EPIPE)'
 
-        # Claude Code's end was told as soon as it was reaped, while the pty's
-        # reader could still hold what it drew last, so an interactive mode that
-        # died at start said why only when the reader won the race; under load
-        # TestShimNeverPrints/failed_start lost it. Tell the end once the reader
-        # has drained, or after a second if something else holds the terminal.
-        substituteInPlace internal/claudetui/child_unix.go \
-          --replace-fail $'\tgo func() {\n\t\terr := cmd.Wait()\n\t\ts.exit = err\n\t\tclose(s.exited)\n\t}()\n\tgo s.read()' \
-          $'\tread := make(chan struct{})\n\tgo func() {\n\t\terr := cmd.Wait()\n\t\tselect {\n\t\tcase <-read:\n\t\tcase <-time.After(time.Second):\n\t\t}\n\t\ts.exit = err\n\t\tclose(s.exited)\n\t}()\n\tgo func() { s.read(); close(read) }()'
-
         # Scheme registration shadows the packaged desktop item. Use the profile
         # command, not a store path that becomes stale after an upgrade and GC.
         substituteInPlace internal/gui/scheme_linux.go \
@@ -201,6 +192,23 @@ let
         substituteInPlace internal/proc/proc_test.go internal/sqlitedb/sqlitedb_test.go \
           --replace-fail 'd.Name() == "node_modules"' \
           'd.Name() == "node_modules" || d.Name() == "vendor"'
+        # The build's source root holds the vendor tree, and this check walks
+        # every Go file: a dependency's Start calls are not magpie's to wait
+        # for.
+        substituteInPlace internal/proc/reap_test.go \
+          --replace-fail 'd.Name() == "testdata"' \
+          'd.Name() == "testdata" || d.Name() == "vendor"'
+        # The fake file manager's sleep is not on the PATH the test gives it,
+        # which is the build's /bin and /usr/bin.
+        substituteInPlace internal/proc/folder_linux_test.go \
+          --replace-fail 'exec sleep 60' 'exec ${coreutils}/bin/sleep 60'
+        # Bun 1.4.4 fails an https tunnel whose CONNECT the bridge refused,
+        # where 1.4.2 handed the bridge's 502 back as the reply; either way
+        # the proxy's failure is said, and the gateway reads it as the
+        # proxy's. Keep accepting both.
+        substituteInPlace internal/plugin/plugin_socks_test.go \
+          --replace-fail $'\t\tif code, b, err := fetch(deadSOCKS, url); err != nil || code != 502 || !strings.HasPrefix(b, "socks connect tcp 127.0.0.1:") {\n\t\t\tt.Fatalf("%s through a SOCKS proxy that is down: %d %q, %v", url, code, b, err)\n\t\t}' \
+          $'\t\tcode, b, err := fetch(deadSOCKS, url)\n\t\tif err != nil && strings.Contains(err.Error(), "proxyconnect tcp: 502 Bad Gateway: socks connect tcp 127.0.0.1:") {\n\t\t\tcontinue\n\t\t}\n\t\tif err != nil || code != 502 || !strings.HasPrefix(b, "socks connect tcp 127.0.0.1:") {\n\t\t\tt.Fatalf("%s through a SOCKS proxy that is down: %d %q, %v", url, code, b, err)\n\t\t}'
         # The fake Claude Code logs the request line through the sandbox's
         # shell, whose echo leaves a JSON string's escapes alone. printf writes
         # the line as it arrived, so the assertion reads the sent form.
@@ -240,7 +248,10 @@ let
         # own provider record against `AddPlugin`, failed one run and passed the
         # next, so it is skipped as flaky rather than trusted either way. Drop
         # the skip once it is known to hold.
-        go test -tags=production,gtk3 \
+        # internal/gateway takes 450-600s, and go test's default 10m timed it
+        # out (#2108); upstream runs with 30m. A Nix build shares its cores
+        # with every other package's tests, so keep that headroom.
+        go test -timeout 30m -tags=production,gtk3 \
           -skip 'TestAddPluginLeavesTheUsersRecord' \
           ./...
         runHook postCheck

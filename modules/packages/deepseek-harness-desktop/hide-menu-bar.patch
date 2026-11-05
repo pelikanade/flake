@@ -10,10 +10,10 @@ claims to have removed.
 
 --- a/main.js
 +++ b/main.js
-@@ -11424,11 +11424,19 @@
- 		visible: false,
- 		accelerator: "F12"
- 	}];
+@@ -21007,11 +21007,19 @@
+ 		role: "toggleDevTools",
+ 		visible: false
+ 	}, devToolsF12Shortcut];
 +	// Patched by this package: the menu is still installed, its bar is not drawn.
 +	const hideWindowMenuBar = (window) => {
 +		if (process.platform !== "darwin" && !window.isDestroyed()) window.setMenuBarVisibility(false);
@@ -22,9 +22,9 @@ claims to have removed.
 +		hideWindowMenuBar(window);
 +	});
  	const refreshApplicationMenu = () => {
- 		Menu.setApplicationMenu(Menu.buildFromTemplate(process.platform === "win32" ? devToolsItems : [{
+ 		Menu.setApplicationMenu(Menu.buildFromTemplate(process.platform === "win32" ? windowsDevToolsShortcuts : [{
  			label: darwin ? app.name : currentDesktopLocale().messages.application,
- 			submenu: [...applicationItems(), ...devToolsItems]
+ 			submenu: [...applicationItems(), devToolsF12Shortcut]
  		}, ...platformMenus()]));
 +		for (const window of BrowserWindow.getAllWindows()) hideWindowMenuBar(window);
  		tray?.relabel();
