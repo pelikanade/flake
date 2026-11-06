@@ -129,7 +129,8 @@ let
         substituteInPlace internal/gateway/automode_test.go \
           --replace-fail '#!/usr/bin/env python3' '#!${lib.getExe python3}'
         # The fake CLIs deliberately clear PATH, so use absolute store paths.
-        substituteInPlace internal/agent/cliupdate_test.go internal/library/rtk_upgrade_test.go \
+        substituteInPlace internal/agent/cliupdate_test.go internal/agent/cliupdate_opencode2_test.go \
+          internal/library/rtk_upgrade_test.go \
           --replace-fail '/bin/cat' '${coreutils}/bin/cat'
         substituteInPlace internal/agent/cliupdate_admin_test.go internal/daemon/daemon_test.go \
           --replace-fail '/bin/cat' '${coreutils}/bin/cat'
@@ -209,6 +210,14 @@ let
         substituteInPlace internal/plugin/plugin_socks_test.go \
           --replace-fail $'\t\tif code, b, err := fetch(deadSOCKS, url); err != nil || code != 502 || !strings.HasPrefix(b, "socks connect tcp 127.0.0.1:") {\n\t\t\tt.Fatalf("%s through a SOCKS proxy that is down: %d %q, %v", url, code, b, err)\n\t\t}' \
           $'\t\tcode, b, err := fetch(deadSOCKS, url)\n\t\tif err != nil && strings.Contains(err.Error(), "proxyconnect tcp: 502 Bad Gateway: socks connect tcp 127.0.0.1:") {\n\t\t\tcontinue\n\t\t}\n\t\tif err != nil || code != 502 || !strings.HasPrefix(b, "socks connect tcp 127.0.0.1:") {\n\t\t\tt.Fatalf("%s through a SOCKS proxy that is down: %d %q, %v", url, code, b, err)\n\t\t}'
+        # Restart retires a host that is still answering a call in the
+        # background, and a call its caller gave up on holds its slot until
+        # the host is told so: the stop may begin after Restart returns. Wait
+        # for the renewal it lets end to be saved rather than read the
+        # sign-in at the instant Restart returns.
+        substituteInPlace internal/plugin/plugin_authstore_test.go \
+          --replace-fail $'\tstart := time.Now()\n\tRestart()\n\tif a := authFile(t)[key]; a["refresh"] != "r-slow+" || a["access"] != "a-1" {' \
+          $'\tstart := time.Now()\n\tRestart()\n\tfor authFile(t)[key]["refresh"] != "r-slow+" && time.Since(start) < stopRenewing+time.Second {\n\t\ttime.Sleep(20 * time.Millisecond)\n\t}\n\tif a := authFile(t)[key]; a["refresh"] != "r-slow+" || a["access"] != "a-1" {'
         # The fake Claude Code logs the request line through the sandbox's
         # shell, whose echo leaves a JSON string's escapes alone. printf writes
         # the line as it arrived, so the assertion reads the sent form.
