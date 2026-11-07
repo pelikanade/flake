@@ -555,11 +555,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1794005405,
-        "narHash": "sha256-TXbVCAFKE3pv5F48YmqyrIPyqxFxvCLvc9U6VU/GBIk=",
+        "lastModified": 1794087264,
+        "narHash": "sha256-Fe9rQ3AJ/Pt/T94kj0jcv4JnR0SeJUhX22obWjMEk/I=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "5ee9872c405e4067705453d976fdaf8212529208",
+        "rev": "15a6718edc0fbb08a9a8f413d964c9fa34cde3c3",
         "type": "github"
       },
       "original": {
@@ -659,11 +659,11 @@
     },
     "nixpkgs-unstable": {
       "locked": {
-        "lastModified": 1793726008,
-        "narHash": "sha256-iNjybNORi/2+shilhMlkNr01UHWKOHRGzQyIyvobs9o=",
-        "rev": "1d060086d60cb76a40cf37109f979d88a5bd6396",
+        "lastModified": 1793876309,
+        "narHash": "sha256-Q62pssAT9r01POiSyXW0IPXBWhntiKqMhzlsp3bsl5I=",
+        "rev": "f9a75f41be3a74eab55d3a7679d34ad6cc0da977",
         "type": "tarball",
-        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1107793.1d060086d60c/nixexprs.tar.zst"
+        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1108983.f9a75f41be3a/nixexprs.tar.zst"
       },
       "original": {
         "type": "tarball",
@@ -748,11 +748,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1793989309,
-        "narHash": "sha256-CzBIlm2TZu0zIC30gDpG0pKtGwQpW95mthXVFD3ZuwY=",
+        "lastModified": 1794081143,
+        "narHash": "sha256-dDBOM+i2CUE1GeQVgRoCEUvGCoC9u+06otQh7YBNzDo=",
         "owner": "can1357",
         "repo": "oh-my-pi",
-        "rev": "79fa222e8390aed3494f4bc6746814e6c74c21cf",
+        "rev": "8c8a620b8d6db784b848d2b019fc132d6dc5b0c3",
         "type": "github"
       },
       "original": {
