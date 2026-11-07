@@ -7,16 +7,16 @@ _: {
     {
       packages.herdr-reviewr = pkgs.rustPlatform.buildRustPackage (finalAttrs: {
         pname = "herdr-reviewr";
-        version = "0.49.1";
+        version = "0.51.0";
 
         src = pkgs.fetchFromGitHub {
           owner = "persiyanov";
           repo = "herdr-reviewr";
-          rev = "92c51e2bd4e2caf42fa00bc193ae2f48955df64f";
-          hash = "sha256-Yl6IM1v+uvHj1SENUC3dvM3vmbGMgkQzqTXFBF9GFfY=";
+          rev = "7e36b29692985ea633dedd15f311fd2fb21e9a7a";
+          hash = "sha256-HE4WrgOgJqmoT3Ld5i+hN8BV6ZgotplF/kJNhZMb6nI=";
         };
 
-        cargoHash = "sha256-3j49IyB/3oWBfA+W8eabwpZ4N7jwRXfiV5t01Ow6/Hw=";
+        cargoHash = "sha256-nTe9HsSL9oj0OI2pp54eztTXtxe/YFCFA/825q6GfdM=";
 
         nativeBuildInputs = with pkgs; [
           makeWrapper
