@@ -9,7 +9,6 @@
       tailscale
       avalanche-server
       caddy
-      nvirellia-im
       gatus
       probe-hub
       probe-agent
